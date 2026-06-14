@@ -8,29 +8,32 @@ export function LandingPage() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       {/* Hero Section */}
-      <section className="bg-slate-50 pt-20 pb-32 px-4 sm:px-6 lg:px-8 flex-1 flex flex-col items-center justify-center text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-8">
-          <span className="flex h-2 w-2 rounded-full bg-primary"></span>
-          Nouveau : L'IA au service de l'éducation
-        </div>
-        <h1 className="text-5xl md:text-7xl font-bold text-slate-900 tracking-tight max-w-4xl mb-6">
-          La plateforme SaaS de référence pour <span className="text-primary">l'enseignement supérieur</span>
-        </h1>
-        <p className="text-xl text-slate-600 max-w-2xl mb-10">
-          Gérez votre université de manière moderne, élégante et efficace. Une interface premium pensée pour les administrateurs, professeurs, et étudiants.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Link to="/onboarding">
-            <Button size="lg" className="px-8 rounded-full">Commencer l'essai</Button>
-          </Link>
-          <Link to="/dashboard">
-            <Button variant="outline" size="lg" className="px-8 rounded-full bg-white">Voir la démo (Dashboards)</Button>
-          </Link>
+      <section className="hero-mesh pt-20 pb-32 px-4 sm:px-6 lg:px-8 flex-1 flex flex-col items-center justify-center text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-mesh-glow opacity-30 pointer-events-none" />
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-8">
+            <span className="flex h-2 w-2 rounded-full bg-primary"></span>
+            Nouveau : L'IA au service de l'éducation
+          </div>
+          <h1 className="text-5xl md:text-7xl font-bold text-slate-900 tracking-tight max-w-4xl mb-6">
+            La plateforme SaaS de référence pour <span className="text-primary">l'enseignement supérieur</span>
+          </h1>
+          <p className="text-xl text-slate-600 max-w-2xl mb-10">
+            Gérez votre université de manière moderne, élégante et efficace. Une interface premium pensée pour les administrateurs, professeurs, et étudiants.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link to="/onboarding">
+              <Button size="lg" className="px-8 rounded-full">Commencer l'essai</Button>
+            </Link>
+            <Link to="/dashboard">
+              <Button variant="outline" size="lg" className="px-8 rounded-full bg-white">Voir la démo (Dashboards)</Button>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Features */}
-      <section id="features" className="py-24 bg-white px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-24 bg-slate-50 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Une architecture robuste</h2>

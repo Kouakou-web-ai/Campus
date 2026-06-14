@@ -5,7 +5,7 @@
   themes: light --default, dark --prefersdark;
 }
 
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ============================================
    POLICES PREMIUM
@@ -117,31 +117,31 @@
   --color-error-light: rgba(239, 68, 68, 0.15);
   --color-info-light: rgba(59, 130, 246, 0.15);
 
-  --surface-0: #1e293b;
-  --surface-1: #0f172a;
-  --surface-2: #1e293b;
-  --surface-3: #334155;
+  --surface-0: #0e0e1a; /* Surface sombre premium teintée indigo */
+  --surface-1: #07070f; /* Fond de page très sombre teinté indigo */
+  --surface-2: #16162a; /* Surfaces de survol teintées indigo */
+  --surface-3: #22223f; /* Surfaces de bordures/séparateurs teintées indigo */
 
-  --text-primary: #ffffff;
-  --text-secondary: #ffffff;
-  --text-muted: #ffffff;
+  --text-primary: #f8fafc; /* Blanc doux/off-white principal */
+  --text-secondary: #cbd5e1; /* Slate-300 secondaire */
+  --text-muted: #94a3b8; /* Slate-400 désactivé/muet */
 
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-subtle: rgba(99, 102, 241, 0.08); /* Bordures teintées indigo ultra-subtils */
+  --border-default: rgba(99, 102, 241, 0.16); /* Bordures teintées indigo normales */
+  --border-strong: rgba(99, 102, 241, 0.28); /* Bordures teintées indigo marquées */
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.2);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.35), 0 10px 10px rgba(0, 0, 0, 0.2);
-  --shadow-glow: 0 0 0 3px rgba(129, 140, 248, 0.2), 0 0 40px rgba(129, 140, 248, 0.12);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.55), 0 10px 10px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 0 3px rgba(129, 140, 248, 0.15), 0 0 40px rgba(129, 140, 248, 0.08);
 
-  --gradient-mesh: radial-gradient(at 40% 20%, hsla(228, 100%, 74%, 0.08) 0px, transparent 50%),
-                   radial-gradient(at 80% 0%, hsla(263, 100%, 74%, 0.06) 0px, transparent 50%),
-                   radial-gradient(at 0% 50%, hsla(355, 100%, 74%, 0.05) 0px, transparent 50%),
-                   radial-gradient(at 80% 50%, hsla(198, 100%, 74%, 0.06) 0px, transparent 50%),
-                   radial-gradient(at 0% 100%, hsla(228, 100%, 74%, 0.06) 0px, transparent 50%);
+  --gradient-mesh: radial-gradient(at 40% 20%, hsla(228, 100%, 74%, 0.06) 0px, transparent 50%),
+                   radial-gradient(at 80% 0%, hsla(263, 100%, 74%, 0.04) 0px, transparent 50%),
+                   radial-gradient(at 0% 50%, hsla(355, 100%, 74%, 0.03) 0px, transparent 50%),
+                   radial-gradient(at 80% 50%, hsla(198, 100%, 74%, 0.04) 0px, transparent 50%),
+                   radial-gradient(at 0% 100%, hsla(228, 100%, 74%, 0.04) 0px, transparent 50%);
 }
 
 @theme inline {
@@ -278,7 +278,7 @@ h6 { font-size: 1rem; font-weight: 600; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 .animate-spin-slow { animation: spin-slow 8s linear infinite; }
-.animate-marquee { animation: marquee 30s linear infinite; }
+.animate-marquee { animation: marquee 60s linear infinite; will-change: transform; }
 .animate-gradient { animation: gradient-shift 4s ease infinite; background-size: 200% 200%; }
 
 /* Délais stagger */
@@ -712,16 +712,27 @@ h6 { font-size: 1rem; font-weight: 600; }
 [data-theme="dark"] .bg-slate-100 { background-color: var(--surface-2) !important; }
 [data-theme="dark"] .bg-slate-200 { background-color: var(--surface-3) !important; }
 
+[data-theme="dark"] h1,
+[data-theme="dark"] h1.text-content,
+[data-theme="dark"] .text-2xl.font-bold.text-content,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: var(--text-primary) !important;
+}
+
 [data-theme="dark"] .text-slate-900,
-[data-theme="dark"] .text-slate-800,
+[data-theme="dark"] .text-slate-800 { color: var(--text-primary) !important; } /* Slate 50 equivalent */
 [data-theme="dark"] .text-slate-700,
-[data-theme="dark"] .text-slate-600,
+[data-theme="dark"] .text-slate-600 { color: var(--text-secondary) !important; } /* Slate 300 equivalent */
 [data-theme="dark"] .text-slate-500,
-[data-theme="dark"] .text-slate-400,
-[data-theme="dark"] .text-slate-300 { color: #ffffff !important; }
+[data-theme="dark"] .text-slate-400 { color: var(--text-muted) !important; } /* Slate 400 equivalent */
+[data-theme="dark"] .text-slate-300 { color: var(--surface-3) !important; }
 
 [data-theme="dark"] .hover\:text-slate-600:hover,
-[data-theme="dark"] .hover\:text-slate-900:hover { color: #ffffff !important; }
+[data-theme="dark"] .hover\:text-slate-900:hover { color: var(--text-primary) !important; }
 
 [data-theme="dark"] .border-slate-50,
 [data-theme="dark"] .border-slate-100,
@@ -740,10 +751,10 @@ h6 { font-size: 1rem; font-weight: 600; }
 [data-theme="dark"] .bg-indigo-50\/30 { background-color: rgba(99, 102, 241, 0.08) !important; }
 [data-theme="dark"] .bg-indigo-100 { background-color: rgba(99, 102, 241, 0.18) !important; }
 [data-theme="dark"] .text-indigo-600,
-[data-theme="dark"] .text-indigo-700,
-[data-theme="dark"] .text-purple-600 { color: #ffffff !important; }
+[data-theme="dark"] .text-indigo-700 { color: var(--color-brand-500) !important; } /* Indigo 400 equivalent */
+[data-theme="dark"] .text-purple-600 { color: #a78bfa !important; } /* Purple 400 equivalent */
 
-[data-theme="dark"] .hover\:text-indigo-600:hover { color: #ffffff !important; }
+[data-theme="dark"] .hover\:text-indigo-600:hover { color: var(--text-primary) !important; }
 
 [data-theme="dark"] .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.12) !important; }
 [data-theme="dark"] .text-emerald-600 { color: #34d399 !important; }

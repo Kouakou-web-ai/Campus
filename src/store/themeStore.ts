@@ -6,8 +6,14 @@ export type ThemeMode = 'light' | 'dark';
 const STORAGE_KEY = 'campus-theme';
 
 export function applyTheme(theme: ThemeMode) {
-  document.documentElement.setAttribute('data-theme', theme);
-  document.documentElement.style.colorScheme = theme;
+  const root = document.documentElement;
+  root.setAttribute('data-theme', theme);
+  root.style.colorScheme = theme;
+  if (theme === 'dark') {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
 }
 
 interface ThemeState {

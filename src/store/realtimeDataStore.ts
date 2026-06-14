@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { db, auth } from '../../firebase-config';
 import { ref, onValue, set, push, update, remove, get } from 'firebase/database';
-import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData } from '../types';
+import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData, StatusType } from '../types';
 
 interface RealtimeDataState {
   students: Student[];
@@ -65,59 +65,151 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
   subscribeToUniversity: (universityId: string) => {
     setStore({ loading: true });
-    const univRef = ref(db, `universites/${universityId}`);
-    
-    const unsubscribe = onValue(univRef, (snapshot) => {
-      const data = snapshot.val() || {};
-      
-      const parseList = (node: any) => {
-        if (!node) return [];
-        return Object.keys(node).map(key => ({ id: key, ...node[key] }));
-      };
 
-      const totalStudents = data.etudiants ? Object.keys(data.etudiants).length : 0;
-      const totalTeachers = data.enseignants ? Object.keys(data.enseignants).length : 0;
+    const parseList = (node: any) => {
+      if (!node) return [];
+      return Object.keys(node).map(key => ({ id: key, ...node[key] }));
+    };
+
+    const unsubscribers: (() => void)[] = [];
+    
+    // Variables locales pour construire l'état agrégé currentUniversity
+    let branding: any = {};
+    let plan: 'starter' | 'pro' | 'enterprise' = 'pro';
+    let status: StatusType = 'actif';
+    let createdAt = new Date().toISOString().split('T')[0];
+    let adminUid: string | undefined = undefined;
+    let adminName: string | undefined = undefined;
+    let adminEmail: string | undefined = undefined;
+    let studentsCount = 0;
+    let teachersCount = 0;
+
+    const updateCurrentUniversity = () => {
       let mrrVal = 0;
-      if (data.plan === 'enterprise') mrrVal = 12450000;
-      else if (data.plan === 'pro') mrrVal = 3800000;
+      if (plan === 'enterprise') mrrVal = 12450000;
+      else if (plan === 'pro') mrrVal = 3800000;
       else mrrVal = 650000;
 
-      const currentUniv: University = {
-        id: universityId,
-        name: data.branding?.name || 'CAMPUS Établissement',
-        city: data.branding?.city || 'Abidjan',
-        country: data.branding?.country || "Côte d'Ivoire",
-        plan: data.plan || 'pro',
-        status: data.status || 'actif',
-        studentsCount: totalStudents,
-        teachersCount: totalTeachers,
-        mrr: mrrVal,
-        createdAt: data.createdAt || new Date().toISOString().split('T')[0],
-        adminUid: data.adminUid || undefined,
-        adminName: data.adminName || undefined,
-        adminEmail: data.adminEmail || undefined,
-      };
-
       setStore({
-        currentUniversity: currentUniv,
-        students: parseList(data.etudiants),
-        teachers: parseList(data.enseignants),
-        courses: parseList(data.cours),
-        transactions: parseList(data.transactions),
-        grades: parseList(data.notes),
-        assignments: parseList(data.devoirs),
-        resources: parseList(data.ressources),
-        scheduleEvents: parseList(data.emploi_du_temps),
-        announcements: parseList(data.annonces),
-        emailsSimules: parseList(data.emails_simules),
-        loading: false
+        currentUniversity: {
+          id: universityId,
+          name: branding?.name || 'CAMPUS Établissement',
+          city: branding?.city || 'Abidjan',
+          country: branding?.country || "Côte d'Ivoire",
+          plan,
+          status,
+          studentsCount,
+          teachersCount,
+          mrr: mrrVal,
+          createdAt,
+          adminUid,
+          adminName,
+          adminEmail
+        }
       });
-    }, (error) => {
-      console.error("Firebase subscription error:", error);
-      setStore({ loading: false });
-    });
+    };
 
-    return unsubscribe;
+    // 1. Branding
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/branding`), (snap) => {
+      branding = snap.val() || {};
+      updateCurrentUniversity();
+    }));
+
+    // 2. Plan
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/plan`), (snap) => {
+      plan = snap.val() || 'pro';
+      updateCurrentUniversity();
+    }));
+
+    // 3. Status
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/status`), (snap) => {
+      status = snap.val() || 'actif';
+      updateCurrentUniversity();
+    }));
+
+    // 4. CreatedAt
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/createdAt`), (snap) => {
+      createdAt = snap.val() || new Date().toISOString().split('T')[0];
+      updateCurrentUniversity();
+    }));
+
+    // 5. Admin Uid
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/adminUid`), (snap) => {
+      adminUid = snap.val() || undefined;
+      updateCurrentUniversity();
+    }));
+
+    // 6. Admin Name
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/adminName`), (snap) => {
+      adminName = snap.val() || undefined;
+      updateCurrentUniversity();
+    }));
+
+    // 7. Admin Email
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/adminEmail`), (snap) => {
+      adminEmail = snap.val() || undefined;
+      updateCurrentUniversity();
+    }));
+
+    // 8. Étudiants
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/etudiants`), (snap) => {
+      const list = parseList(snap.val());
+      studentsCount = list.length;
+      setStore({ students: list });
+      updateCurrentUniversity();
+    }));
+
+    // 9. Enseignants
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/enseignants`), (snap) => {
+      const list = parseList(snap.val());
+      teachersCount = list.length;
+      setStore({ teachers: list });
+      updateCurrentUniversity();
+    }));
+
+    // 10. Cours
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/cours`), (snap) => {
+      setStore({ courses: parseList(snap.val()) });
+    }));
+
+    // 11. Transactions
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/transactions`), (snap) => {
+      setStore({ transactions: parseList(snap.val()) });
+    }));
+
+    // 12. Notes (Grades)
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/notes`), (snap) => {
+      setStore({ grades: parseList(snap.val()) });
+    }));
+
+    // 13. Devoirs (Assignments)
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/devoirs`), (snap) => {
+      setStore({ assignments: parseList(snap.val()) });
+    }));
+
+    // 14. Ressources
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/ressources`), (snap) => {
+      setStore({ resources: parseList(snap.val()) });
+    }));
+
+    // 15. Emploi du temps
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/emploi_du_temps`), (snap) => {
+      setStore({ scheduleEvents: parseList(snap.val()) });
+    }));
+
+    // 16. Annonces
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/annonces`), (snap) => {
+      setStore({ announcements: parseList(snap.val()) });
+    }));
+
+    // 17. Emails simulés
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/emails_simules`), (snap) => {
+      setStore({ emailsSimules: parseList(snap.val()), loading: false });
+    }));
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
   },
 
   subscribeToSuperAdmin: () => {

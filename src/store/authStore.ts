@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { auth } from '../../firebase-config';
-import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, deleteUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { applyTheme } from './themeStore';
+import { auth, googleProvider } from '../../firebase-config';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, deleteUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider, signInWithPopup } from 'firebase/auth';
 import axios from 'axios';
 import { normalizeUserStatus } from '../constants/accountStatus';
 import type { UserStatus } from '../types/userAccount';
@@ -18,6 +19,9 @@ export interface User {
   telephone?: string;
   adresse?: string;
   createdDate?: string;
+  filiere?: string;
+  annee?: number;
+  specialite?: string;
 }
 
 interface AuthState {
@@ -26,6 +30,7 @@ interface AuthState {
   loading: boolean;
   login: (role: UserRole, email?: string) => Promise<void>;
   loginWithFirebase: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   signupWithFirebase: (
     email: string,
     password: string,
@@ -117,6 +122,107 @@ export const useAuthStore = create<AuthState>((set) => ({
           telephone: userData.telephone,
           adresse: userData.adresse,
           createdDate: userData.createdDate,
+          filiere: userData.filiere,
+          annee: userData.annee,
+          specialite: userData.specialite,
+        },
+        isAuthenticated: true,
+        loading: false
+      });
+    } catch (err) {
+      set({ loading: false });
+      throw err;
+    }
+  },
+
+  loginWithGoogle: async () => {
+    set({ loading: true });
+    try {
+      const data = await signInWithPopup(auth, googleProvider);
+      const fbUser = data.user;
+      
+      const token = await fbUser.getIdToken();
+      const dbUrl = import.meta.env.VITE_databaseURL;
+      
+      // Check if user exists
+      let userData;
+      try {
+        const response = await axios.get(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`);
+        userData = response.data;
+      } catch (err) {
+        // If not found or error, we'll create below
+      }
+
+      const prenom = userData?.prenom || fbUser.displayName?.split(' ')[0] || '';
+      const nom = userData?.nom || fbUser.displayName?.split(' ').slice(1).join(' ') || '';
+      const fullName = prenom ? `${prenom} ${nom}`.trim() : (nom || 'Utilisateur');
+      const email = fbUser.email || '';
+
+      if (userData && userData.status === 'pending') {
+        // Upgrade them to active immediately (demo mode shortcut)
+        await axios.patch(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`, { status: 'active' });
+        userData.status = 'active';
+        
+        // Ensure student record exists
+        const studentId = `ETU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        await axios.put(`${dbUrl}/universites/univ-ufhb/etudiants/${fbUser.uid}.json?auth=${token}`, {
+          id: fbUser.uid,
+          name: fullName,
+          email,
+          studentId,
+          universityId: 'univ-ufhb',
+          status: 'actif',
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      if (!userData) {
+        // Create new user in DB if it doesn't exist
+        await axios.put(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`, {
+          prenom,
+          nom,
+          email,
+          role: 'STUDENT',
+          status: 'active',
+          universityId: 'univ-ufhb',
+          uid: fbUser.uid,
+          createdDate: new Date().toISOString(),
+        });
+        
+        // Also create student record so dashboard works
+        const studentId = `ETU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        await axios.put(`${dbUrl}/universites/univ-ufhb/etudiants/${fbUser.uid}.json?auth=${token}`, {
+          id: fbUser.uid,
+          name: fullName,
+          email,
+          studentId,
+          universityId: 'univ-ufhb',
+          status: 'actif',
+          updatedAt: new Date().toISOString()
+        });
+
+        userData = {
+          role: 'STUDENT',
+          status: 'active',
+          universityId: 'univ-ufhb',
+        };
+      }
+
+      set({
+        user: {
+          id: fbUser.uid,
+          name: fullName,
+          prenom: prenom || undefined,
+          email,
+          role: userData.role,
+          universityId: userData.universityId,
+          status: normalizeUserStatus(userData.status as string | undefined),
+          telephone: userData.telephone,
+          adresse: userData.adresse,
+          createdDate: userData.createdDate,
+          filiere: userData.filiere,
+          annee: userData.annee,
+          specialite: userData.specialite,
         },
         isAuthenticated: true,
         loading: false
@@ -292,6 +398,9 @@ export const useAuthStore = create<AuthState>((set) => ({
             status: normalizeUserStatus(userData.status as string | undefined),
             role: userData.role || state.user.role,
             universityId: userData.universityId ?? state.user.universityId,
+            filiere: userData.filiere ?? state.user.filiere,
+            annee: userData.annee ?? state.user.annee,
+            specialite: userData.specialite ?? state.user.specialite,
           }
         : null,
     }));
@@ -349,7 +458,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       
       // Update theme if requested
       if (data.theme) {
-        document.documentElement.setAttribute('data-theme', data.theme);
+        applyTheme(data.theme as any);
         localStorage.setItem('campus-theme', data.theme);
       }
 

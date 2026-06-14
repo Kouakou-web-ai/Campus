@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle, Mic } from 'lucide-react';
+import axios from 'axios';
+import { db } from '../../../firebase-config';
+import { ref, push, set } from 'firebase/database';
+import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
+import { useSpeechToText } from '../../hooks/useSpeechToText';
 
 const contactSchema = z.object({
   nom: z.string().min(2, 'Nom requis (min. 2 caractères)'),
@@ -16,8 +21,8 @@ type ContactForm = z.infer<typeof contactSchema>;
 
 const CONTACT_INFO = [
   { icon: Mail, label: 'Email', value: 'truixk@gmail.com', href: 'mailto:truixk@gmail.com' },
-  { icon: Phone, label: 'Téléphone', value: '+33 1 42 00 00 00', href: 'tel:+33142000000' },
-  { icon: MapPin, label: 'Adresse', value: '15 Rue de l\'Innovation, 75008 Paris', href: '#' },
+  { icon: Phone, label: 'Téléphone', value: '+225 01 72 64 91 10', href: 'tel:+2250172649110' },
+  { icon: MapPin, label: 'Adresse', value: 'Abidjan, Côte d\'Ivoire', href: '#' },
 ];
 
 const SUBJECTS = [
@@ -27,14 +32,57 @@ const SUBJECTS = [
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ContactForm>({
+  const { register, handleSubmit, setValue, getValues, trigger, formState: { errors, isSubmitting } } = useForm<ContactForm>({
     resolver: zodResolver(contactSchema),
   });
 
-  const onSubmit = async (_data: ContactForm) => {
-    await new Promise(r => setTimeout(r, 1000));
-    setSubmitted(true);
+  const { isListening, isSupported, startListening, stopListening } = useSpeechToText({
+    onResult: (text) => {
+      const currentVal = getValues('message') || '';
+      const space = currentVal ? ' ' : '';
+      setValue('message', currentVal + space + text);
+      trigger('message');
+    },
+  });
+
+  const onSubmit = async (data: ContactForm) => {
+    try {
+      // 1. Sauvegarder dans Firebase Realtime Database
+      const messagesRef = ref(db, 'contact_messages');
+      const newMsgRef = push(messagesRef);
+      await set(newMsgRef, {
+        ...data,
+        sentAt: new Date().toISOString(),
+        status: 'unread'
+      });
+
+      // 2. Envoyer par email avec FormSubmit
+      try {
+        await axios.post('https://formsubmit.co/ajax/truixk@gmail.com', {
+          name: data.nom,
+          email: data.email,
+          etablissement: data.etablissement,
+          sujet: data.sujet,
+          message: data.message,
+          _subject: `Nouveau message de contact CAMPUS - ${data.sujet}`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+      } catch (emailErr) {
+        console.error("Erreur d'envoi email:", emailErr);
+      }
+
+      ToastSuccess("Votre message a été envoyé avec succès !");
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error("Erreur lors de la soumission:", err);
+      ToastError("Impossible d'envoyer votre message. Veuillez réessayer.");
+    }
   };
+
 
   return (
     <div className="py-20">
@@ -160,7 +208,33 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Message *</label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-600">Message *</label>
+                    {isSupported && (
+                      <button
+                        type="button"
+                        onClick={isListening ? stopListening : startListening}
+                        className={`text-xs font-medium px-2 py-1 rounded-lg border flex items-center gap-1.5 transition-all duration-200 ${
+                          isListening
+                            ? 'bg-red-50 text-red-600 border-red-200 animate-pulse font-semibold'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                        }`}
+                      >
+                        {isListening ? (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                            <Mic size={12} className="text-red-500" />
+                            <span>Écoute en cours...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mic size={12} />
+                            <span>Dicter mon message</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <textarea
                     {...register('message')}
                     rows={5}

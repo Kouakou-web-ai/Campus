@@ -12,9 +12,11 @@ export default function DarkModeToggle() {
     const root = document.documentElement;
     if (isDark) {
       root.setAttribute('data-theme', 'dark');
+      root.classList.add('dark');
       localStorage.setItem('campus-theme', 'dark');
     } else {
       root.setAttribute('data-theme', 'light');
+      root.classList.remove('dark');
       localStorage.setItem('campus-theme', 'light');
     }
   }, [isDark]);

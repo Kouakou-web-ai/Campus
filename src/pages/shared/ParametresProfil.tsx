@@ -1,42 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import PageHeader from '../../components/ui/PageHeader';
-import { User, Shield, Bell, Moon, Sun, Save, CheckCircle, Loader2 } from 'lucide-react';
+import { User, Shield, Sun, Moon, Save, Loader2 } from 'lucide-react';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
+import { useTranslation } from '../../hooks/useTranslation';
+import { useThemeStore } from '../../store/themeStore';
 
 export default function ParametresProfil() {
   const { user, updateUserProfile, loading } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'profil' | 'securite' | 'notifications' | 'preferences'>('profil');
+  const { t, language, setLanguage } = useTranslation();
+  const { mode, setMode } = useThemeStore();
+  const [activeTab, setActiveTab] = useState<'profil' | 'securite' | 'preferences'>('profil');
 
   // Form states
   const [name, setName] = useState(user?.name || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // Preferences states
-  const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'light');
-  
-  // Notifications states
-  const [notifEmails, setNotifEmails] = useState(true);
-  const [notifMessages, setNotifMessages] = useState(true);
 
-  // Load preferences from localStorage if any
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('campus-theme');
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.setAttribute('data-theme', savedTheme);
+  const getInitials = (nameStr: string) => {
+    if (!nameStr) return '';
+    const parts = nameStr.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
     }
-    if (user) {
-      const savedNotifs = localStorage.getItem(`campus-notifs-${user.id}`);
-      if (savedNotifs) {
-        const parsed = JSON.parse(savedNotifs);
-        setNotifEmails(parsed.emails ?? true);
-        setNotifMessages(parsed.messages ?? true);
-      }
-    }
-  }, [user]);
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +37,7 @@ export default function ParametresProfil() {
       // Check Profil tab changes
       if (activeTab === 'profil' && name !== user?.name) {
         if (name.trim().length < 2) {
-          ToastError('Le nom doit contenir au moins 2 caractères.');
+          ToastError(t('settings.name_too_short'));
           return;
         }
         dataToUpdate.name = name.trim();
@@ -59,28 +48,19 @@ export default function ParametresProfil() {
       if (activeTab === 'securite') {
         if (currentPassword && newPassword) {
           if (newPassword !== confirmPassword) {
-            ToastError('Les nouveaux mots de passe ne correspondent pas.');
+            ToastError(t('settings.security.password_mismatch'));
             return;
           }
           if (newPassword.length < 6) {
-            ToastError('Le nouveau mot de passe doit faire au moins 6 caractères.');
+            ToastError(t('settings.security.password_too_short'));
             return;
           }
           dataToUpdate.currentPassword = currentPassword;
           dataToUpdate.newPassword = newPassword;
           needsUpdate = true;
         } else if (currentPassword || newPassword || confirmPassword) {
-          ToastError('Veuillez remplir tous les champs de mot de passe pour le modifier.');
+          ToastError(t('settings.security.password_required'));
           return;
-        }
-      }
-
-      // Check Preferences
-      if (activeTab === 'preferences') {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        if (theme !== currentTheme) {
-          dataToUpdate.theme = theme;
-          needsUpdate = true;
         }
       }
 
@@ -89,22 +69,9 @@ export default function ParametresProfil() {
         if (updateUserProfile) {
           await updateUserProfile(dataToUpdate);
         } else {
-          // If in mock mode (no updateUserProfile available, or just mocking)
-          if (dataToUpdate.theme) {
-            document.documentElement.setAttribute('data-theme', dataToUpdate.theme);
-            localStorage.setItem('campus-theme', dataToUpdate.theme);
-          }
           // Just simulate delay
           await new Promise(r => setTimeout(r, 800));
         }
-      }
-
-      // Save local notifications
-      if (activeTab === 'notifications' && user) {
-        localStorage.setItem(`campus-notifs-${user.id}`, JSON.stringify({
-          emails: notifEmails,
-          messages: notifMessages
-        }));
       }
 
       // Reset password fields after success
@@ -114,9 +81,9 @@ export default function ParametresProfil() {
         setConfirmPassword('');
       }
 
-      ToastSuccess('Paramètres sauvegardés avec succès.');
+      ToastSuccess(t('settings.success'));
     } catch (err: any) {
-      ToastError(err.message || 'Erreur lors de la sauvegarde.');
+      ToastError(err.message || t('settings.error'));
     }
   };
 
@@ -125,8 +92,8 @@ export default function ParametresProfil() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 page-transition">
       <PageHeader 
-        title="Paramètres" 
-        description="Gérez vos informations personnelles, votre sécurité et vos préférences."
+        title={t('settings.title')} 
+        description={t('settings.description')}
       />
 
       <div className="flex flex-col md:flex-row gap-6">
@@ -139,7 +106,7 @@ export default function ParametresProfil() {
                   className={`${activeTab === 'profil' ? 'active bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : ''}`}
                   onClick={() => setActiveTab('profil')}
                 >
-                  <User size={18} /> Mon Profil
+                  <User size={18} /> {t('settings.tab.profil')}
                 </a>
               </li>
               <li>
@@ -147,15 +114,7 @@ export default function ParametresProfil() {
                   className={`${activeTab === 'securite' ? 'active bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : ''}`}
                   onClick={() => setActiveTab('securite')}
                 >
-                  <Shield size={18} /> Sécurité
-                </a>
-              </li>
-              <li>
-                <a 
-                  className={`${activeTab === 'notifications' ? 'active bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : ''}`}
-                  onClick={() => setActiveTab('notifications')}
-                >
-                  <Bell size={18} /> Notifications
+                  <Shield size={18} /> {t('settings.tab.securite')}
                 </a>
               </li>
               <li>
@@ -163,7 +122,7 @@ export default function ParametresProfil() {
                   className={`${activeTab === 'preferences' ? 'active bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : ''}`}
                   onClick={() => setActiveTab('preferences')}
                 >
-                  <Sun size={18} /> Préférences
+                  <Sun size={18} /> {t('settings.tab.preferences')}
                 </a>
               </li>
             </ul>
@@ -178,23 +137,19 @@ export default function ParametresProfil() {
               {/* Onglet Profil */}
               {activeTab === 'profil' && (
                 <div className="animate-fade-in space-y-4">
-                  <h3 className="text-lg font-semibold border-b border-border-subtle pb-2">Informations Personnelles</h3>
+                  <h3 className="text-lg font-semibold border-b border-border-subtle pb-2">{t('settings.profile.info')}</h3>
                   
                   <div className="flex items-center gap-6 mb-6">
                     <div className="avatar placeholder">
-                      <div className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-full w-24 shadow-md">
-                        <span className="text-3xl">{user.name.charAt(0).toUpperCase()}</span>
+                      <div className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-full w-24 h-24 flex items-center justify-center shadow-md">
+                        <span className="text-3xl font-bold">{getInitials(name)}</span>
                       </div>
-                    </div>
-                    <div>
-                      <button type="button" className="btn btn-sm btn-outline mb-2">Changer la photo</button>
-                      <p className="text-xs text-content-muted">Format JPG, GIF ou PNG. Taille max 2MB.</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="form-control">
-                      <label className="label"><span className="label-text">Nom complet</span></label>
+                      <label className="label"><span className="label-text">{t('settings.profile.name')}</span></label>
                       <input 
                         type="text" 
                         className="input input-bordered input-premium w-full" 
@@ -204,12 +159,12 @@ export default function ParametresProfil() {
                       />
                     </div>
                     <div className="form-control">
-                      <label className="label"><span className="label-text">Adresse Email</span></label>
+                      <label className="label"><span className="label-text">{t('settings.profile.email')}</span></label>
                       <input type="email" className="input input-bordered input-premium w-full bg-surface-muted" value={user.email} disabled />
                     </div>
                     <div className="form-control">
-                      <label className="label"><span className="label-text">Rôle</span></label>
-                      <input type="text" className="input input-bordered input-premium w-full bg-surface-muted" value={user.role.replace('_', ' ')} disabled />
+                      <label className="label"><span className="label-text">{t('settings.profile.role')}</span></label>
+                      <input type="text" className="input input-bordered input-premium w-full bg-surface-muted" value={t(`role.${user.role}`, user.role.replace('_', ' '))} disabled />
                     </div>
                   </div>
                 </div>
@@ -218,10 +173,10 @@ export default function ParametresProfil() {
               {/* Onglet Sécurité */}
               {activeTab === 'securite' && (
                 <div className="animate-fade-in space-y-4">
-                  <h3 className="text-lg font-semibold border-b border-border-subtle pb-2">Sécurité du Compte</h3>
+                  <h3 className="text-lg font-semibold border-b border-border-subtle pb-2">{t('settings.security.title')}</h3>
                   
                   <div className="form-control max-w-md">
-                    <label className="label"><span className="label-text">Mot de passe actuel</span></label>
+                    <label className="label"><span className="label-text">{t('settings.security.current_password')}</span></label>
                     <input 
                       type="password" 
                       className="input input-bordered input-premium w-full" 
@@ -231,7 +186,7 @@ export default function ParametresProfil() {
                     />
                   </div>
                   <div className="form-control max-w-md">
-                    <label className="label"><span className="label-text">Nouveau mot de passe</span></label>
+                    <label className="label"><span className="label-text">{t('settings.security.new_password')}</span></label>
                     <input 
                       type="password" 
                       className="input input-bordered input-premium w-full" 
@@ -241,7 +196,7 @@ export default function ParametresProfil() {
                     />
                   </div>
                   <div className="form-control max-w-md">
-                    <label className="label"><span className="label-text">Confirmer le nouveau mot de passe</span></label>
+                    <label className="label"><span className="label-text">{t('settings.security.confirm_password')}</span></label>
                     <input 
                       type="password" 
                       className="input input-bordered input-premium w-full" 
@@ -250,75 +205,28 @@ export default function ParametresProfil() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                   </div>
-
-                  <div className="divider-gradient my-6"></div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Authentification à deux facteurs (A2F)</h4>
-                      <p className="text-sm text-content-muted">Ajoutez une couche de sécurité supplémentaire à votre compte.</p>
-                    </div>
-                    <button type="button" className="btn btn-outline btn-sm">Activer A2F</button>
-                  </div>
-                </div>
-              )}
-
-              {/* Onglet Notifications */}
-              {activeTab === 'notifications' && (
-                <div className="animate-fade-in space-y-4">
-                  <h3 className="text-lg font-semibold border-b border-border-subtle pb-2">Préférences de Notification</h3>
-                  
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between cursor-pointer p-3 rounded-xl hover:bg-surface-raised transition-colors">
-                      <div>
-                        <span className="font-medium">Emails de plateforme</span>
-                        <p className="text-xs text-content-muted">Recevoir des mises à jour sur l'application.</p>
-                      </div>
-                      <input 
-                        type="checkbox" 
-                        className="toggle toggle-primary" 
-                        checked={notifEmails}
-                        onChange={(e) => setNotifEmails(e.target.checked)}
-                      />
-                    </label>
-                    <label className="flex items-center justify-between cursor-pointer p-3 rounded-xl hover:bg-surface-raised transition-colors">
-                      <div>
-                        <span className="font-medium">Messages directs</span>
-                        <p className="text-xs text-content-muted">Être notifié lors de la réception d'un nouveau message.</p>
-                      </div>
-                      <input 
-                        type="checkbox" 
-                        className="toggle toggle-primary" 
-                        checked={notifMessages}
-                        onChange={(e) => setNotifMessages(e.target.checked)}
-                      />
-                    </label>
-                    <label className="flex items-center justify-between cursor-pointer p-3 rounded-xl hover:bg-surface-raised transition-colors opacity-70">
-                      <div>
-                        <span className="font-medium">Alertes de sécurité</span>
-                        <p className="text-xs text-content-muted">M'avertir des connexions suspectes.</p>
-                      </div>
-                      <input type="checkbox" className="toggle toggle-primary" checked disabled />
-                    </label>
-                  </div>
                 </div>
               )}
 
               {/* Onglet Préférences */}
               {activeTab === 'preferences' && (
                 <div className="animate-fade-in space-y-4">
-                  <h3 className="text-lg font-semibold border-b border-border-subtle pb-2">Préférences d'Affichage</h3>
+                  <h3 className="text-lg font-semibold border-b border-border-subtle pb-2">{t('settings.preferences.title')}</h3>
                   
                   <div className="form-control max-w-md mb-4">
-                    <label className="label"><span className="label-text font-medium">Langue</span></label>
-                    <select className="select select-bordered select-premium w-full">
+                    <label className="label"><span className="label-text font-medium">{t('settings.preferences.language')}</span></label>
+                    <select 
+                      className="select select-bordered select-premium w-full"
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value as any)}
+                    >
                       <option value="fr">Français (France)</option>
-                      <option value="en" disabled>Anglais (Bientôt)</option>
+                      <option value="en">English (UK)</option>
                     </select>
                   </div>
 
                   <div className="form-control max-w-md">
-                    <label className="label"><span className="label-text font-medium">Thème</span></label>
+                    <label className="label"><span className="label-text font-medium">{t('settings.preferences.theme')}</span></label>
                     <div className="flex gap-4 mt-2">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input 
@@ -326,10 +234,10 @@ export default function ParametresProfil() {
                           name="theme" 
                           className="radio radio-primary" 
                           value="light" 
-                          checked={theme === 'light'}
-                          onChange={() => setTheme('light')}
+                          checked={mode === 'light'}
+                          onChange={() => setMode('light')}
                         />
-                        <Sun size={16} /> Clair
+                        <Sun size={16} /> {t('settings.preferences.theme.light')}
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input 
@@ -337,10 +245,10 @@ export default function ParametresProfil() {
                           name="theme" 
                           className="radio radio-primary" 
                           value="dark" 
-                          checked={theme === 'dark'}
-                          onChange={() => setTheme('dark')}
+                          checked={mode === 'dark'}
+                          onChange={() => setMode('dark')}
                         />
-                        <Moon size={16} /> Sombre
+                        <Moon size={16} /> {t('settings.preferences.theme.dark')}
                       </label>
                     </div>
                   </div>
@@ -350,7 +258,7 @@ export default function ParametresProfil() {
               <div className="flex justify-end pt-6 border-t border-border-subtle mt-8">
                 <button type="submit" className="btn btn-primary gap-2" disabled={loading}>
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
-                  {loading ? 'Sauvegarde...' : 'Enregistrer les modifications'}
+                  {loading ? t('settings.profile.saving') : t('settings.profile.save')}
                 </button>
               </div>
 

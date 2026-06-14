@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import ProtectedRoute from './ProtectedRoute';
 import RoleGuard from './RoleGuard';
 import AccountStatusGuard from './AccountStatusGuard';
@@ -60,11 +61,20 @@ const AccountSuspendedPage = React.lazy(() => import('../pages/account/AccountSu
 // Loading fallback
 const Loader = () => <LoadingState message="Chargement de la page…" />;
 
-export default function AppRoutes() {
+function AnimatedRoutes() {
+  const location = useLocation();
+  
   return (
-    <BrowserRouter>
-      <Suspense fallback={<Loader />}>
-        <Routes>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -5 }}
+        transition={{ duration: 0.2 }}
+        className="w-full h-full"
+      >
+        <Routes location={location}>
           {/* ── Public ──────────────────────────────────────────────────── */}
           <Route element={<PublicLayout />}>
             <Route path="/"              element={<LandingPage />} />
@@ -142,7 +152,6 @@ export default function AppRoutes() {
               <Route path="admin/enseignants" element={<GestionEnseignants />} />
               <Route path="admin/cours"       element={<GestionCours />} />
               <Route path="admin/finance"     element={<CentreFinancier />} />
-              <Route path="admin/emails"      element={<EmailsSimules />} />
             </Route>
 
             {/* Teacher */}
@@ -181,6 +190,16 @@ export default function AppRoutes() {
           {/* Catch-all → 404 */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+export default function AppRoutes() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<Loader />}>
+        <AnimatedRoutes />
       </Suspense>
     </BrowserRouter>
   );

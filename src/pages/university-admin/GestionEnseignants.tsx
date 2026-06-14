@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Star, BookOpen, Users, Clock, Mail, Plus, Upload, X, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Star, BookOpen, Users, Clock, Mail, Plus, Upload, X, Trash2, Search } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { Avatar } from '../../components/ui/AvatarGroup';
@@ -23,8 +24,16 @@ export default function GestionEnseignants() {
       }
     }
   };
+  const location = useLocation();
+  const [search, setSearch] = useState(location.state?.search || '');
   const [modalOpen, setModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.search) {
+      setSearch(location.state.search);
+    }
+  }, [location.state?.search]);
 
   // Form states for new teacher
   const [name, setName] = useState('');
@@ -93,6 +102,12 @@ export default function GestionEnseignants() {
   const totalCourses = teachers.reduce((s, t) => s + ((t && t.coursCount) || 0), 0);
   const totalStudents = teachers.reduce((s, t) => s + ((t && t.studentsCount) || 0), 0);
 
+  const filteredTeachers = teachers.filter(t => {
+    if (!t) return false;
+    const term = search.toLowerCase();
+    return (t.name?.toLowerCase() || '').includes(term) || (t.email?.toLowerCase() || '').includes(term);
+  });
+
   return (
     <div className="page-transition space-y-6">
       <PageHeader
@@ -129,15 +144,15 @@ export default function GestionEnseignants() {
       </div>
 
       {/* Empty state */}
-      {teachers.length === 0 ? (
+      {filteredTeachers.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-3xl border border-slate-100/80 shadow-md">
           <Users className="mx-auto text-slate-300 mb-3" size={48} />
           <h3 className="text-lg font-semibold text-slate-700">Aucun enseignant</h3>
-          <p className="text-slate-400 text-sm max-w-sm mx-auto mt-1">Ajoutez un nouvel enseignant pour commencer à constituer votre équipe pédagogique.</p>
+          <p className="text-slate-400 text-sm max-w-sm mx-auto mt-1">Aucun enseignant trouvé pour cette recherche.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
-          {teachers.map(teacher => (
+          {filteredTeachers.map(teacher => (
             <div key={teacher.id} className="card-premium p-6 group animate-fade-up">
               <div className="flex items-start gap-4">
                 <Avatar name={teacher.name} size="lg" />

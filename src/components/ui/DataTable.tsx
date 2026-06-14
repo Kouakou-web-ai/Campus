@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, Inbox } from 'lucide-react';
 import type { TableColumn } from '../../types';
 
 interface DataTableProps<T> {
@@ -46,21 +46,22 @@ export default function DataTable<T>({
 
   if (sortedData.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 mb-4 border border-slate-100">
-          🔍
+      <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-surface rounded-2xl border border-border-subtle shadow-sm my-4">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center text-indigo-500 dark:text-indigo-400 mb-4 border border-indigo-100/30 dark:border-indigo-900/30 animate-pulse">
+          <Inbox size={28} />
         </div>
-        <h4 className="text-sm font-semibold text-slate-800">{emptyMessage}</h4>
+        <h4 className="text-sm font-semibold text-content">{emptyMessage}</h4>
         {emptyDescription && (
-          <p className="text-xs text-slate-400 mt-1 max-w-sm">{emptyDescription}</p>
+          <p className="text-xs text-content-muted mt-1 max-w-sm">{emptyDescription}</p>
         )}
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto w-full">
-      <table className="w-full table-premium">
+    <div className="relative w-full overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
+      <div className="overflow-x-auto w-full scrollbar-thin">
+        <table className="w-full table-premium">
         <thead>
           <tr>
             {columns.map((col, idx) => {
@@ -105,6 +106,7 @@ export default function DataTable<T>({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

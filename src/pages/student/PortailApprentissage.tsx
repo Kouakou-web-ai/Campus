@@ -2,6 +2,7 @@ import { BookOpen, Clock, AlertCircle, Bell, GraduationCap } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import ProgressRing from '../../components/ui/ProgressRing';
+import LearningQuiz from '../../components/student/LearningQuiz';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
 const COURSE_COLORS = ['bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-sky-500'];
@@ -77,9 +78,9 @@ export default function PortailApprentissage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cours en cours */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="lg:col-span-2 space-y-4">
           <h2 className="text-base font-semibold text-slate-800">Mes cours actifs</h2>
           
           {activeCourses.length === 0 ? (
@@ -89,7 +90,7 @@ export default function PortailApprentissage() {
             </div>
           ) : (
             activeCourses.map((course, i) => (
-              <div key={course.id} className="card-premium p-4 group cursor-pointer animate-fade-up">
+              <div key={course.id} className="card-premium p-6 group cursor-pointer animate-fade-up">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl ${COURSE_COLORS[i % COURSE_COLORS.length]} flex items-center justify-center flex-shrink-0`}>
                     <BookOpen size={18} className="text-white" />
@@ -112,12 +113,16 @@ export default function PortailApprentissage() {
               </div>
             ))
           )}
+          
+          <div className="pt-4">
+            <LearningQuiz />
+          </div>
         </div>
-
+ 
         {/* Sidebar */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Prochain cours */}
-          <div className="card-premium p-5">
+          <div className="card-premium p-6">
             <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
               <Clock size={14} className="text-indigo-500" />
               Prochain cours
@@ -134,9 +139,9 @@ export default function PortailApprentissage() {
               <p className="text-slate-400 text-xs text-center py-4 bg-slate-50 rounded-xl">Aucun cours planifié aujourd'hui</p>
             )}
           </div>
-
+ 
           {/* Devoirs à rendre */}
-          <div className="card-premium p-5">
+          <div className="card-premium p-6">
             <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
               <AlertCircle size={14} className="text-red-400" />
               Devoirs à rendre

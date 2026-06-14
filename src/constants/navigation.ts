@@ -54,7 +54,6 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
         { label: 'Étudiants', path: '/app/admin/etudiants', icon: Users },
         { label: 'Enseignants', path: '/app/admin/enseignants', icon: GraduationCap },
         { label: 'Cours', path: '/app/admin/cours', icon: BookOpen },
-        { label: 'Emails envoyés', path: '/app/admin/emails', icon: Mail },
       ],
     },
     {

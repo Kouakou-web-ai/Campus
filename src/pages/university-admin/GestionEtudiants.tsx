@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Plus, Download, Upload, Mail, Users, CheckCircle, UserPlus, Award, X, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
@@ -107,8 +108,15 @@ export default function GestionEtudiants() {
     },
   ];
 
-  const [search, setSearch] = useState('');
+  const location = useLocation();
+  const [search, setSearch] = useState(location.state?.search || '');
   const [filterFiliere, setFilterFiliere] = useState('tous');
+
+  useEffect(() => {
+    if (location.state?.search) {
+      setSearch(location.state.search);
+    }
+  }, [location.state?.search]);
   const [filterStatus, setFilterStatus] = useState('tous');
   const [modalOpen, setModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);

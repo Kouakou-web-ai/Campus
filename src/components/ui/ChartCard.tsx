@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 interface ChartCardProps {
   title: string;
@@ -16,7 +17,11 @@ export default function ChartCard({
   children,
 }: ChartCardProps) {
   return (
-    <div className={`card-premium ${className}`}>
+    <motion.div 
+      whileHover={{ scale: 1.01, y: -2 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      className={`card-premium p-6 ${className}`}
+    >
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-base font-semibold text-content">{title}</h3>
@@ -27,6 +32,6 @@ export default function ChartCard({
       <div className="w-full">
         {children}
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -24,6 +24,8 @@ interface NotificationState {
   fetchNotifications: (userId: string) => Promise<void>;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
+  removeNotification: (notificationId: string) => void;
+  removeAllNotifications: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
@@ -67,5 +69,9 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   })),
   markAllAsRead: () => set((state) => ({
     notifications: state.notifications.map((n) => ({ ...n, read: true }))
-  }))
+  })),
+  removeNotification: (notificationId) => set((state) => ({
+    notifications: state.notifications.filter((n) => n.id !== notificationId)
+  })),
+  removeAllNotifications: () => set({ notifications: [] })
 }));

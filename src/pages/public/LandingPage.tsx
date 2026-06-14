@@ -109,7 +109,7 @@ export default function LandingPage() {
   const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
 
   const { text: typewriterText } = useTypewriter({
-    words: ['votre université', 'vos étudiants', 'vos finances', 'vos cours'],
+    words: ['votre université', 'vos étudiants', 'vos cours'],
     typeSpeed: 70,
     deleteSpeed: 40,
     pauseTime: 2200,
@@ -286,14 +286,17 @@ export default function LandingPage() {
       </section>
 
       {/* ============ PARTENAIRES ============ */}
-      <section className="py-12 border-y border-slate-100 bg-slate-50/50 overflow-hidden">
-        <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-8">
+      <section 
+        className="py-6 border-y border-indigo-500/20 overflow-hidden"
+        style={{ background: 'var(--gradient-brand)' }}
+      >
+        <p className="text-center text-xs font-bold text-indigo-200 uppercase tracking-widest mb-4">
           Déployé dans les grandes institutions
         </p>
         <div className="marquee-container">
           <div className="animate-marquee inline-flex gap-12">
             {[...PARTNERS, ...PARTNERS].map((name, i) => (
-              <span key={i} className="flex-shrink-0 text-slate-400 font-heading font-bold text-sm sm:text-base whitespace-nowrap hover:text-indigo-600 transition-colors cursor-default">
+              <span key={i} className="flex-shrink-0 text-white/80 font-heading font-bold text-sm sm:text-base whitespace-nowrap hover:text-white transition-colors cursor-default">
                 🏛️ {name}
               </span>
             ))}

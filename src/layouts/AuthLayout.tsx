@@ -1,6 +1,7 @@
 import { Outlet, Link } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import ThemeToggle from '../components/shared/ThemeToggle';
+import ParticlesBackground from '../components/ui/ParticlesBackground';
 
 export default function AuthLayout() {
   return (
@@ -49,12 +50,12 @@ export default function AuthLayout() {
       </div>
 
       {/* Panel droit — formulaire */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 relative">
-        <div className="absolute top-4 right-4 lg:top-6 lg:right-6">
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 relative overflow-hidden">
+        <ParticlesBackground className="opacity-30 dark:opacity-20" />
+        <div className="absolute top-4 right-4 lg:top-6 lg:right-6 z-10">
           <ThemeToggle variant="dropdown" />
         </div>
-        <div className="w-full max-w-md">
-
+        <div className="w-full max-w-md z-10">
           <Outlet />
         </div>
       </div>

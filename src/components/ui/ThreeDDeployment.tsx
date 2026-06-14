@@ -120,7 +120,7 @@ export default function ThreeDDeployment() {
     const renderLoop = () => {
       ctx.clearRect(0, 0, width, height);
 
-      time += 0.025;
+      time += 0.06;
 
       // Cycle between Wave (5s), Transition (2s), Text (5s), Transition (2s)
       const cycleTime = 14;

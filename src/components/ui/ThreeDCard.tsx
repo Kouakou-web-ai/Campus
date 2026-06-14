@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 
 interface ThreeDCardProps {
   children: React.ReactNode;
@@ -11,12 +11,21 @@ interface ThreeDCardProps {
 export default function ThreeDCard({
   children,
   className = '',
-  maxTilt = 12,
+  maxTilt = 15,
   scale = 1.02,
   style = {},
 }: ThreeDCardProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const shineRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const card = cardRef.current;
@@ -27,33 +36,44 @@ export default function ThreeDCard({
     const x = e.clientX - rect.left; // Position X de la souris dans la carte
     const y = e.clientY - rect.top;  // Position Y de la souris dans la carte
 
-    const px = x / rect.width;
-    const py = y / rect.height;
-
-    // Calculer les angles d'inclinaison (inversé pour l'axe X)
-    const tiltX = (0.5 - py) * maxTilt;
-    const tiltY = (px - 0.5) * maxTilt;
-
-    // Appliquer le transform 3D directement sur le DOM pour éviter tout re-render React
-    card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(${scale}, ${scale}, ${scale})`;
-
-    // Déplacer l'effet de reflet (Shine)
-    if (shine) {
-      shine.style.background = `radial-gradient(circle at ${px * 100}% ${py * 100}%, rgba(255, 255, 255, 0.15) 0%, transparent 60%)`;
-      shine.style.opacity = '1';
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
     }
+
+    rafRef.current = requestAnimationFrame(() => {
+      const px = x / rect.width;
+      const py = y / rect.height;
+
+      // Calculer les angles d'inclinaison (inversé pour l'axe X)
+      const tiltX = (0.5 - py) * maxTilt;
+      const tiltY = (px - 0.5) * maxTilt;
+
+      // Appliquer le transform 3D
+      card.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(${scale}, ${scale}, ${scale})`;
+
+      // Déplacer l'effet de reflet (Shine)
+      if (shine) {
+        shine.style.background = `radial-gradient(circle at ${px * 100}% ${py * 100}%, rgba(255, 255, 255, 0.2) 0%, transparent 60%)`;
+        shine.style.opacity = '1';
+      }
+    });
   };
 
   const handleMouseEnter = () => {
     const card = cardRef.current;
     if (!card) return;
-    card.style.transition = 'transform 100ms cubic-bezier(0.25, 1, 0.5, 1)';
+    // Transition très courte pour éviter le lag tout en gardant une légère fluidité
+    card.style.transition = 'transform 50ms ease-out';
   };
 
   const handleMouseLeave = () => {
     const card = cardRef.current;
     const shine = shineRef.current;
     if (!card) return;
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
 
     // Remettre à zéro doucement
     card.style.transition = 'transform 500ms cubic-bezier(0.25, 1, 0.5, 1)';
@@ -81,14 +101,11 @@ export default function ThreeDCard({
       {/* Reflet de lumière 3D */}
       <div
         ref={shineRef}
-        className="absolute inset-0 pointer-events-none rounded-2xl opacity-0 transition-opacity duration-300 z-10"
-        style={{
-          mixBlendMode: 'overlay',
-        }}
+        className="absolute inset-0 pointer-events-none rounded-2xl opacity-0 z-10 mix-blend-overlay"
       />
       
       {/* Contenu principal (avec petit effet de décalage 3D pour la profondeur) */}
-      <div style={{ transform: 'translateZ(10px)' }}>
+      <div style={{ transform: 'translateZ(20px)' }} className="transition-transform duration-300">
         {children}
       </div>
     </div>

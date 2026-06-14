@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { Home, MessageCircle } from 'lucide-react';
-
 const FLOATING_SHAPES = [
   { size: 80, top: '10%', left: '5%', delay: 0, duration: 6, color: 'bg-indigo-200/30' },
   { size: 50, top: '20%', right: '10%', delay: 1, duration: 7, color: 'bg-violet-200/30' },
@@ -45,7 +44,7 @@ export default function NotFoundPage() {
         {/* 404 giant number */}
         <div className="relative mb-6 select-none">
           <span
-            className="text-[10rem] sm:text-[14rem] font-extrabold font-heading leading-none gradient-text"
+            className="text-[6rem] sm:text-[_5rem] font-extrabold font-heading leading-none gradient-text"
             style={{
               WebkitTextStroke: '2px transparent',
               filter: 'drop-shadow(0 0 60px rgba(99,102,241,0.25))',
@@ -72,7 +71,7 @@ export default function NotFoundPage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             to="/"
-            className="btn-gradient text-white px-8 py-3.5 rounded-2xl font-semibold flex items-center gap-2 group shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 w-full sm:w-auto justify-center"
+            className="btn-gradient text-white p-2 rounded-2xl font-semibold flex items-center gap-2 group shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 w-full sm:w-auto justify-center"
           >
             <Home size={18} />
             Retour à l'accueil
@@ -87,7 +86,7 @@ export default function NotFoundPage() {
         </div>
 
         {/* Fun emoji */}
-        <div className="mt-12 text-5xl" style={{ animation: 'float 4s ease-in-out infinite' }}>
+        <div className="mt-12 text-5xl" style={{ animation: 'float 2s ease-in-out infinite' }}>
           🎓
         </div>
       </div>

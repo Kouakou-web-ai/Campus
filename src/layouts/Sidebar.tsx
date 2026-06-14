@@ -8,6 +8,8 @@ import { useRegistrationStore } from '../store/registrationStore';
 import { useRealtimeDataStore } from '../store/realtimeDataStore';
 import { useChatStore } from '../store/chatStore';
 import { ToastSuccess, ToastError } from '../controllers/Toast-emitter';
+import { useTranslation } from '../hooks/useTranslation';
+import { labelToKeyMap, sectionToKeyMap } from '../constants/translations';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -16,14 +18,15 @@ interface SidebarProps {
 export default function Sidebar({ collapsed = false }: SidebarProps) {
   const { user, logout, deleteAccount } = useAuthStore();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const handleDeleteAccount = async () => {
-    if (window.confirm("ATTENTION : Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action supprimera également toutes vos données associées et est totalement irréversible.")) {
+    if (window.confirm(t('nav.delete_confirm'))) {
       try {
         await deleteAccount();
-        ToastSuccess("Votre compte a été supprimé avec succès.");
+        ToastSuccess(t('nav.delete_success'));
       } catch (err: any) {
-        ToastError(err.message || "Erreur lors de la suppression du compte.");
+        ToastError(err.message || t('nav.delete_error'));
       }
     }
   };
@@ -73,7 +76,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   if (!user) return null;
 
   const navSections = navigationByRole[user.role] ?? [];
-  const roleLabel = roleLabels[user.role];
+  const roleLabel = t(`role.${user.role}`, roleLabels[user.role]);
 
   const isActive = (path: string) => {
     if (path === '/super-admin' || path === '/admin' || path === '/enseignant' || path === '/etudiant' || path === '/parent') {
@@ -107,7 +110,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           <div key={si}>
             {section.title && !collapsed && (
               <p className="text-xs font-semibold text-content-muted uppercase tracking-wider px-2 mb-2">
-                {section.title}
+                {t(sectionToKeyMap[section.title] || section.title)}
               </p>
             )}
             <ul className="space-y-1">
@@ -161,7 +164,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   <li key={item.path}>
                     <Link
                       to={item.path}
-                      title={collapsed ? item.label : undefined}
+                      title={collapsed ? t(labelToKeyMap[item.label] || item.label) : undefined}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
                         active
                           ? 'bg-indigo-50 text-indigo-600 dark:text-indigo-400 shadow-sm'
@@ -180,7 +183,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                         )}
                       </div>
                       {!collapsed && (
-                        <span className="flex-1">{item.label}</span>
+                        <span className="flex-1">{t(labelToKeyMap[item.label] || item.label)}</span>
                       )}
                       {!collapsed && badgeValue && (
                         <span className="text-xs font-bold text-red-500 animate-pulse ml-auto">
@@ -221,7 +224,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
             >
               <li>
                 <Link to="/app/parametres" className="flex items-center gap-2 text-content-secondary font-medium">
-                  <Settings size={14} /> Paramètres
+                  <Settings size={14} /> {t('nav.settings')}
                 </Link>
               </li>
               <li>
@@ -229,7 +232,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   onClick={handleDeleteAccount}
                   className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40 w-full text-left font-medium"
                 >
-                  <Trash2 size={14} /> Supprimer mon compte
+                  <Trash2 size={14} /> {t('nav.delete_account')}
                 </button>
               </li>
               <li>
@@ -237,7 +240,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   onClick={logout}
                   className="flex items-center gap-2 text-red-500 hover:bg-red-50 w-full text-left font-medium"
                 >
-                  <LogOut size={14} /> Déconnexion
+                  <LogOut size={14} /> {t('nav.logout')}
                 </button>
               </li>
             </ul>
@@ -246,7 +249,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           <button
             onClick={logout}
             className="w-full flex justify-center p-2 rounded-xl hover:bg-red-50 text-content-muted hover:text-red-500 transition-colors"
-            title="Déconnexion"
+            title={t('nav.logout')}
           >
             <LogOut size={18} />
           </button>

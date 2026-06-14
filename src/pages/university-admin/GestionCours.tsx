@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { BookOpen, Users, Clock, Plus, X, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { BookOpen, Users, Clock, Plus, X, Trash2, Search } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
@@ -102,8 +103,16 @@ export default function GestionCours() {
     }
   };
 
+  const location = useLocation();
+  const [search, setSearch] = useState(location.state?.search || '');
   const [filterSemester, setFilterSemester] = useState<number | 'tous'>('tous');
   const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.search) {
+      setSearch(location.state.search);
+    }
+  }, [location.state?.search]);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -120,9 +129,15 @@ export default function GestionCours() {
   const [duration, setDuration] = useState(2);
   const [room, setRoom] = useState('Salle 101');
 
-  const filtered = filterSemester === 'tous'
-    ? courses.filter(Boolean)
-    : courses.filter(c => c && c.semester === filterSemester);
+  const filtered = courses.filter(c => {
+    if (!c) return false;
+    if (filterSemester !== 'tous' && c.semester !== filterSemester) return false;
+    if (search.trim()) {
+      const term = search.toLowerCase();
+      if (!(c.title.toLowerCase().includes(term) || c.code.toLowerCase().includes(term))) return false;
+    }
+    return true;
+  });
 
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,6 +252,16 @@ export default function GestionCours() {
         breadcrumbs={[{ label: 'Admin' }, { label: 'Cours' }]}
         actions={
           <div className="flex items-center gap-2">
+            <div className="relative w-full sm:w-48 md:w-64">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Chercher un cours..."
+                className="input-premium px-3 py-2 pl-9 text-sm w-full"
+              />
+            </div>
             <select
               value={filterSemester}
               onChange={e => setFilterSemester(e.target.value === 'tous' ? 'tous' : Number(e.target.value))}
@@ -246,7 +271,7 @@ export default function GestionCours() {
               <option value={1}>Semestre 1</option>
               <option value={2}>Semestre 2</option>
             </select>
-            <button onClick={() => setModalOpen(true)} className="btn-gradient text-sm px-4 py-2 rounded-full font-semibold text-white flex items-center gap-1.5">
+            <button onClick={() => setModalOpen(true)} className="btn-gradient text-sm px-4 py-2 rounded-full font-semibold text-white flex items-center gap-1.5 whitespace-nowrap">
               <Plus size={14} />
               Nouveau cours
             </button>

@@ -2,53 +2,67 @@ import { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
 import * as THREE from 'three';
+import ThreeErrorBoundary from './ThreeErrorBoundary';
 
-function FloatingItem({ geometry, material, speed = 1, bounds = 15 }: any) {
+function FloatingItem({ geometry, material, bounds = 22 }: any) {
   const meshRef = useRef<THREE.Group>(null);
   
-  // Initial state for random positioning and velocity
-  const { pos, vel, rotSpeed } = useMemo(() => {
+  // Random scale for variety
+  const randomScale = useMemo(() => Math.random() * 0.12 + 0.12, []);
+
+  // Initial state for random positioning, drifting velocity, and rotation
+  const { pos, vel, rotSpeed, phase } = useMemo(() => {
+    // Center-focused with spreads
     return {
       pos: [
         (Math.random() - 0.5) * bounds,
-        (Math.random() - 0.5) * (bounds * 0.8),
-        (Math.random() - 0.5) * 5 - 2
+        (Math.random() - 0.5) * (bounds * 0.7),
+        (Math.random() - 0.5) * 8 - 4
       ],
       vel: [
-        (Math.random() - 0.5) * 0.02 * speed,
-        (Math.random() - 0.5) * 0.02 * speed,
-        0
+        (Math.random() - 0.5) * 0.004,
+        (Math.random() - 0.5) * 0.004,
+        (Math.random() - 0.5) * 0.002
       ],
       rotSpeed: [
-        (Math.random() - 0.5) * 0.02,
-        (Math.random() - 0.5) * 0.02,
-        (Math.random() - 0.5) * 0.02
-      ]
+        (Math.random() - 0.5) * 0.005,
+        (Math.random() - 0.5) * 0.005,
+        (Math.random() - 0.5) * 0.005
+      ],
+      phase: Math.random() * Math.PI * 2
     };
-  }, [bounds, speed]);
+  }, [bounds]);
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     if (meshRef.current) {
-      // Update position for continuous scrolling
-      meshRef.current.position.x += vel[0];
-      meshRef.current.position.y += vel[1];
+      // Avoid huge jumps when tab is inactive
+      const timeScale = Math.min(delta * 60, 2);
+      const time = state.clock.getElapsedTime();
       
-      // Update rotation
-      meshRef.current.rotation.x += rotSpeed[0];
-      meshRef.current.rotation.y += rotSpeed[1];
-      meshRef.current.rotation.z += rotSpeed[2];
+      // Slow fluid circulation/drift
+      meshRef.current.position.x += vel[0] * timeScale + Math.sin(time * 0.5 + phase) * 0.0015 * timeScale;
+      meshRef.current.position.y += vel[1] * timeScale + Math.cos(time * 0.5 + phase) * 0.0015 * timeScale;
+      meshRef.current.position.z += vel[2] * timeScale;
 
-      // Wrap around the screen if it goes too far
-      const halfBounds = bounds / 2;
-      if (meshRef.current.position.x > halfBounds) meshRef.current.position.x = -halfBounds;
-      if (meshRef.current.position.x < -halfBounds) meshRef.current.position.x = halfBounds;
-      if (meshRef.current.position.y > halfBounds) meshRef.current.position.y = -halfBounds;
-      if (meshRef.current.position.y < -halfBounds) meshRef.current.position.y = halfBounds;
+      // Gentle rotation
+      meshRef.current.rotation.x += rotSpeed[0] * timeScale;
+      meshRef.current.rotation.y += rotSpeed[1] * timeScale;
+      meshRef.current.rotation.z += rotSpeed[2] * timeScale;
+
+      // Wrap around bounds (bounds represents visible box size)
+      const halfW = bounds / 2;
+      const halfH = (bounds * 0.75) / 2;
+      
+      if (meshRef.current.position.x > halfW) meshRef.current.position.x = -halfW;
+      if (meshRef.current.position.x < -halfW) meshRef.current.position.x = halfW;
+      
+      if (meshRef.current.position.y > halfH) meshRef.current.position.y = -halfH;
+      if (meshRef.current.position.y < -halfH) meshRef.current.position.y = halfH;
     }
   });
 
   return (
-    <group ref={meshRef} position={pos as [number, number, number]}>
+    <group ref={meshRef} position={pos as [number, number, number]} scale={randomScale}>
       {geometry(material)}
     </group>
   );
@@ -56,36 +70,39 @@ function FloatingItem({ geometry, material, speed = 1, bounds = 15 }: any) {
 
 function AnimatedScene() {
   const items = useMemo(() => {
+    // Subtle colors with low opacity and high transmission for glassmorphism look
     const materials = {
-      brandLight: <meshPhysicalMaterial color="#818cf8" transmission={0.9} opacity={1} transparent roughness={0.2} thickness={0.5} clearcoat={1} />,
-      brandPrimary: <meshPhysicalMaterial color="#6366f1" transmission={0.9} opacity={1} transparent roughness={0.2} thickness={0.5} clearcoat={1} />,
-      brandMedium: <meshPhysicalMaterial color="#4f46e5" transmission={0.8} opacity={1} transparent roughness={0.3} thickness={0.5} />,
-      brandDark: <meshPhysicalMaterial color="#4338ca" transmission={0.8} opacity={1} transparent roughness={0.3} thickness={0.5} />,
-      brandDeep: <meshPhysicalMaterial color="#3730a3" transmission={0.8} opacity={1} transparent roughness={0.2} thickness={0.2} />
+      brandLight: <meshPhysicalMaterial color="#818cf8" transmission={0.95} opacity={0.25} transparent roughness={0.1} thickness={0.4} clearcoat={1} />,
+      brandPrimary: <meshPhysicalMaterial color="#6366f1" transmission={0.95} opacity={0.25} transparent roughness={0.1} thickness={0.4} clearcoat={1} />,
+      brandMedium: <meshPhysicalMaterial color="#4f46e5" transmission={0.9} opacity={0.2} transparent roughness={0.2} thickness={0.4} />,
+      brandDark: <meshPhysicalMaterial color="#4338ca" transmission={0.9} opacity={0.2} transparent roughness={0.2} thickness={0.4} />,
+      brandDeep: <meshPhysicalMaterial color="#3730a3" transmission={0.9} opacity={0.2} transparent roughness={0.1} thickness={0.2} />
     };
 
+    // Graduation Cap (Mortarboard) Geometry Builder
     const geometries = [
-      // Book
-      (mat: any) => <mesh scale={0.3} material={mat}><boxGeometry args={[1.5, 2, 0.2]} /></mesh>,
-      // Pencil
       (mat: any) => (
-        <group scale={0.35}>
-          <mesh material={mat}><cylinderGeometry args={[0.1, 0.1, 1.5, 6]} /></mesh>
-          <mesh position={[0, 0.85, 0]}><coneGeometry args={[0.1, 0.3, 6]} /><meshPhysicalMaterial color="#475569" transmission={0.8} roughness={0.2} /></mesh>
-        </group>
-      ),
-      // Folder
-      (mat: any) => (
-        <group scale={0.3}>
-          <mesh material={mat}><boxGeometry args={[1.8, 1.4, 0.1]} /></mesh>
-          <mesh position={[0.1, -0.1, 0.1]}><boxGeometry args={[1.7, 1.3, 0.05]} /><meshPhysicalMaterial color="#a5b4fc" transmission={0.8} roughness={0.2} thickness={0.2} /></mesh>
-        </group>
-      ),
-      // Abstract Rings
-      (mat: any) => (
-        <group scale={0.35}>
-          <mesh material={mat}><torusGeometry args={[0.5, 0.15, 16, 32]} /></mesh>
-          <mesh><sphereGeometry args={[0.3, 32, 32]} /><meshPhysicalMaterial color="#818cf8" transmission={0.5} roughness={0.2} /></mesh>
+        <group>
+          {/* Square flat top cap */}
+          <mesh position={[0, 0.12, 0]} material={mat}>
+            <boxGeometry args={[1.5, 0.05, 1.5]} />
+          </mesh>
+          {/* Head band (base) */}
+          <mesh position={[0, -0.08, 0]} material={mat}>
+            <cylinderGeometry args={[0.5, 0.55, 0.35, 16]} />
+          </mesh>
+          {/* Central button on top */}
+          <mesh position={[0, 0.16, 0]} material={mat}>
+            <sphereGeometry args={[0.08, 8, 8]} />
+          </mesh>
+          {/* Tassel cord (pointing slightly down and out) */}
+          <mesh position={[0.4, 0.1, 0.4]} rotation={[0.2, 0, -0.2]} material={mat}>
+            <boxGeometry args={[0.8, 0.02, 0.02]} />
+          </mesh>
+          {/* Tassel fringe hanging piece */}
+          <mesh position={[0.78, 0.0, 0.4]} material={mat}>
+            <cylinderGeometry args={[0.04, 0.04, 0.2, 8]} />
+          </mesh>
         </group>
       )
     ];
@@ -93,11 +110,11 @@ function AnimatedScene() {
     const generated = [];
     const matKeys = Object.keys(materials);
     
-    // Generate 35 floating items
-    for (let i = 0; i < 35; i++) {
+    // Generate 32 floating caps
+    for (let i = 0; i < 32; i++) {
       const geoParams = geometries[Math.floor(Math.random() * geometries.length)];
       const mat = materials[matKeys[Math.floor(Math.random() * matKeys.length)] as keyof typeof materials];
-      generated.push(<FloatingItem key={i} geometry={geoParams} material={mat} speed={Math.random() * 2 + 0.5} bounds={22} />);
+      generated.push(<FloatingItem key={i} geometry={geoParams} material={mat} bounds={22} />);
     }
     
     return generated;
@@ -105,9 +122,9 @@ function AnimatedScene() {
 
   return (
     <>
-      <ambientLight intensity={0.8} />
+      <ambientLight intensity={0.9} />
       <directionalLight position={[10, 10, 5]} intensity={1.5} />
-      <directionalLight position={[-10, -10, -5]} intensity={0.5} color="#818cf8" />
+      <directionalLight position={[-10, -10, -5]} intensity={0.6} color="#818cf8" />
       
       {items}
       
@@ -118,12 +135,14 @@ function AnimatedScene() {
 
 export default function Hero3DBackground() {
   return (
-    <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.8]">
-      <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
-        <Suspense fallback={null}>
-          <AnimatedScene />
-        </Suspense>
-      </Canvas>
-    </div>
+    <ThreeErrorBoundary>
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.25]">
+        <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
+          <Suspense fallback={null}>
+            <AnimatedScene />
+          </Suspense>
+        </Canvas>
+      </div>
+    </ThreeErrorBoundary>
   );
 }
