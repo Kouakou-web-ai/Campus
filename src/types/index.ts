@@ -44,6 +44,10 @@ export interface University {
   adminUid?: string;
   adminName?: string;
   adminEmail?: string;
+  coursCount?: number;
+  devoirsCount?: number;
+  ressourcesCount?: number;
+  transactionsCount?: number;
 }
 
 export interface Student {

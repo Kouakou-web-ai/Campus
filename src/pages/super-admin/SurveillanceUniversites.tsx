@@ -6,6 +6,7 @@ import ProgressRing from '../../components/ui/ProgressRing';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import type { University } from '../../types';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
+import UniversityManagementModal from '../../components/ui/UniversityManagementModal';
 
 const PLAN_COLORS: Record<string, string> = {
   starter: 'bg-slate-100 text-slate-600',
@@ -13,7 +14,7 @@ const PLAN_COLORS: Record<string, string> = {
   enterprise: 'bg-amber-100 text-amber-700',
 };
 
-function UnivCard({ u }: { u: University }) {
+function UnivCard({ u, onManage }: { u: University; onManage: (id: string) => void }) {
   const occupancy = u.studentsCount > 0 ? Math.min(100, Math.round((u.studentsCount / 5000) * 100)) : 0;
 
   return (
@@ -84,7 +85,10 @@ function UnivCard({ u }: { u: University }) {
 
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
         <span className="text-xs text-slate-400">Depuis le {new Date(u.createdAt).toLocaleDateString('fr-FR')}</span>
-        <button className="text-xs text-indigo-600 font-semibold hover:text-indigo-700 transition-colors">
+        <button
+          onClick={() => onManage(u.id)}
+          className="text-xs text-indigo-600 font-semibold hover:text-indigo-700 transition-colors"
+        >
           Gérer →
         </button>
       </div>
@@ -98,6 +102,7 @@ export default function SurveillanceUniversites() {
   const [filterPlan, setFilterPlan] = useState('tous');
   const [filterStatus, setFilterStatus] = useState('tous');
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedUnivId, setSelectedUnivId] = useState<string | null>(null);
 
   // Form states for new university
   const [newName, setNewName] = useState('');
@@ -207,7 +212,7 @@ export default function SurveillanceUniversites() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(u => (
-            <UnivCard key={u.id} u={u} />
+            <UnivCard key={u.id} u={u} onManage={setSelectedUnivId} />
           ))}
         </div>
       )}
@@ -274,6 +279,12 @@ export default function SurveillanceUniversites() {
           </div>
         </div>
       )}
+
+      <UniversityManagementModal
+        isOpen={selectedUnivId !== null}
+        onClose={() => setSelectedUnivId(null)}
+        universityId={selectedUnivId}
+      />
     </div>
   );
 }

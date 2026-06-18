@@ -47,6 +47,7 @@ interface RealtimeDataState {
   deleteResource: (universityId: string, resourceId: string) => Promise<void>;
   deleteScheduleEvent: (universityId: string, eventId: string) => Promise<void>;
   deleteUniversity: (universityId: string) => Promise<void>;
+  updateUniversity: (universityId: string, data: Partial<Omit<University, 'id' | 'studentsCount' | 'teachersCount' | 'mrr'>>) => Promise<void>;
 }
 
 export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStore) => ({
@@ -243,6 +244,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         const u = data[key];
         const studentsCount = u.etudiants ? Object.keys(u.etudiants).length : 0;
         const teachersCount = u.enseignants ? Object.keys(u.enseignants).length : 0;
+        const coursCount = u.cours ? Object.keys(u.cours).length : 0;
+        const devoirsCount = u.devoirs ? Object.keys(u.devoirs).length : 0;
+        const ressourcesCount = u.ressources ? Object.keys(u.ressources).length : 0;
+        const transactionsCount = u.transactions ? Object.keys(u.transactions).length : 0;
         
         // Calculate dynamic MRR based on plans or payments
         let mrrVal = 0;
@@ -268,6 +273,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
           adminUid: u.adminUid || undefined,
           adminName: u.adminName || undefined,
           adminEmail: u.adminEmail || undefined,
+          coursCount,
+          devoirsCount,
+          ressourcesCount,
+          transactionsCount,
         });
 
         if (u.emails_simules) {
@@ -593,5 +602,19 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   deleteUniversity: async (universityId) => {
     const univRef = ref(db, `universites/${universityId}`);
     await remove(univRef);
+  },
+
+  updateUniversity: async (universityId, data) => {
+    const updates: Record<string, any> = {};
+    if (data.name !== undefined) updates[`universites/${universityId}/branding/name`] = data.name;
+    if (data.city !== undefined) updates[`universites/${universityId}/branding/city`] = data.city;
+    if (data.country !== undefined) updates[`universites/${universityId}/branding/country`] = data.country;
+    if (data.plan !== undefined) updates[`universites/${universityId}/plan`] = data.plan;
+    if (data.status !== undefined) updates[`universites/${universityId}/status`] = data.status;
+    if (data.adminUid !== undefined) updates[`universites/${universityId}/adminUid`] = data.adminUid;
+    if (data.adminName !== undefined) updates[`universites/${universityId}/adminName`] = data.adminName;
+    if (data.adminEmail !== undefined) updates[`universites/${universityId}/adminEmail`] = data.adminEmail;
+    
+    await update(ref(db), updates);
   }
 }));

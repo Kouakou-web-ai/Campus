@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Users, Building2, TrendingUp, AlertCircle } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -9,6 +10,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import ThreeDCard from '../../components/ui/ThreeDCard';
+import UniversityManagementModal from '../../components/ui/UniversityManagementModal';
 
 // STATS will be defined dynamically inside the component
 
@@ -32,6 +34,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 
 export default function SuperAdminDashboard() {
   const { universities, revenueData, loading } = useRealtimeDataStore();
+  const [selectedUnivId, setSelectedUnivId] = useState<string | null>(null);
 
   const totalMRR = universities.reduce((sum, u) => sum + u.mrr, 0);
   const totalStudents = universities.reduce((sum, u) => sum + u.studentsCount, 0);
@@ -188,7 +191,11 @@ export default function SuperAdminDashboard() {
             </thead>
             <tbody>
               {universities.map(u => (
-                <tr key={u.id} className="cursor-pointer">
+                <tr
+                  key={u.id}
+                  className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                  onClick={() => setSelectedUnivId(u.id)}
+                >
                   <td>
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
@@ -223,6 +230,12 @@ export default function SuperAdminDashboard() {
           </table>
         </div>
       </div>
+
+      <UniversityManagementModal
+        isOpen={selectedUnivId !== null}
+        onClose={() => setSelectedUnivId(null)}
+        universityId={selectedUnivId}
+      />
     </div>
   );
 }
