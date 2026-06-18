@@ -186,7 +186,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="text-xl text-slate-500 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                La solution SaaS moderne pour centraliser la scolarité, les notes, la pédagogie et les règlements de scolarité par Mobile Money et virement.
+                Révolutionnez la gestion de votre université : centralisez les dossiers académiques, automatisez le suivi pédagogique et connectez instantanément l'administration, les enseignants, les étudiants et les parents.
               </p>
 
               {/* CTAs */}

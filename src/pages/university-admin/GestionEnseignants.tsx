@@ -8,10 +8,11 @@ import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { useAuthStore } from '../../store/authStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 import ImportModal from '../../components/ui/ImportModal';
+import TeacherProfileModal from '../../components/ui/TeacherProfileModal';
 
 export default function GestionEnseignants() {
   const { user } = useAuthStore();
-  const { teachers, addTeacher, deleteTeacher, loading } = useRealtimeDataStore();
+  const { teachers, courses, students, addTeacher, deleteTeacher, loading } = useRealtimeDataStore();
 
   const handleDelete = async (teacherId: string) => {
     if (!user?.universityId) return;
@@ -28,6 +29,7 @@ export default function GestionEnseignants() {
   const [search, setSearch] = useState(location.state?.search || '');
   const [modalOpen, setModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [selectedTeacherForProfile, setSelectedTeacherForProfile] = useState<any | null>(null);
 
   useEffect(() => {
     if (location.state?.search) {
@@ -98,12 +100,25 @@ export default function GestionEnseignants() {
     );
   }
 
-  const activeTeachers = teachers.filter(t => t && t.status === 'actif').length;
-  const totalCourses = teachers.reduce((s, t) => s + ((t && t.coursCount) || 0), 0);
-  const totalStudents = teachers.reduce((s, t) => s + ((t && t.studentsCount) || 0), 0);
+  const teachersWithStats = teachers.map(t => {
+    if (!t) return null;
+    const teacherCourses = courses.filter(c => c.teacherId === t.id);
+    const teacherFilieres = [...new Set(teacherCourses.map(c => c.filiere))];
+    const teacherStudents = students.filter(s => teacherFilieres.includes(s.filiere));
+    return {
+      ...t,
+      coursCount: teacherCourses.length,
+      studentsCount: teacherStudents.length,
+      courses: teacherCourses,
+      students: teacherStudents
+    };
+  }).filter(Boolean) as any[];
 
-  const filteredTeachers = teachers.filter(t => {
-    if (!t) return false;
+  const activeTeachers = teachersWithStats.filter(t => t.status === 'actif').length;
+  const totalCourses = teachersWithStats.reduce((s, t) => s + t.coursCount, 0);
+  const totalStudents = teachersWithStats.reduce((s, t) => s + t.studentsCount, 0);
+
+  const filteredTeachers = teachersWithStats.filter(t => {
     const term = search.toLowerCase();
     return (t.name?.toLowerCase() || '').includes(term) || (t.email?.toLowerCase() || '').includes(term);
   });
@@ -201,9 +216,13 @@ export default function GestionEnseignants() {
               {/* Actions */}
               <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
                 <span className="text-xs text-slate-400 flex-1 truncate">{teacher.email}</span>
-                <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                <a
+                  href={`mailto:${teacher.email}`}
+                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                  title="Envoyer un e-mail"
+                >
                   <Mail size={14} />
-                </button>
+                </a>
                 <button
                   onClick={() => handleDelete(teacher.id)}
                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -211,7 +230,10 @@ export default function GestionEnseignants() {
                 >
                   <Trash2 size={14} />
                 </button>
-                <button className="text-xs text-indigo-600 font-semibold hover:text-indigo-700 px-3 py-1.5 bg-indigo-50 rounded-lg transition-colors">
+                <button
+                  onClick={() => setSelectedTeacherForProfile(teacher)}
+                  className="text-xs text-indigo-600 font-semibold hover:text-indigo-700 px-3 py-1.5 bg-indigo-50 rounded-lg transition-colors"
+                >
                   Voir profil
                 </button>
               </div>
@@ -293,6 +315,12 @@ export default function GestionEnseignants() {
           onImport={handleImportTeachers}
         />
       )}
+
+      <TeacherProfileModal
+        isOpen={selectedTeacherForProfile !== null}
+        onClose={() => setSelectedTeacherForProfile(null)}
+        teacher={selectedTeacherForProfile}
+      />
     </div>
   );
 }

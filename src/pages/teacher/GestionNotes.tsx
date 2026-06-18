@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
@@ -29,6 +29,11 @@ export default function GestionNotes() {
     }
   }, [myCourses, selectedCourse]);
 
+  const course = myCourses.find(c => c.id === selectedCourse);
+  const courseStudents = useMemo(() => {
+    return course ? students.filter(s => s.filiere === course.filiere) : [];
+  }, [course, students]);
+
   // Load existing grades into local state when selected course or grades list change
   useEffect(() => {
     if (!selectedCourse) return;
@@ -36,7 +41,7 @@ export default function GestionNotes() {
     const initialMap: typeof localGrades = {};
     
     // Default: every student has no grade
-    students.forEach(s => {
+    courseStudents.forEach(s => {
       initialMap[s.id] = {
         note: undefined,
         appreciation: '',
@@ -58,9 +63,7 @@ export default function GestionNotes() {
 
     setLocalGrades(initialMap);
     setSaved(false);
-  }, [selectedCourse, grades, students]);
-
-  const course = myCourses.find(c => c.id === selectedCourse);
+  }, [selectedCourse, grades, courseStudents]);
 
   const updateNote = (studentId: string, noteStr: string) => {
     const val = noteStr === '' ? undefined : parseFloat(noteStr);
@@ -228,14 +231,14 @@ export default function GestionNotes() {
             {course && (
               <div className="md:ml-auto flex flex-wrap items-center gap-4 text-xs md:text-sm text-slate-500">
                 <span>Moyenne classe : <strong className="text-indigo-600">{avg}/20</strong></span>
-                <span>Évalués : <strong className="text-slate-800">{enteredGrades.length}/{students.length}</strong></span>
+                <span>Évalués : <strong className="text-slate-800">{enteredGrades.length}/{courseStudents.length}</strong></span>
               </div>
             )}
           </div>
 
-          {students.length === 0 ? (
+          {courseStudents.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-3xl border border-slate-100">
-              <p className="text-slate-400 text-sm">Aucun étudiant inscrit dans l'établissement pour saisir des notes.</p>
+              <p className="text-slate-400 text-sm">Aucun étudiant inscrit dans cette filière pour saisir des notes.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -255,7 +258,7 @@ export default function GestionNotes() {
                       </tr>
                     </thead>
                     <tbody>
-                      {students.map(student => {
+                      {courseStudents.map(student => {
                         const local = localGrades[student.id] || { note: undefined, appreciation: '', submitted: false };
                         return (
                           <tr key={student.id}>

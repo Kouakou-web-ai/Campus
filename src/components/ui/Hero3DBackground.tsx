@@ -1,6 +1,5 @@
-import { useRef, useMemo, Suspense } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import ThreeErrorBoundary from './ThreeErrorBoundary';
 
@@ -70,13 +69,13 @@ function FloatingItem({ geometry, material, bounds = 22 }: any) {
 
 function AnimatedScene() {
   const items = useMemo(() => {
-    // Subtle colors with low opacity and high transmission for glassmorphism look
+    // Standard materials are much faster than Physical materials with transmission
     const materials = {
-      brandLight: <meshPhysicalMaterial color="#818cf8" transmission={0.95} opacity={0.25} transparent roughness={0.1} thickness={0.4} clearcoat={1} />,
-      brandPrimary: <meshPhysicalMaterial color="#6366f1" transmission={0.95} opacity={0.25} transparent roughness={0.1} thickness={0.4} clearcoat={1} />,
-      brandMedium: <meshPhysicalMaterial color="#4f46e5" transmission={0.9} opacity={0.2} transparent roughness={0.2} thickness={0.4} />,
-      brandDark: <meshPhysicalMaterial color="#4338ca" transmission={0.9} opacity={0.2} transparent roughness={0.2} thickness={0.4} />,
-      brandDeep: <meshPhysicalMaterial color="#3730a3" transmission={0.9} opacity={0.2} transparent roughness={0.1} thickness={0.2} />
+      brandLight: <meshStandardMaterial color="#818cf8" transparent opacity={0.35} roughness={0.2} metalness={0.1} />,
+      brandPrimary: <meshStandardMaterial color="#6366f1" transparent opacity={0.35} roughness={0.2} metalness={0.1} />,
+      brandMedium: <meshStandardMaterial color="#4f46e5" transparent opacity={0.3} roughness={0.3} metalness={0.1} />,
+      brandDark: <meshStandardMaterial color="#4338ca" transparent opacity={0.3} roughness={0.3} metalness={0.1} />,
+      brandDeep: <meshStandardMaterial color="#3730a3" transparent opacity={0.3} roughness={0.2} metalness={0.1} />
     };
 
     // Graduation Cap (Mortarboard) Geometry Builder
@@ -110,8 +109,8 @@ function AnimatedScene() {
     const generated = [];
     const matKeys = Object.keys(materials);
     
-    // Generate 32 floating caps
-    for (let i = 0; i < 32; i++) {
+    // Generate 12 floating caps for optimal background performance
+    for (let i = 0; i < 12; i++) {
       const geoParams = geometries[Math.floor(Math.random() * geometries.length)];
       const mat = materials[matKeys[Math.floor(Math.random() * matKeys.length)] as keyof typeof materials];
       generated.push(<FloatingItem key={i} geometry={geoParams} material={mat} bounds={22} />);
@@ -122,25 +121,33 @@ function AnimatedScene() {
 
   return (
     <>
-      <ambientLight intensity={0.9} />
-      <directionalLight position={[10, 10, 5]} intensity={1.5} />
-      <directionalLight position={[-10, -10, -5]} intensity={0.6} color="#818cf8" />
+      <ambientLight intensity={1.2} />
+      <directionalLight position={[10, 10, 5]} intensity={1.8} />
+      <directionalLight position={[-10, -10, -5]} intensity={0.8} color="#818cf8" />
       
       {items}
-      
-      <Environment preset="city" />
     </>
   );
 }
 
 export default function Hero3DBackground() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    setIsMobile(media.matches);
+    const listener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, []);
+
+  if (isMobile) return null;
+
   return (
     <ThreeErrorBoundary>
       <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.25]">
-        <Canvas camera={{ position: [0, 0, 10], fov: 45 }}>
-          <Suspense fallback={null}>
-            <AnimatedScene />
-          </Suspense>
+        <Canvas camera={{ position: [0, 0, 10], fov: 45 }} dpr={1}>
+          <AnimatedScene />
         </Canvas>
       </div>
     </ThreeErrorBoundary>

@@ -6,8 +6,8 @@ import * as THREE from 'three';
 import ThreeErrorBoundary from './ThreeErrorBoundary';
 
 const COLORS = {
-  light: { particles: ['#6366f1', '#a855f7', '#06b6d4'], mesh: '99, 102, 241' },
-  dark: { particles: ['#ffffff', '#cbd5e1', '#38bdf8'], mesh: '255, 255, 255' },
+  light: { particles: ['#4f46e5', '#6366f1', '#818cf8'], mesh: '79, 70, 229' },
+  dark: { particles: ['#818cf8', '#6366f1', '#a5b4fc'], mesh: '129, 140, 248' },
 } as const;
 
 function Particles({ shapeMode }: { shapeMode: 'sphere' | 'torus' | 'wave' | 'helix' }) {
@@ -85,9 +85,9 @@ function Particles({ shapeMode }: { shapeMode: 'sphere' | 'torus' | 'wave' | 'he
   }, [themeColors]);
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      <sphereGeometry args={[2.5, 16, 16]} />
-      <meshBasicMaterial />
+    <instancedMesh ref={meshRef} args={[undefined, undefined, count]} castShadow receiveShadow>
+      <sphereGeometry args={[3.2, 20, 20]} />
+      <meshStandardMaterial vertexColors roughness={0.25} metalness={0.15} />
     </instancedMesh>
   );
 }
@@ -125,6 +125,7 @@ function CSSParticleFallback() {
 export default function ThreeDCanvas() {
   const [shapeMode, setShapeMode] = useState<'sphere' | 'torus' | 'wave' | 'helix'>('sphere');
   const [dpr, setDpr] = useState(1.5);
+  const mode = useThemeStore((s) => s.mode);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -142,6 +143,9 @@ export default function ThreeDCanvas() {
     <ThreeErrorBoundary fallback={<CSSParticleFallback />}>
       <div className="w-full h-[320px] sm:h-[450px] relative group select-none">
         <Canvas dpr={dpr} camera={{ position: [0, 0, 400], fov: 45 }} style={{ cursor: 'grab' }}>
+          <ambientLight intensity={1.2} />
+          <directionalLight position={[150, 150, 150]} intensity={1.5} />
+          <pointLight position={[-150, -150, 150]} intensity={0.8} color={mode === 'dark' ? '#818cf8' : '#4f46e5'} />
           <PerformanceMonitor onDecline={() => setDpr(1)} onIncline={() => setDpr(2)} />
           <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0.5} />
           <Particles shapeMode={shapeMode} />

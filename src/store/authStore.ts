@@ -68,12 +68,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (role, email = 'user@campus.fr') => {
     set({ loading: true });
     const mockUser: User = {
-      id: `usr-${role.toLowerCase()}`,
-      name: `Démo ${role.replace('_', ' ')}`,
-      email,
+      id: role === 'TEACHER' ? 't1' : role === 'STUDENT' ? 's1' : `usr-${role.toLowerCase()}`,
+      name: role === 'TEACHER' ? 'Prof. Koffi Kouamé Alexandre' : role === 'STUDENT' ? 'Koffi Yao Stéphane' : `Démo ${role.replace('_', ' ')}`,
+      email: role === 'TEACHER' ? 'a.koffi@univ-ufhb.ci' : role === 'STUDENT' ? 'stephane.koffi@univ-ufhb.ci' : email,
       role,
       status: 'active',
       universityId: role === 'SUPER_ADMIN' ? null : 'univ-ufhb',
+      filiere: role === 'STUDENT' ? 'Informatique' : undefined,
+      annee: role === 'STUDENT' ? 3 : undefined,
     };
     
     await new Promise((resolve) => setTimeout(resolve, 800));
@@ -315,6 +317,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         universityId,
         uid: fbUser.uid,
         createdDate: new Date().toISOString(),
+        filiere: invitedEntity?.filiere || undefined,
+        annee: invitedEntity?.annee !== undefined ? Number(invitedEntity.annee) : undefined,
+        specialite: invitedEntity?.specialite || undefined,
       });
 
       // 5. Create the real student or teacher record using details from the invitation

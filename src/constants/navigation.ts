@@ -41,7 +41,6 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
         { label: 'Analytiques revenus', path: '/app/super-admin/revenus', icon: TrendingUp },
         { label: 'Universités', path: '/app/super-admin/universites', icon: Building2 },
         { label: 'Demandes administrateurs', path: '/app/super-admin/demandes', icon: UserCheck },
-        { label: 'Emails envoyés', path: '/app/super-admin/emails', icon: Mail },
       ],
     },
   ],
@@ -68,8 +67,8 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
       items: [
         { label: 'Tableau de bord', path: '/app/enseignant', icon: LayoutDashboard },
         { label: 'Gestion des notes', path: '/app/enseignant/notes', icon: ClipboardList },
+        { label: 'Feuille d\'appel', path: '/app/enseignant/absences', icon: UserCheck },
         { label: 'Devoirs', path: '/app/enseignant/devoirs', icon: FileText },
-        { label: 'Ressources', path: '/app/enseignant/ressources', icon: Library },
         { label: 'Messagerie', path: '/app/messagerie', icon: MessageSquare },
       ],
     },

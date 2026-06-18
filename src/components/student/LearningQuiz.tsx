@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, Award, RotateCcw, Check, ChevronRight, HelpCircle, Lock, BookOpenCheck } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 import { FILIERE_QUIZZES } from '../../constants/quizData';
 import type { ChapterData } from '../../constants/quizData';
 
 export default function LearningQuiz() {
   const { user } = useAuthStore();
+  const { students } = useRealtimeDataStore();
   
   // Detect major (filière) with fallback to informatique
   const getFiliereKey = (filiere: string | undefined): string => {
@@ -17,9 +19,12 @@ export default function LearningQuiz() {
     return 'informatique';
   };
 
-  const filiereKey = getFiliereKey(user?.filiere);
+  const currentStudent = students.find((s) => s.id === user?.id || s.email === user?.email);
+  const studentFiliere = currentStudent?.filiere || user?.filiere || 'Informatique';
+
+  const filiereKey = getFiliereKey(studentFiliere);
   const chapters: ChapterData[] = FILIERE_QUIZZES[filiereKey] || FILIERE_QUIZZES['informatique'];
-  const filiereDisplayName = user?.filiere || 'Informatique';
+  const filiereDisplayName = studentFiliere;
 
   // State for unlocked level (1 to 10)
   const progressKey = `campus_quiz_progress_${user?.id || 'guest'}_${filiereKey}`;

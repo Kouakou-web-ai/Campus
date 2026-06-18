@@ -17,6 +17,8 @@ interface RealtimeDataState {
   currentUniversity: University | null;
   announcements: any[];
   emailsSimules: any[];
+  cahierDeTextes: any[];
+  quizzes: any[];
   loading: boolean;
   
   subscribeToUniversity: (universityId: string) => () => void;
@@ -61,6 +63,8 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   currentUniversity: null,
   announcements: [],
   emailsSimules: [],
+  cahierDeTextes: [],
+  quizzes: [],
   loading: false,
 
   subscribeToUniversity: (universityId: string) => {
@@ -204,7 +208,17 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
     // 17. Emails simulés
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/emails_simules`), (snap) => {
-      setStore({ emailsSimules: parseList(snap.val()), loading: false });
+      setStore({ emailsSimules: parseList(snap.val()) });
+    }));
+
+    // 18. Cahier de textes
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/cahier_de_textes`), (snap) => {
+      setStore({ cahierDeTextes: parseList(snap.val()) });
+    }));
+
+    // 19. Quizzes
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/quizzes`), (snap) => {
+      setStore({ quizzes: parseList(snap.val()), loading: false });
     }));
 
     return () => {

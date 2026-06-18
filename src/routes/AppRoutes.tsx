@@ -38,7 +38,7 @@ const CentreFinancier     = React.lazy(() => import('../pages/university-admin/C
 const TeacherDashboard       = React.lazy(() => import('../pages/teacher/Dashboard').then(m => ({ default: m.TeacherDashboard })));
 const GestionNotes           = React.lazy(() => import('../pages/teacher/GestionNotes'));
 const PublicationDevoirs     = React.lazy(() => import('../pages/teacher/PublicationDevoirs'));
-const RessourcesPedagogiques = React.lazy(() => import('../pages/teacher/RessourcesPedagogiques'));
+const GestionAbsences        = React.lazy(() => import('../pages/teacher/GestionAbsences'));
 const EmailsSimules          = React.lazy(() => import('../pages/shared/EmailsSimules'));
 const Messagerie             = React.lazy(() => import('../pages/shared/Messagerie'));
 const ParametresProfil       = React.lazy(() => import('../pages/shared/ParametresProfil'));
@@ -141,7 +141,7 @@ function AnimatedRoutes() {
               <Route path="super-admin/revenus"      element={<AnalytiquesRevenu />} />
               <Route path="super-admin/universites"  element={<SurveillanceUniversites />} />
               <Route path="super-admin/demandes"     element={<DemandesAdministrateurs />} />
-              <Route path="super-admin/emails"       element={<EmailsSimules />} />
+              {/* <Route path="super-admin/emails"       element={<EmailsSimules />} /> */}
             </Route>
 
             {/* University Admin */}
@@ -159,7 +159,7 @@ function AnimatedRoutes() {
               <Route path="enseignant"           element={<TeacherDashboard />} />
               <Route path="enseignant/notes"     element={<GestionNotes />} />
               <Route path="enseignant/devoirs"   element={<PublicationDevoirs />} />
-              <Route path="enseignant/ressources" element={<RessourcesPedagogiques />} />
+              <Route path="enseignant/absences"  element={<GestionAbsences />} />
             </Route>
 
             {/* Student */}

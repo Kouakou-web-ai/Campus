@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer,
 } from 'recharts';
@@ -6,7 +7,9 @@ import PageHeader from '../../components/ui/PageHeader';
 import ChartCard from '../../components/ui/ChartCard';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { useAuthStore } from '../../store/authStore';
-import { Award } from 'lucide-react';
+import { Award, Link2 } from 'lucide-react';
+import { ref, onValue, off } from 'firebase/database';
+import { db } from '../../../firebase-config';
 
 const getMentionColor = (note: number) => {
   if (note >= 16) return 'text-violet-600 bg-violet-50';
@@ -17,16 +20,35 @@ const getMentionColor = (note: number) => {
 };
 
 export default function SuiviAcademique() {
+  const { user } = useAuthStore();
   const { students, grades, courses } = useRealtimeDataStore();
+  const [linkedIds, setLinkedIds] = useState<string[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
 
+  // Subscribe to parent's linked children in Firebase
   useEffect(() => {
-    if (students.length > 0 && !selectedStudentId) {
-      setSelectedStudentId(students[0].id);
-    }
-  }, [students, selectedStudentId]);
+    if (!user) return;
+    const enfantsRef = ref(db, `utilisateurs/${user.id}/enfants`);
+    const unsub = onValue(enfantsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setLinkedIds(Object.keys(data));
+      } else {
+        setLinkedIds([]);
+      }
+    });
+    return () => off(enfantsRef, 'value', unsub);
+  }, [user]);
 
-  const child = students.find(s => s.id === selectedStudentId);
+  const myChildren = students.filter(s => linkedIds.includes(s.id));
+
+  useEffect(() => {
+    if (myChildren.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(myChildren[0].id);
+    }
+  }, [myChildren, selectedStudentId]);
+
+  const child = myChildren.find(s => s.id === selectedStudentId);
 
   // Filter child grades
   const childGrades = child ? grades.filter(g => g.studentId === child.id && g.note !== undefined) : [];
@@ -72,13 +94,19 @@ export default function SuiviAcademique() {
         breadcrumbs={[{ label: 'Parent' }, { label: 'Académique' }]}
       />
 
-      {students.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-md">
-          <Award className="mx-auto text-slate-300 mb-3" size={48} />
-          <h3 className="text-lg font-semibold text-slate-700">Aucun résultat</h3>
-          <p className="text-slate-400 text-sm max-w-sm mx-auto mt-1">
-            Les relevés de notes apparaîtront une fois saisis par l'établissement.
+      {myChildren.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-md max-w-lg mx-auto animate-fade-up">
+          <Link2 className="mx-auto text-indigo-500 mb-4 animate-bounce" size={48} />
+          <h3 className="text-lg font-bold text-slate-800">Aucun enfant lié</h3>
+          <p className="text-slate-500 text-sm max-w-sm mx-auto mt-2 mb-6">
+            Veuillez d'abord lier le compte de votre enfant avec son matricule et son adresse e-mail.
           </p>
+          <Link
+            to="/app/parent"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-6 py-2.5 rounded-xl transition-colors shadow-md"
+          >
+            Lier un enfant
+          </Link>
         </div>
       ) : (
         <>
@@ -90,7 +118,7 @@ export default function SuiviAcademique() {
               onChange={e => setSelectedStudentId(e.target.value)}
               className="input-premium flex-1 max-w-xs px-3 py-2 text-sm"
             >
-              {students.map(s => (
+              {myChildren.map(s => (
                 <option key={s.id} value={s.id}>{s.name} ({s.studentId})</option>
               ))}
             </select>
