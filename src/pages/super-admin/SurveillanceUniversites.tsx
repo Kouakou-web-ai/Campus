@@ -15,7 +15,7 @@ const PLAN_COLORS: Record<string, string> = {
 };
 
 function UnivCard({ u, onManage }: { u: University; onManage: (id: string) => void }) {
-  const occupancy = u.studentsCount > 0 ? Math.min(100, Math.round((u.studentsCount / 5000) * 100)) : 0;
+  const occupancy = u.studentsCount > 0 ? Math.min(100, Math.round((u.studentsCount / (u.plan === 'starter' ? 500 : u.plan === 'pro' ? 5000 : 999999)) * 100)) : 0;
 
   return (
     <div className="card-premium p-6 group hover:shadow-xl transition-all duration-300">
@@ -132,7 +132,7 @@ export default function SurveillanceUniversites() {
         status: 'actif',
         studentsCount: 0,
         teachersCount: 0,
-        mrr: newPlan === 'enterprise' ? 12450000 : newPlan === 'pro' ? 3800000 : 650000,
+        mrr: newPlan === 'enterprise' ? 250000 : newPlan === 'pro' ? 100000 : 50000,
         createdAt: new Date().toISOString().split('T')[0]
       });
       ToastSuccess("Université ajoutée avec succès !");
@@ -263,9 +263,9 @@ export default function SurveillanceUniversites() {
                   onChange={e => setNewPlan(e.target.value as any)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="starter">Starter (650 000 FCFA / mois)</option>
-                  <option value="pro">Pro (3 800 000 FCFA / mois)</option>
-                  <option value="enterprise">Entreprise (12 450 000 FCFA / mois)</option>
+                  <option value="starter">Starter (50 000 FCFA / mois)</option>
+                  <option value="pro">Pro (100 000 FCFA / mois)</option>
+                  <option value="enterprise">Entreprise (Sur devis)</option>
                 </select>
               </div>
               <button

@@ -58,9 +58,7 @@ export default function PublicLayout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md transition-transform group-hover:scale-105">
-                <GraduationCap size={18} className="text-white" />
-              </div>
+              <img src="/images/logo-original.png" alt="Campus Logo" className="w-9 h-9 rounded-xl shadow-md transition-transform group-hover:scale-105 object-cover" />
               <span className="font-heading font-bold text-xl text-content">CAMPUS</span>
             </Link>
 
@@ -293,9 +291,7 @@ export default function PublicLayout() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-                  <GraduationCap size={18} className="text-white" />
-                </div>
+                <img src="/images/logo-original.png" alt="Campus Logo" className="w-9 h-9 rounded-xl object-cover" />
                 <span className="font-heading font-bold text-xl text-white">CAMPUS</span>
               </div>
               <p className="text-sm text-slate-500 leading-relaxed">

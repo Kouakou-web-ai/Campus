@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { applyTheme } from './themeStore';
 import { auth, googleProvider } from '../../firebase-config';
-import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, deleteUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, deleteUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import axios from 'axios';
 import { normalizeUserStatus } from '../constants/accountStatus';
 import type { UserStatus } from '../types/userAccount';
@@ -58,6 +58,7 @@ interface AuthState {
   refreshUserProfile: () => Promise<void>;
   updateUserProfile: (data: { name?: string; currentPassword?: string; newPassword?: string; theme?: string }) => Promise<void>;
   deleteAccount: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -526,6 +527,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (err.code === 'auth/requires-recent-login') {
         throw new Error("Sécurité : Veuillez vous déconnecter et vous reconnecter, puis réessayer la suppression.");
       }
+      throw err;
+    }
+  },
+
+  sendPasswordReset: async (email) => {
+    set({ loading: true });
+    try {
+      await sendPasswordResetEmail(auth, email);
+      set({ loading: false });
+    } catch (err) {
+      set({ loading: false });
       throw err;
     }
   },

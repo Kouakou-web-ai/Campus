@@ -91,9 +91,9 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
     const updateCurrentUniversity = () => {
       let mrrVal = 0;
-      if (plan === 'enterprise') mrrVal = 12450000;
-      else if (plan === 'pro') mrrVal = 3800000;
-      else mrrVal = 650000;
+      if (plan === 'enterprise') mrrVal = 250000;
+      else if (plan === 'pro') mrrVal = 100000;
+      else mrrVal = 50000;
 
       setStore({
         currentUniversity: {
@@ -251,9 +251,9 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         
         // Calculate dynamic MRR based on plans or payments
         let mrrVal = 0;
-        if (u.plan === 'enterprise') mrrVal = 12450000;
-        else if (u.plan === 'pro') mrrVal = 3800000;
-        else mrrVal = 650000;
+        if (u.plan === 'enterprise') mrrVal = 250000;
+        else if (u.plan === 'pro') mrrVal = 100000;
+        else mrrVal = 50000;
 
         totalStudents += studentsCount;
         totalTeachers += teachersCount;

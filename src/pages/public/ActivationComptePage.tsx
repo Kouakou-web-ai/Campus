@@ -123,9 +123,7 @@ export default function ActivationComptePage() {
     <div className="animate-fade-up max-w-md mx-auto">
       <div className="mb-8 text-center">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-100">
-            <GraduationCap size={22} className="text-white" />
-          </div>
+          <img src="/images/logo-original.png" alt="Campus Logo" className="w-11 h-11 rounded-2xl shadow-lg object-cover" />
           <span className="font-heading font-black text-2xl tracking-tight text-slate-900">CAMPUS</span>
         </div>
         <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Activation du compte</h2>

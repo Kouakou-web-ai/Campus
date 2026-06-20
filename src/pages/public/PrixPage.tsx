@@ -15,7 +15,6 @@ const PLANS = [
     badge: null,
     features: [
       'Jusqu\'à 500 étudiants',
-      '3 administrateurs',
       'Gestion des cours',
       'Suivi des présences',
       'Paiements basiques',
@@ -33,7 +32,6 @@ const PLANS = [
     badge: 'Le plus populaire',
     features: [
       'Jusqu\'à 5 000 étudiants',
-      '15 administrateurs',
       'Toutes les fonctionnalités Starter',
       'Analytiques avancées',
       'Rapports personnalisés',
@@ -53,7 +51,6 @@ const PLANS = [
     badge: 'Sur devis',
     features: [
       'Étudiants illimités',
-      'Administrateurs illimités',
       'Toutes les fonctionnalités Pro',
       'Infrastructure dédiée',
       'SLA 99.99% garanti',

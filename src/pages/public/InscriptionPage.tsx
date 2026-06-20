@@ -163,9 +163,7 @@ export default function InscriptionPage() {
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <GraduationCap size={24} className="text-white" />
-            </div>
+            <img src="/images/logo-original.png" alt="Campus Logo" className="w-12 h-12 rounded-2xl shadow-lg object-cover" />
             <span className="font-heading font-black text-2xl tracking-tight text-content">CAMPUS</span>
           </div>
           <h2 className="text-3xl font-extrabold text-content tracking-tight">Inscription Établissement</h2>
@@ -175,14 +173,12 @@ export default function InscriptionPage() {
         {/* Form Container */}
         <form 
           onSubmit={handleSignup} 
-          className="space-y-6 bg-surface border border-border-subtle p-8 sm:p-10 rounded-3xl shadow-xl shadow-slate-100/5 dark:shadow-none transition-colors"
+          className="space-y-8 bg-surface border border-border-subtle p-8 sm:p-10 rounded-3xl shadow-xl shadow-slate-100/5 dark:shadow-none transition-colors"
         >
           {/* Invitation Banner */}
           {isInvited && (
             <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl flex items-start gap-3 text-indigo-800 dark:text-indigo-200">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                <GraduationCap size={18} className="text-indigo-600 dark:text-indigo-400" />
-              </div>
+              <img src="/images/logo-original.png" alt="Campus Logo" className="w-8 h-8 rounded-lg shrink-0 mt-0.5 object-cover" />
               <div className="text-xs">
                 <p className="font-bold text-sm mb-0.5">Invitation Académique Détectée</p>
                 <p className="leading-relaxed">
@@ -411,7 +407,7 @@ export default function InscriptionPage() {
             S'inscrire avec Google
           </button>
 
-          <p className="text-center text-sm text-content-secondary">
+          <p className="text-center text-sm text-content-secondary pt-2">
             Déjà inscrit ?{' '}
             <Link to="/connexion" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
               Se connecter

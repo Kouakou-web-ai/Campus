@@ -14,21 +14,21 @@ interface UniversityManagementModalProps {
 const PLAN_FEATURES = {
   starter: {
     name: 'Starter',
-    price: '650 000 FCFA',
+    price: '50 000 FCFA / mois',
     quota: '500 étudiants',
-    features: ['Accès aux fonctionnalités de base', 'Support par email', '1 administrateur académique']
+    features: ['Accès aux fonctionnalités de base', 'Support par email']
   },
   pro: {
     name: 'Pro',
-    price: '3 800 000 FCFA',
+    price: '100 000 FCFA / mois',
     quota: '5 000 étudiants',
-    features: ['Toutes les fonctionnalités', 'Support prioritaire 24/7', 'Jusqu\'à 5 administrateurs académiques', 'Messagerie intégrée']
+    features: ['Toutes les fonctionnalités', 'Support prioritaire 24/7', 'Messagerie intégrée']
   },
   enterprise: {
     name: 'Entreprise',
-    price: '12 450 000 FCFA',
+    price: 'Sur devis',
     quota: 'Étudiants illimités',
-    features: ['Infrastructure dédiée', 'Support ultra-prioritaire dédié', 'Administrateurs illimités', 'Fonctionnalités sur-mesure']
+    features: ['Infrastructure dédiée', 'Support ultra-prioritaire dédié', 'Fonctionnalités sur-mesure']
   }
 };
 

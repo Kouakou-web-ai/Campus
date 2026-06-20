@@ -32,7 +32,7 @@ export const mockUniversities: University[] = [
     status: 'actif',
     studentsCount: 64200,
     teachersCount: 1850,
-    mrr: 8125000,
+    mrr: 250000,
     createdAt: '2023-09-01',
   },
   {
@@ -44,7 +44,7 @@ export const mockUniversities: University[] = [
     status: 'actif',
     studentsCount: 32000,
     teachersCount: 920,
-    mrr: 3800000,
+    mrr: 100000,
     createdAt: '2024-01-15',
   },
   {
@@ -56,7 +56,7 @@ export const mockUniversities: University[] = [
     status: 'actif',
     studentsCount: 28100,
     teachersCount: 840,
-    mrr: 2750000,
+    mrr: 100000,
     createdAt: '2024-03-01',
   },
   {
@@ -68,7 +68,7 @@ export const mockUniversities: University[] = [
     status: 'actif',
     studentsCount: 4850,
     teachersCount: 310,
-    mrr: 12450000,
+    mrr: 250000,
     createdAt: '2023-09-01',
   },
   {
@@ -80,7 +80,7 @@ export const mockUniversities: University[] = [
     status: 'actif',
     studentsCount: 14500,
     teachersCount: 420,
-    mrr: 1250000,
+    mrr: 50000,
     createdAt: '2024-06-10',
   },
   {
@@ -92,7 +92,7 @@ export const mockUniversities: University[] = [
     status: 'en_attente',
     studentsCount: 9800,
     teachersCount: 310,
-    mrr: 650000,
+    mrr: 50000,
     createdAt: '2024-10-01',
   },
 ];

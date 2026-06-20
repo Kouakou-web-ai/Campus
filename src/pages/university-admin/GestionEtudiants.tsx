@@ -15,7 +15,7 @@ import ImportModal from '../../components/ui/ImportModal';
 
 export default function GestionEtudiants() {
   const { user } = useAuthStore();
-  const { students, addStudent, deleteStudent, loading } = useRealtimeDataStore();
+  const { students, addStudent, deleteStudent, loading, currentUniversity } = useRealtimeDataStore();
 
   const handleDelete = async (studentId: string) => {
     if (!user?.universityId) return;
@@ -163,6 +163,14 @@ export default function GestionEtudiants() {
       ToastError("Veuillez remplir les champs obligatoires.");
       return;
     }
+
+    const plan = currentUniversity?.plan || 'pro';
+    const limit = plan === 'starter' ? 500 : plan === 'pro' ? 5000 : Infinity;
+    if (students.length >= limit) {
+      ToastError(`Limite d'étudiants atteinte. Votre abonnement ${plan === 'starter' ? 'Starter' : 'Pro'} est limité à ${limit} étudiants. Veuillez passer à un forfait supérieur.`);
+      return;
+    }
+
     try {
       const studentId = 'ETU-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
       await addStudent(user.universityId, {
@@ -189,6 +197,14 @@ export default function GestionEtudiants() {
 
   const handleImportStudents = async (items: any[]) => {
     if (!user?.universityId) return;
+
+    const plan = currentUniversity?.plan || 'pro';
+    const limit = plan === 'starter' ? 500 : plan === 'pro' ? 5000 : Infinity;
+    if (students.length + items.length > limit) {
+      ToastError(`Importation impossible. La liste dépasse la limite de votre forfait (${limit} étudiants maximum).`);
+      return;
+    }
+
     try {
       for (const item of items) {
         await addStudent(user.universityId, {

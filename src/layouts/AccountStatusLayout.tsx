@@ -11,9 +11,7 @@ export default function AccountStatusLayout() {
       <header className="border-b border-border-subtle bg-surface/80 backdrop-blur-md">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-              <GraduationCap size={18} className="text-white" />
-            </div>
+            <img src="/images/logo-original.png" alt="Campus Logo" className="w-9 h-9 rounded-xl object-cover" />
             <span className="font-heading font-bold text-lg text-content">CAMPUS</span>
           </Link>
           <div className="flex items-center gap-2">

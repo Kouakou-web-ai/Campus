@@ -208,9 +208,7 @@ export default function EmailsSimules() {
                   <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm max-w-2xl mx-auto">
                     {/* Fake Header logo */}
                     <div className="flex items-center gap-2 border-b border-slate-100 pb-4 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base">
-                        C
-                      </div>
+                      <img src="/images/logo-original.png" alt="Campus Logo" className="w-8 h-8 rounded-lg object-cover" />
                       <span className="font-bold text-sm text-slate-800 tracking-wider">CAMPUS ACADEMY</span>
                     </div>
 

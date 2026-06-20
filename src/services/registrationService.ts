@@ -97,6 +97,20 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
   if (universityId) {
     if (status === 'active') {
       if (role === 'STUDENT') {
+        const univSnapshot = await get(ref(db, `universites/${universityId}`));
+        if (univSnapshot.exists()) {
+          const univData = univSnapshot.val();
+          const plan = univData.plan || 'pro';
+          const limit = plan === 'starter' ? 500 : plan === 'pro' ? 5000 : Infinity;
+          
+          const studentsSnapshot = await get(ref(db, `universites/${universityId}/etudiants`));
+          const currentCount = studentsSnapshot.exists() ? Object.keys(studentsSnapshot.val()).length : 0;
+          
+          if (currentCount >= limit) {
+            throw new Error(`Limite d'abonnés atteinte pour cette université (${plan === 'starter' ? 'Starter : 500' : 'Pro : 5000'} étudiants maximum).`);
+          }
+        }
+
         const studentId = userData.studentId ? String(userData.studentId) : `ETU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
         await set(ref(db, `universites/${universityId}/etudiants/${uid}`), {
           name: fullName,

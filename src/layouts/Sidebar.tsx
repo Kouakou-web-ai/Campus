@@ -93,9 +93,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
     >
       {/* Logo */}
       <div className={`flex items-center gap-3 px-5 py-5 border-b border-border-subtle ${collapsed ? 'justify-center px-3' : ''}`}>
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-md">
-          <GraduationCap size={18} className="text-white" />
-        </div>
+        <img src="/images/logo-original.png" alt="Logo" className="w-9 h-9 rounded-xl flex-shrink-0 shadow-md object-cover" />
         {!collapsed && (
           <div>
             <span className="font-heading font-bold text-content text-lg leading-none">CAMPUS</span>
