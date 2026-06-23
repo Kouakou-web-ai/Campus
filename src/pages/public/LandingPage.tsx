@@ -216,14 +216,60 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right Column: Hero Image */}
+            {/* Right Column: Hero Image with 3D Effect & Floating Badges */}
             <div className="lg:col-span-5 flex justify-center items-center animate-scale-in delay-200">
-              <div className="relative w-full max-w-lg">
-                <img 
-                  src="/images/students-hero.png" 
-                  alt="Étudiants CAMPUS" 
-                  className="w-full h-auto object-contain max-h-[480px] hover:scale-[1.02] transition-transform duration-500"
-                />
+              <div className="relative w-full max-w-lg p-6">
+                
+                {/* Background Glow behind the image */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl opacity-60 pointer-events-none -z-10" />
+
+                {/* Floating Badge: Université */}
+                <div className="absolute -top-4 -left-6 bg-white/95 dark:bg-slate-900/95 shadow-xl border border-slate-100/80 dark:border-slate-800/80 p-3 rounded-2xl flex items-center gap-2.5 animate-float z-20 hover:scale-105 transition-all duration-300 cursor-default">
+                  <span className="text-xl">🏛️</span>
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Espace</p>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-white">Admin-Université</p>
+                  </div>
+                </div>
+
+                {/* Floating Badge: Enseignants */}
+                <div className="absolute -top-12 right-0 bg-white/95 dark:bg-slate-900/95 shadow-xl border border-slate-100/80 dark:border-slate-800/80 p-3 rounded-2xl flex items-center gap-2.5 animate-float delay-500 z-20 hover:scale-105 transition-all duration-300 cursor-default">
+                  <span className="text-xl">👨‍🏫</span>
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Espace</p>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-white">Enseignants</p>
+                  </div>
+                </div>
+
+                {/* Floating Badge: Étudiants */}
+                <div className="absolute bottom-20 -right-6 bg-white/95 dark:bg-slate-900/95 shadow-xl border border-slate-100/80 dark:border-slate-800/80 p-3 rounded-2xl flex items-center gap-2.5 animate-float delay-700 z-20 hover:scale-105 transition-all duration-300 cursor-default">
+                  <span className="text-xl">🎓</span>
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Espace</p>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-white">Étudiants</p>
+                  </div>
+                </div>
+
+                {/* Floating Badge: Parents */}
+                <div className="absolute bottom-4 -left-6 bg-white/95 dark:bg-slate-900/95 shadow-xl border border-slate-100/80 dark:border-slate-800/80 p-3 rounded-2xl flex items-center gap-2.5 animate-float delay-1000 z-20 hover:scale-105 transition-all duration-300 cursor-default">
+                  <span className="text-xl">👥</span>
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Espace</p>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-white">Parents</p>
+                  </div>
+                </div>
+
+                {/* 3D Tilt Wrapper */}
+                <ThreeDCard maxTilt={8} scale={1.01} className="relative z-10">
+                  <div className="relative rounded-3xl overflow-visible p-2">
+                    <img 
+                      src="/images/students-hero.png" 
+                      alt="Illustration CAMPUS" 
+                      className="w-full h-auto object-contain max-h-[450px] drop-shadow-2xl"
+                    />
+                  </div>
+                </ThreeDCard>
+                
               </div>
             </div>
           </div>
