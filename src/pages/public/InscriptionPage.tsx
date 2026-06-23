@@ -18,7 +18,7 @@ export default function InscriptionPage() {
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
   const [adresse, setAdresse] = useState('');
-  const [role, setRole] = useState<UserRole>('STUDENT');
+  const [role, setRole] = useState<UserRole>('TEACHER');
   const [universityId, setUniversityId] = useState('univ-ufhb');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -57,7 +57,7 @@ export default function InscriptionPage() {
           setNom(userProfile.nom || '');
           setTelephone(userProfile.telephone || '');
           setAdresse(userProfile.adresse || '');
-          setRole(userProfile.role || 'STUDENT');
+          setRole(userProfile.role || 'TEACHER');
           setUniversityId(userProfile.universityId || 'univ-ufhb');
           ToastSuccess("Invitation détectée ! Veuillez choisir un mot de passe pour activer votre compte.");
         }
@@ -149,7 +149,7 @@ export default function InscriptionPage() {
           ToastError("Adresse e-mail invalide.");
           break;
         default:
-          ToastError(err.message || "Erreur lors de la création du compte. Réessayez.");
+          ToastError(err.message || "Erreur lors de l'activité. Réessayez.");
       }
     }
   };
@@ -278,10 +278,8 @@ export default function InscriptionPage() {
                 disabled={isInvited}
                 className="w-full px-4 py-3.5 bg-surface-raised border border-border rounded-xl text-sm text-content focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200 disabled:opacity-80 disabled:cursor-not-allowed"
               >
-                <option value="STUDENT">Étudiant</option>
                 <option value="TEACHER">Enseignant</option>
                 <option value="UNIVERSITY_ADMIN">Administrateur</option>
-                <option value="PARENT">Parent</option>
               </select>
             </div>
             <div className="space-y-2">

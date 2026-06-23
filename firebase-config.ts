@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: import.meta.env.VITE_apikey as string,
   authDomain: import.meta.env.VITE_authDomain as string,
   databaseURL: import.meta.env.VITE_databaseURL as string,

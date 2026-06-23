@@ -10,18 +10,23 @@ import { ref, onValue, set } from 'firebase/database';
 
 export default function GestionAbsences() {
   const { user } = useAuthStore();
-  const { courses, students, updateStudent, addSimulatedEmail, loading } = useRealtimeDataStore();
+  const { courses, students, updateStudent, addSimulatedEmail, loading, appels } = useRealtimeDataStore();
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [reportingStudentId, setReportingStudentId] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<'appel' | 'historique'>('appel');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCourseId, setFilterCourseId] = useState('');
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
 
   // Calls for today
-  const [appels, setAppels] = useState<Record<string, { status: 'present' | 'absent_justifie' | 'absent_non_justifie', updatedAt: string }>>({});
+  const [appelsToday, setAppelsToday] = useState<Record<string, { status: 'present' | 'absent_justifie' | 'absent_non_justifie', updatedAt: string }>>({});
 
   const myCourses = courses.filter((c) => c.teacherId === user?.id);
+  const myCourseIds = myCourses.map(c => c.id);
 
   // Initialize selected course when courses load
   useEffect(() => {
@@ -36,7 +41,7 @@ export default function GestionAbsences() {
     const dateKey = new Date().toISOString().split('T')[0];
     const appelsRef = ref(db, `universites/${user.universityId}/appels/${selectedCourseId}/${dateKey}`);
     const unsub = onValue(appelsRef, (snapshot) => {
-      setAppels(snapshot.val() || {});
+      setAppelsToday(snapshot.val() || {});
     });
     return () => unsub();
   }, [user?.universityId, selectedCourseId]);
@@ -44,6 +49,48 @@ export default function GestionAbsences() {
   const course = myCourses.find((c) => c.id === selectedCourseId);
   // Filter students by course's filiere
   const courseStudents = course ? students.filter((s) => s.filiere === course.filiere) : [];
+
+  // Reconstruct all past absences for this teacher's courses
+  const absenceHistory: any[] = [];
+  if (appels) {
+    Object.entries(appels).forEach(([courseId, dates]: [string, any]) => {
+      if (myCourseIds.includes(courseId)) {
+        const targetCourse = courses.find(c => c.id === courseId);
+        if (dates) {
+          Object.entries(dates).forEach(([dateKey, studentsList]: [string, any]) => {
+            if (studentsList) {
+              Object.entries(studentsList).forEach(([studentId, record]: [string, any]) => {
+                if (record.status === 'absent_justifie' || record.status === 'absent_non_justifie') {
+                  const student = students.find(s => s.id === studentId);
+                  absenceHistory.push({
+                    id: `${courseId}-${dateKey}-${studentId}`,
+                    studentName: student ? student.name : 'Étudiant',
+                    studentMatricule: student ? student.studentId : 'MATRICULE',
+                    courseId,
+                    courseTitle: targetCourse ? targetCourse.title : 'Cours',
+                    courseCode: targetCourse ? targetCourse.code : 'CODE',
+                    date: dateKey,
+                    duration: '2 heures',
+                    status: record.status,
+                    justified: record.status === 'absent_justifie'
+                  });
+                }
+              });
+            }
+          });
+        }
+      }
+    });
+  }
+  absenceHistory.sort((a, b) => b.date.localeCompare(a.date));
+
+  // Filter history
+  const filteredHistory = absenceHistory.filter(item => {
+    const matchesSearch = item.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          item.studentMatricule.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCourse = filterCourseId ? item.courseId === filterCourseId : true;
+    return matchesSearch && matchesCourse;
+  });
 
   const handleMarkPresent = async (studentId: string) => {
     const universityId = user?.universityId;
@@ -53,21 +100,18 @@ export default function GestionAbsences() {
     if (!student) return;
 
     const dateKey = new Date().toISOString().split('T')[0];
-    const prevStatus = appels[studentId]?.status;
+    const prevStatus = appelsToday[studentId]?.status;
 
-    // If already present, do nothing
     if (prevStatus === 'present') return;
 
     setReportingStudentId(studentId);
     try {
-      // If student was previously marked absent non justifié, we decrement their cumulative count
       if (prevStatus === 'absent_non_justifie') {
         const currentAbsences = student.absences || 0;
         const newAbsences = Math.max(0, currentAbsences - 1);
         await updateStudent(universityId, studentId, { absences: newAbsences });
       }
 
-      // Update call status in Firebase
       const callRef = ref(db, `universites/${universityId}/appels/${selectedCourseId}/${dateKey}/${studentId}`);
       await set(callRef, {
         status: 'present',
@@ -90,11 +134,10 @@ export default function GestionAbsences() {
     if (!student) return;
 
     const dateKey = new Date().toISOString().split('T')[0];
-    const prevStatus = appels[studentId]?.status;
+    const prevStatus = appelsToday[studentId]?.status;
     const isJustified = type === 'justifie';
     const newStatus = isJustified ? 'absent_justifie' : 'absent_non_justifie';
 
-    // If same status, do nothing
     if (prevStatus === newStatus) {
       setModalOpen(false);
       setActiveStudentId(null);
@@ -107,10 +150,8 @@ export default function GestionAbsences() {
       let newAbsences = currentAbsences;
 
       if (prevStatus === 'absent_non_justifie' && isJustified) {
-        // transitioning from non_justified to justified -> decrement
         newAbsences = Math.max(0, currentAbsences - 1);
       } else if (prevStatus !== 'absent_non_justifie' && !isJustified) {
-        // transitioning from something else to non_justified -> increment
         newAbsences = currentAbsences + 1;
       }
 
@@ -118,14 +159,12 @@ export default function GestionAbsences() {
         await updateStudent(universityId, studentId, { absences: newAbsences });
       }
 
-      // Update call status in Firebase
       const callRef = ref(db, `universites/${universityId}/appels/${selectedCourseId}/${dateKey}/${studentId}`);
       await set(callRef, {
         status: newStatus,
         updatedAt: new Date().toISOString()
       });
 
-      // Send email simulation
       const parentEmail = `parent.${student.email}`;
       if (isJustified) {
         await addSimulatedEmail(universityId, {
@@ -171,6 +210,30 @@ export default function GestionAbsences() {
         breadcrumbs={[{ label: 'Enseignant' }, { label: 'Feuille d\'appel' }]}
       />
 
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 text-sm font-semibold overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('appel')}
+          className={`pb-3 border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'appel'
+              ? 'border-indigo-600 text-indigo-600 font-bold'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Faire l'appel
+        </button>
+        <button
+          onClick={() => setActiveTab('historique')}
+          className={`pb-3 border-b-2 transition-all whitespace-nowrap ${
+            activeTab === 'historique'
+              ? 'border-indigo-600 text-indigo-600 font-bold'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Historique des absences
+        </button>
+      </div>
+
       {myCourses.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-md">
           <BookOpen className="mx-auto text-slate-300 mb-3" size={48} />
@@ -179,7 +242,7 @@ export default function GestionAbsences() {
             Les cours configurés par l'administration apparaîtront ici.
           </p>
         </div>
-      ) : (
+      ) : activeTab === 'appel' ? (
         <>
           {/* Course Selector */}
           <div className="card-premium p-4 flex flex-col md:flex-row items-start md:items-center gap-4">
@@ -211,7 +274,7 @@ export default function GestionAbsences() {
               <p className="text-slate-400 text-sm">Aucun étudiant inscrit dans cette filière.</p>
             </div>
           ) : (
-            <div className="card-premium overflow-hidden">
+            <div className="card-premium overflow-hidden animate-fade-up">
               <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h3 className="text-base font-semibold text-slate-800">Appel du jour — {new Date().toLocaleDateString('fr-FR')}</h3>
                 <span className="text-xs font-medium text-slate-400">Présence obligatoire</span>
@@ -230,7 +293,7 @@ export default function GestionAbsences() {
                   <tbody>
                     {courseStudents.map((student) => {
                       const totalAbsences = student.absences || 0;
-                      const studentAppel = appels[student.id];
+                      const studentAppel = appelsToday[student.id];
                       const status = studentAppel?.status;
 
                       return (
@@ -309,6 +372,85 @@ export default function GestionAbsences() {
             </div>
           )}
         </>
+      ) : (
+        /* HISTORIQUE TAB */
+        <div className="space-y-4 animate-fade-in">
+          {/* Filters */}
+          <div className="card-premium p-4 flex flex-col md:flex-row gap-4 items-center">
+            <div className="flex-1 w-full">
+              <input
+                type="text"
+                placeholder="Rechercher par nom ou matricule..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="input input-bordered input-premium w-full text-sm"
+              />
+            </div>
+            <div className="w-full md:w-64">
+              <select
+                value={filterCourseId}
+                onChange={e => setFilterCourseId(e.target.value)}
+                className="select select-bordered select-premium w-full text-sm"
+              >
+                <option value="">-- Tous vos cours --</option>
+                {myCourses.map(c => (
+                  <option key={c.id} value={c.id}>{c.code} - {c.title}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Historical Table */}
+          <div className="card-premium overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-800">Registre des absences passées</h3>
+              <span className="badge badge-sm badge-ghost font-semibold">{filteredHistory.length} absence(s) trouvée(s)</span>
+            </div>
+            {filteredHistory.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-sm">
+                Aucune absence enregistrée dans le registre pour les filtres sélectionnés.
+              </div>
+            ) : (
+              <div className="overflow-x-auto bg-white">
+                <table className="w-full table-premium">
+                  <thead>
+                    <tr>
+                      <th>Étudiant</th>
+                      <th>Matricule</th>
+                      <th>Cours</th>
+                      <th>Date de l'appel</th>
+                      <th className="text-center">Durée</th>
+                      <th className="text-right">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredHistory.map(item => (
+                      <tr key={item.id}>
+                        <td className="font-semibold text-slate-800 text-sm">{item.studentName}</td>
+                        <td className="font-mono text-xs text-slate-500">{item.studentMatricule}</td>
+                        <td>
+                          <p className="font-medium text-slate-700 text-sm">{item.courseTitle}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{item.courseCode}</p>
+                        </td>
+                        <td className="text-slate-655 text-sm">{new Date(item.date).toLocaleDateString('fr-FR')}</td>
+                        <td className="text-center text-sm text-slate-500">{item.duration}</td>
+                        <td className="text-right">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                            item.justified 
+                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                              : 'bg-rose-50 text-rose-600 border border-rose-100'
+                          }`}>
+                            {item.justified ? 'Justifiée' : 'Non justifiée'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Modale de justification d'absence */}
@@ -354,7 +496,7 @@ export default function GestionAbsences() {
                     setModalOpen(false);
                     setActiveStudentId(null);
                   }}
-                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-medium text-sm transition-all"
+                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-650 rounded-xl font-medium text-sm transition-all"
                 >
                   Annuler
                 </button>

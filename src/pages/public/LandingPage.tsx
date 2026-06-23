@@ -5,11 +5,8 @@ import {
   BarChart3, Shield, Zap, Globe, ChevronRight, Play,
 } from 'lucide-react';
 import ThreeDCard from '../../components/ui/ThreeDCard';
-import ThreeDDeployment from '../../components/ui/ThreeDDeployment';
-import ThreeDCanvas from '../../components/ui/ThreeDCanvas';
 import ParticlesBackground from '../../components/ui/ParticlesBackground';
 import RevealOnScroll from '../../components/ui/RevealOnScroll';
-import Hero3DBackground from '../../components/ui/Hero3DBackground';
 import { useTypewriter } from '../../hooks/useTypewriter';
 
 const FEATURES = [
@@ -29,8 +26,8 @@ const FEATURES = [
   },
   {
     icon: Shield,
-    title: 'Sécurité Multi-tenant',
-    description: 'Architecture isolant hermétiquement les données de chaque université avec authentification stricte par rôles.',
+    title: 'Sécurité & Confidentialité',
+    description: 'Architecture robuste isolant hermétiquement les données de votre établissement avec authentification stricte par rôles.',
     color: 'text-emerald-600',
     bg: 'bg-emerald-50',
   },
@@ -139,11 +136,10 @@ export default function LandingPage() {
     <div className="overflow-hidden">
       {/* ============ HERO ============ */}
       <section className="relative min-h-screen flex items-center hero-mesh py-24 overflow-hidden">
-        {/* Background Grille 3D Linear/Vercel style */}
-        <div className="absolute inset-0 three-d-grid opacity-[0.15] pointer-events-none" />
+        {/* Background Grille Plate (carreaux subtils) */}
+        <div className="absolute inset-0 flat-grid pointer-events-none" />
 
-        {/* 3D Background */}
-        <Hero3DBackground />
+
 
         {/* Particles */}
         <ParticlesBackground count={55} color="99,102,241" />
@@ -172,7 +168,7 @@ export default function LandingPage() {
               {/* Badge */}
               <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100/50 text-indigo-700 text-sm font-semibold px-4 py-1.5 rounded-full transform hover:scale-105 transition-all duration-300">
                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
-                Spécialement adapté aux Universités de Côte d'Ivoire 🇨🇮
+                Spécialement adapté aux établissements d'enseignement 🇨🇮
               </div>
 
               {/* Headline */}
@@ -205,7 +201,7 @@ export default function LandingPage() {
                   <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-indigo-50 flex items-center justify-center transition-colors">
                     <Play size={14} className="text-slate-700 group-hover:text-indigo-600 ml-0.5" />
                   </div>
-                  Demander une démo
+                  Demander un devis
                 </Link>
               </div>
 
@@ -220,27 +216,14 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right Column: 3D interactive Canvas */}
+            {/* Right Column: Hero Image */}
             <div className="lg:col-span-5 flex justify-center items-center animate-scale-in delay-200">
-              <div className="w-full max-w-md bg-white/40 border border-slate-100/60 rounded-3xl p-4 shadow-2xl backdrop-blur-md relative float-slow">
-                {/* Floating 3D Badge indicator */}
-                <div className="absolute -top-5 -left-5 bg-white/95 shadow-lg border border-slate-100 p-3 rounded-2xl flex items-center gap-2.5 animate-float z-20">
-                  <span className="text-xl">✨</span>
-                  <div className="text-left">
-                    <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Interactif 3D</p>
-                    <p className="text-xs font-semibold text-slate-800">Glissez pour tourner</p>
-                  </div>
-                </div>
-
-                <div className="absolute -bottom-5 -right-5 bg-white/95 shadow-lg border border-slate-100 p-3 rounded-2xl flex items-center gap-2.5 animate-float delay-500 z-20">
-                  <span className="text-xl">🇨🇮</span>
-                  <div className="text-left">
-                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Multi-universités</p>
-                    <p className="text-xs font-semibold text-slate-800">Interconnecté</p>
-                  </div>
-                </div>
-
-                <ThreeDCanvas />
+              <div className="relative w-full max-w-lg">
+                <img 
+                  src="/images/students-hero.png" 
+                  alt="Étudiants CAMPUS" 
+                  className="w-full h-auto object-contain max-h-[480px] hover:scale-[1.02] transition-transform duration-500"
+                />
               </div>
             </div>
           </div>
@@ -261,7 +244,7 @@ export default function LandingPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
                     {[
-                      { label: 'Étudiants Actifs', value: '64 200', color: 'bg-indigo-500', desc: 'UFHB Cocody' },
+                      { label: 'Étudiants Actifs', value: '64 200', color: 'bg-indigo-500', desc: 'Votre Espace' },
                       { label: 'Cours programmés', value: '1 240', color: 'bg-emerald-500', desc: 'Semestre 1' },
                       { label: 'Revenus (MRR)', value: '12.4M FCFA', color: 'bg-violet-500', desc: 'Scolarités perçues' },
                       { label: 'Taux de réussite', value: '92.4%', color: 'bg-amber-500', desc: 'Moyenne générale' },
@@ -285,24 +268,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ PARTENAIRES ============ */}
-      <section 
-        className="py-6 border-y border-indigo-500/20 overflow-hidden"
-        style={{ background: 'var(--gradient-brand)' }}
-      >
-        <p className="text-center text-xs font-bold text-indigo-200 uppercase tracking-widest mb-4">
-          Déployé dans les grandes institutions
-        </p>
-        <div className="marquee-container">
-          <div className="animate-marquee inline-flex gap-12">
-            {[...PARTNERS, ...PARTNERS].map((name, i) => (
-              <span key={i} className="flex-shrink-0 text-white/80 font-heading font-bold text-sm sm:text-base whitespace-nowrap hover:text-white transition-colors cursor-default">
-                🏛️ {name}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       {/* ============ PORTAILS INTERACTIFS (SÉLECTEUR DE RÔLES) ============ */}
       <section className="py-24 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden">
@@ -670,12 +636,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ HOW IT WORKS — ThreeDDeployment ============ */}
-      <section className="py-12 bg-white dark:bg-slate-900 flex flex-col justify-center items-center">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <ThreeDDeployment />
-        </div>
-      </section>
+
 
 
       {/* ============ CTA FINAL ============ */}
@@ -688,7 +649,7 @@ export default function LandingPage() {
             Prêt à moderniser votre établissement ?
           </h2>
           <p className="text-indigo-200 text-lg mb-8">
-            Rejoignez les universités ivoiriennes qui font confiance à CAMPUS pour simplifier la vie de leurs étudiants et personnels.
+            Faites confiance à CAMPUS pour simplifier la vie de vos étudiants, enseignants et personnels au sein de votre établissement.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

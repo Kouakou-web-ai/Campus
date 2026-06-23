@@ -13,12 +13,14 @@ const getMentionColor = (note: number) => {
   return 'text-red-600 bg-red-50';
 };
 
+import { useState } from 'react';
+
 export default function ResultatsAcademiques() {
   const { user } = useAuthStore();
   const { grades, courses, students, currentUniversity, loading } = useRealtimeDataStore();
+  const [selectedSemesterTab, setSelectedSemesterTab] = useState<'all' | '1' | '2'>('all');
 
   const studentProfile = students.find(s => s.id === user?.id);
-
   const studentGrades = grades.filter(g => g.studentId === user?.id && g.note !== undefined);
   
   const subjects = studentGrades.map((g) => {
@@ -36,19 +38,45 @@ export default function ResultatsAcademiques() {
       code: course ? course.code : 'CODE-000',
       note,
       coeff: course ? course.credits || 4 : 4,
+      semester: course ? course.semester || 1 : 1,
       mention
     };
   });
 
-  const totalCoeff = subjects.reduce((sum, sub) => sum + sub.coeff, 0);
-  const weightedAvg = totalCoeff > 0 
-    ? (subjects.reduce((sum, sub) => sum + sub.note * sub.coeff, 0) / totalCoeff)
-    : 0;
+  // Calculate separate averages
+  const subjectsSem1 = subjects.filter(s => s.semester === 1);
+  const subjectsSem2 = subjects.filter(s => s.semester === 2);
 
-  const totalCredits = subjects.filter(s => s.note >= 10).reduce((sum, s) => sum + s.coeff, 0);
+  const totalCoeffSem1 = subjectsSem1.reduce((sum, s) => sum + s.coeff, 0);
+  const avgSem1 = totalCoeffSem1 > 0 ? (subjectsSem1.reduce((sum, s) => sum + s.note * s.coeff, 0) / totalCoeffSem1) : 0;
+
+  const totalCoeffSem2 = subjectsSem2.reduce((sum, s) => sum + s.coeff, 0);
+  const avgSem2 = totalCoeffSem2 > 0 ? (subjectsSem2.reduce((sum, s) => sum + s.note * s.coeff, 0) / totalCoeffSem2) : 0;
+
+  const totalCoeffAll = subjects.reduce((sum, s) => sum + s.coeff, 0);
+  const avgAll = totalCoeffAll > 0 ? (subjects.reduce((sum, s) => sum + s.note * s.coeff, 0) / totalCoeffAll) : 0;
+
+  // Filter subjects based on tab
+  const filteredSubjects = selectedSemesterTab === 'all' 
+    ? subjects 
+    : subjects.filter(s => String(s.semester) === selectedSemesterTab);
+
+  const currentAverage = selectedSemesterTab === 'all' 
+    ? avgAll 
+    : selectedSemesterTab === '1' 
+      ? avgSem1 
+      : avgSem2;
+
+  const currentCoeff = selectedSemesterTab === 'all'
+    ? totalCoeffAll
+    : selectedSemesterTab === '1'
+      ? totalCoeffSem1
+      : totalCoeffSem2;
+
+  const currentCredits = filteredSubjects.filter(s => s.note >= 10).reduce((sum, s) => sum + s.coeff, 0);
 
   // Radar data
-  const radarData = subjects.map(s => ({
+  const radarData = filteredSubjects.map(s => ({
     subject: s.code || s.name.slice(0, 5),
     score: s.note
   }));
@@ -92,8 +120,8 @@ export default function ResultatsAcademiques() {
               studentProfile?.name || user?.name || 'Étudiant',
               studentProfile?.studentId || 'Matricule',
               studentProfile?.filiere || 'Informatique',
-              1, // semestre
-              subjects.map(s => ({
+              selectedSemesterTab === 'all' ? 1 : Number(selectedSemesterTab),
+              filteredSubjects.map(s => ({
                 subject: s.name,
                 value: s.note,
                 coefficient: s.coeff
@@ -106,31 +134,67 @@ export default function ResultatsAcademiques() {
         }
       />
 
-      {subjects.length === 0 ? (
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 text-sm font-semibold overflow-x-auto">
+        <button
+          onClick={() => setSelectedSemesterTab('all')}
+          className={`pb-3 border-b-2 transition-all whitespace-nowrap ${
+            selectedSemesterTab === 'all'
+              ? 'border-indigo-600 text-indigo-600 font-bold'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Bilan Annuel
+        </button>
+        <button
+          onClick={() => setSelectedSemesterTab('1')}
+          className={`pb-3 border-b-2 transition-all whitespace-nowrap ${
+            selectedSemesterTab === '1'
+              ? 'border-indigo-600 text-indigo-600 font-bold'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Semestre 1
+        </button>
+        <button
+          onClick={() => setSelectedSemesterTab('2')}
+          className={`pb-3 border-b-2 transition-all whitespace-nowrap ${
+            selectedSemesterTab === '2'
+              ? 'border-indigo-600 text-indigo-600 font-bold'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Semestre 2
+        </button>
+      </div>
+
+      {filteredSubjects.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-md">
-          <p className="text-slate-400 text-sm">Vos notes n'ont pas encore été publiées par vos enseignants.</p>
+          <p className="text-slate-400 text-sm">Aucune note n'a encore été publiée pour cette période.</p>
         </div>
       ) : (
         <>
           {/* Moyenne hero */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="card-premium p-6 text-center bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-100 col-span-1">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Moyenne générale</p>
-              <div className="text-5xl font-extrabold font-heading gradient-text">{weightedAvg.toFixed(2)}</div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                {selectedSemesterTab === 'all' ? 'Moyenne générale' : `Moyenne Semestre ${selectedSemesterTab}`}
+              </p>
+              <div className="text-5xl font-extrabold font-heading gradient-text">{currentAverage.toFixed(2)}</div>
               <div className="text-slate-400 text-sm mt-1">/20</div>
               <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Mention {weightedAvg >= 16 ? 'Très Bien' : weightedAvg >= 14 ? 'Bien' : weightedAvg >= 12 ? 'Assez Bien' : weightedAvg >= 10 ? 'Passable' : 'Insuffisant'}
+                Mention {currentAverage >= 16 ? 'Très Bien' : currentAverage >= 14 ? 'Bien' : currentAverage >= 12 ? 'Assez Bien' : currentAverage >= 10 ? 'Passable' : 'Insuffisant'}
               </div>
             </div>
             <div className="card-premium p-5 text-center flex flex-col justify-center">
               <p className="text-xs text-slate-400 mb-1">Crédits validés</p>
-              <div className="text-3xl font-bold text-slate-800">{totalCredits} / {totalCoeff}</div>
-              <div className="text-xs text-emerald-600 font-semibold mt-1">✓ Semestre en cours</div>
+              <div className="text-3xl font-bold text-slate-800">{currentCredits} / {currentCoeff}</div>
+              <div className="text-xs text-emerald-600 font-semibold mt-1">✓ {selectedSemesterTab === 'all' ? 'Année académique' : `Semestre ${selectedSemesterTab}`}</div>
             </div>
             <div className="card-premium p-5 text-center flex flex-col justify-center">
               <p className="text-xs text-slate-400 mb-1">Statut académique</p>
-              <div className="text-2xl font-bold text-slate-800">{weightedAvg >= 10 ? 'Admis' : 'En attente'}</div>
+              <div className="text-2xl font-bold text-slate-800">{currentAverage >= 10 ? 'Admis' : 'En attente'}</div>
               <p className="text-xs text-slate-400 mt-1">Moyenne de validation: 10/20</p>
             </div>
           </div>
@@ -144,6 +208,7 @@ export default function ResultatsAcademiques() {
               <thead>
                 <tr>
                   <th>Matière</th>
+                  <th className="text-center">Semestre</th>
                   <th className="text-center">Coeff. (Crédits)</th>
                   <th className="text-center">Note</th>
                   <th>Mention</th>
@@ -151,11 +216,14 @@ export default function ResultatsAcademiques() {
                 </tr>
               </thead>
               <tbody>
-                {subjects.map((sub, i) => (
+                {filteredSubjects.map((sub, i) => (
                   <tr key={i}>
                     <td>
                       <p className="font-medium text-slate-800 text-sm">{sub.name}</p>
                       <p className="text-xs text-slate-400">{sub.code}</p>
+                    </td>
+                    <td className="text-center">
+                      <span className="badge badge-sm badge-ghost font-semibold">Semestre {sub.semester}</span>
                     </td>
                     <td className="text-center text-sm text-slate-500">{sub.coeff}</td>
                     <td className="text-center">
@@ -253,12 +321,12 @@ export default function ResultatsAcademiques() {
           <div>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Statut Académique</p>
             <p className="text-base font-bold text-slate-800 mt-0.5">
-              {weightedAvg >= 10 ? 'ADMIS' : 'AJOURNÉ'}
+              {avgAll >= 10 ? 'ADMIS' : 'AJOURNÉ'}
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Moyenne Générale</p>
-            <p className="text-3xl font-extrabold text-indigo-600 mt-0.5">{weightedAvg.toFixed(2)}/20</p>
+            <p className="text-3xl font-extrabold text-indigo-600 mt-0.5">{avgAll.toFixed(2)}/20</p>
           </div>
         </div>
 

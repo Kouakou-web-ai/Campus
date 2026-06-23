@@ -27,7 +27,7 @@ const PLANS = [
     icon: Star,
     monthlyPrice: 100000,
     annualPrice: 80000,
-    description: 'Pour les universités en pleine croissance.',
+    description: 'Pour les établissements en pleine croissance.',
     color: 'from-indigo-500 to-violet-600',
     badge: 'Le plus populaire',
     features: [

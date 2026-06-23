@@ -6,14 +6,14 @@ const FAQ_CATEGORIES = [
     name: 'Général',
     items: [
       { q: 'Qu\'est-ce que CAMPUS ?', a: 'CAMPUS est une plateforme SaaS de gestion universitaire tout-en-un. Elle centralise la gestion des étudiants, enseignants, cours, emplois du temps et finances dans une interface moderne.' },
-      { q: 'CAMPUS est-il adapté à ma taille d\'université ?', a: 'Oui. CAMPUS s\'adapte aux établissements de 100 à 100 000+ étudiants grâce à son architecture multi-tenant scalable.' },
+      { q: 'CAMPUS est-il adapté à ma taille d\'établissement ?', a: 'Oui. CAMPUS s\'adapte aux établissements de 100 à 100 000+ étudiants grâce à son architecture moderne et hautement évolutive.' },
       { q: 'Proposez-vous un essai gratuit ?', a: 'Absolument ! 14 jours d\'accès complet au plan Pro, sans carte bancaire. Aucun engagement.' },
     ],
   },
   {
     name: 'Technique',
     items: [
-      { q: 'Comment mes données sont-elles sécurisées ?', a: 'CAMPUS utilise Firebase avec un chiffrement AES-256. Les données de chaque université sont strictement isolées via une architecture multi-tenant.' },
+      { q: 'Comment mes données sont-elles sécurisées ?', a: 'CAMPUS utilise Firebase avec un chiffrement AES-256. Les données de votre établissement sont strictement isolées via une architecture hautement sécurisée et cloisonnée.' },
       { q: 'CAMPUS fonctionne-t-il sur mobile ?', a: 'Oui, CAMPUS est entièrement responsive. Une PWA est également disponible pour une expérience native sur mobile.' },
       { q: 'Proposez-vous une API ?', a: 'Oui, une API REST complète est disponible sur les plans Pro et Enterprise avec documentation OpenAPI.' },
       { q: 'Quelle est la disponibilité garantie ?', a: 'Nous garantissons un uptime de 99.9% sur Pro et 99.99% sur Enterprise avec monitoring 24/7.' },

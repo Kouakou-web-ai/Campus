@@ -10,7 +10,7 @@ import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 
 export default function SuiviEnfant() {
   const { user } = useAuthStore();
-  const { students, grades, transactions, assignments, currentUniversity } = useRealtimeDataStore();
+  const { students, grades, transactions, assignments, currentUniversity, appels, courses } = useRealtimeDataStore();
   
   const [linkedIds, setLinkedIds] = useState<string[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -56,13 +56,43 @@ export default function SuiviEnfant() {
   // Filter child transactions
   const childTransactions = child ? transactions.filter(t => t.studentName === child.name) : [];
 
+  // Reconstruct detailed absences history for selected child
+  const childAbsencesList: any[] = [];
+  if (child && appels) {
+    Object.entries(appels).forEach(([courseId, dates]: [string, any]) => {
+      const course = courses.find(c => c.id === courseId);
+      if (dates) {
+        Object.entries(dates).forEach(([dateKey, studentsList]: [string, any]) => {
+          if (studentsList && studentsList[child.id]) {
+            const record = studentsList[child.id];
+            if (record.status === 'absent_justifie' || record.status === 'absent_non_justifie') {
+              childAbsencesList.push({
+                id: `${courseId}-${dateKey}-${child.id}`,
+                studentName: child.name,
+                courseTitle: course ? course.title : 'Cours',
+                courseCode: course ? course.code : 'CODE',
+                date: dateKey,
+                duration: '2 heures',
+                status: record.status,
+                justified: record.status === 'absent_justifie'
+              });
+            }
+          }
+        });
+      }
+    });
+  }
+  // Sort absences by date descending
+  childAbsencesList.sort((a, b) => b.date.localeCompare(a.date));
+
   // Generate activities based on real database records
   const activities: { icon: string; text: string; time: string }[] = [];
   if (child) {
     childGrades.forEach(g => {
+      const course = courses.find(c => c.id === g.courseId);
       activities.push({
         icon: '📝',
-        text: `Note reçue — ${g.appreciation || 'Évaluation'} : ${g.note}/20 dans ${g.studentName}`,
+        text: `Note reçue : ${g.note}/20 dans ${course ? course.title : 'Matière'}`,
         time: 'Récemment'
       });
     });
@@ -166,19 +196,21 @@ export default function SuiviEnfant() {
         </div>
       ) : (
         <>
-          {/* Child selection dropdown */}
-          <div className="card-premium p-4 flex items-center gap-3">
-            <label className="text-sm font-semibold text-slate-600 flex-shrink-0">Sélectionner votre enfant :</label>
-            <select
-              value={selectedStudentId}
-              onChange={e => setSelectedStudentId(e.target.value)}
-              className="input-premium flex-1 max-w-xs px-3 py-2 text-sm"
-            >
-              {myChildren.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.studentId})</option>
-              ))}
-            </select>
-          </div>
+          {/* Child selection dropdown - ONLY visible if parent has multiple children */}
+          {myChildren.length > 1 && (
+            <div className="card-premium p-4 flex items-center gap-3">
+              <label className="text-sm font-semibold text-slate-600 flex-shrink-0">Sélectionner votre enfant :</label>
+              <select
+                value={selectedStudentId}
+                onChange={e => setSelectedStudentId(e.target.value)}
+                className="input-premium flex-1 max-w-xs px-3 py-2 text-sm"
+              >
+                {myChildren.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.studentId})</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {child && (
             <>
@@ -231,44 +263,90 @@ export default function SuiviEnfant() {
                 </div>
               </div>
 
-              {/* Alertes */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(child.absences || 0) > 3 ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">⚠️</span>
-                      <div>
-                        <h4 className="font-semibold text-amber-800 text-sm">Attention requise</h4>
-                        <p className="text-xs text-amber-600 mt-1">
-                          Plusieurs absences ({child.absences}) signalées ce semestre. Veuillez contacter l'administration.
-                        </p>
+              {/* Aggregated Alerts Section for all children */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Alertes de scolarité</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {myChildren.map(c => {
+                    const hasAbsenceWarning = (c.absences || 0) > 3;
+                    return (
+                      <div 
+                        key={c.id} 
+                        className={`border rounded-2xl p-5 ${
+                          hasAbsenceWarning 
+                            ? 'bg-amber-50 border-amber-200 text-amber-800' 
+                            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">{hasAbsenceWarning ? '⚠️' : '🎉'}</span>
+                          <div>
+                            <h4 className="font-bold text-sm">
+                              {c.name} ({c.studentId})
+                            </h4>
+                            <p className="text-xs mt-1">
+                              {hasAbsenceWarning 
+                                ? `Attention : Plusieurs absences (${c.absences}) signalées ce semestre. Veuillez contacter le secrétariat.`
+                                : `Assiduité exemplaire : Votre enfant suit rigoureusement l'ensemble des cours programmés.`}
+                            </p>
+                            <p className="text-[10px] opacity-80 mt-2 border-t border-current/10 pt-1.5 font-medium">
+                              Scolarité versée : {c.paidAmount.toLocaleString('fr-FR')} F sur {c.totalAmount.toLocaleString('fr-FR')} F.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Historique détaillé des absences */}
+              <div className="card-premium overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-slate-800">Historique détaillé des absences</h3>
+                  <span className="badge badge-sm badge-ghost font-semibold">{childAbsencesList.length} absence(s)</span>
+                </div>
+                {childAbsencesList.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-sm">
+                    Aucune absence enregistrée pour {child.name}.
                   </div>
                 ) : (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">🎉</span>
-                      <div>
-                        <h4 className="font-semibold text-emerald-800 text-sm">Assiduité exemplaire</h4>
-                        <p className="text-xs text-emerald-600 mt-1">
-                          Votre enfant suit rigoureusement l'ensemble des cours programmés.
-                        </p>
-                      </div>
-                    </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-premium">
+                      <thead>
+                        <tr>
+                          <th>Étudiant</th>
+                          <th>Date</th>
+                          <th>Matière</th>
+                          <th className="text-center">Durée</th>
+                          <th className="text-right">Justification</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {childAbsencesList.map((abs) => (
+                          <tr key={abs.id}>
+                            <td className="font-semibold text-slate-800 text-sm">{abs.studentName}</td>
+                            <td className="text-slate-655 text-sm">{new Date(abs.date).toLocaleDateString('fr-FR')}</td>
+                            <td>
+                              <p className="font-medium text-slate-850 text-sm">{abs.courseTitle}</p>
+                              <p className="text-[10px] text-slate-400 font-mono">{abs.courseCode}</p>
+                            </td>
+                            <td className="text-center text-sm text-slate-500">{abs.duration}</td>
+                            <td className="text-right">
+                              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                abs.justified 
+                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                  : 'bg-rose-50 text-rose-600 border border-rose-100'
+                              }`}>
+                                {abs.justified ? 'Justifiée' : 'Non justifiée'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">💳</span>
-                    <div>
-                      <h4 className="font-semibold text-slate-800 text-sm">Statut facturation</h4>
-                      <p className="text-xs text-slate-600 mt-1">
-                        Scolarité versée: {child.paidAmount.toLocaleString('fr-FR')} F sur {child.totalAmount.toLocaleString('fr-FR')} F.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Activité récente */}

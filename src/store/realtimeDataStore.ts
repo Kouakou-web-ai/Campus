@@ -1,7 +1,9 @@
 import { create } from 'zustand';
-import { db, auth } from '../../firebase-config';
+import { db, auth, firebaseConfig } from '../../firebase-config';
 import { ref, onValue, set, push, update, remove, get } from 'firebase/database';
 import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData, StatusType } from '../types';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 
 interface RealtimeDataState {
   students: Student[];
@@ -19,12 +21,20 @@ interface RealtimeDataState {
   emailsSimules: any[];
   cahierDeTextes: any[];
   quizzes: any[];
+  appels: any;
   loading: boolean;
   
   subscribeToUniversity: (universityId: string) => () => void;
   subscribeToSuperAdmin: () => () => void;
   
-  addStudent: (universityId: string, student: Omit<Student, 'id' | 'universityId'>) => Promise<void>;
+  addStudent: (
+    universityId: string,
+    student: Omit<Student, 'id' | 'universityId' | 'studentId'> & {
+      studentId?: string;
+      parentEmail: string;
+      parentName: string;
+    }
+  ) => Promise<void>;
   updateStudent: (universityId: string, studentId: string, data: Partial<Student>) => Promise<void>;
   addTeacher: (universityId: string, teacher: Omit<Teacher, 'id' | 'universityId'>) => Promise<void>;
   updateTeacher: (universityId: string, teacherId: string, data: Partial<Teacher>) => Promise<void>;
@@ -66,6 +76,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   emailsSimules: [],
   cahierDeTextes: [],
   quizzes: [],
+  appels: {},
   loading: false,
 
   subscribeToUniversity: (universityId: string) => {
@@ -219,7 +230,12 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
     // 19. Quizzes
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/quizzes`), (snap) => {
-      setStore({ quizzes: parseList(snap.val()), loading: false });
+      setStore({ quizzes: parseList(snap.val()) });
+    }));
+
+    // 20. Appels (Absences)
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/appels`), (snap) => {
+      setStore({ appels: snap.val() || {}, loading: false });
     }));
 
     return () => {
@@ -361,47 +377,144 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     return unsubscribeUnivs;
   },
 
-  addStudent: async (universityId, student) => {
-    const studentsRef = ref(db, `universites/${universityId}/etudiants`);
-    const newStudentRef = push(studentsRef);
-    const studentUid = newStudentRef.key;
-    if (!studentUid) return;
-    const activationUrl = `${window.location.origin}/activation-compte?email=${encodeURIComponent(student.email)}`;
+  addStudent: async (universityId, studentData) => {
+    const { parentEmail, parentName, studentId: customStudentId, ...studentInfo } = studentData;
 
-    // 1. Enregistrer l'étudiant dans l'université avec son identifiant UID temporaire
-    await set(newStudentRef, {
-      ...student,
+    // 1. Générer le matricule étudiant si non renseigné
+    const studentId = customStudentId?.trim() || `ETU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // 2. Générer des mots de passe temporaires
+    const tempStudentPassword = 'ETU-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    const tempParentPassword = 'PAR-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+
+    // 3. Enregistrer l'étudiant dans Firebase Auth (via une app secondaire)
+    let studentUid = '';
+    const tempStudentAppName = `temp-student-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const tempStudentApp = initializeApp(firebaseConfig, tempStudentAppName);
+    const tempStudentAuth = getAuth(tempStudentApp);
+    try {
+      const studentCreds = await createUserWithEmailAndPassword(tempStudentAuth, studentInfo.email.trim(), tempStudentPassword);
+      studentUid = studentCreds.user.uid;
+    } catch (err: any) {
+      await deleteApp(tempStudentApp);
+      if (err.code === 'auth/email-already-in-use') {
+        throw new Error("L'adresse email de l'étudiant est déjà utilisée.");
+      }
+      throw err;
+    }
+    await deleteApp(tempStudentApp);
+
+    // 4. Vérifier si le parent existe déjà dans /utilisateurs
+    let parentUid = '';
+    const usersRef = ref(db, 'utilisateurs');
+    const allUsersSnap = await get(usersRef);
+    if (allUsersSnap.exists()) {
+      const allUsers = allUsersSnap.val();
+      const existingParent = Object.entries(allUsers).find(
+        ([_, u]: [string, any]) => u && u.email?.toLowerCase() === parentEmail.trim().toLowerCase() && u.role === 'PARENT'
+      );
+      if (existingParent) {
+        parentUid = existingParent[0];
+      }
+    }
+
+    // 5. Si le parent n'existe pas, le créer dans Firebase Auth
+    if (!parentUid) {
+      const tempParentAppName = `temp-parent-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const tempParentApp = initializeApp(firebaseConfig, tempParentAppName);
+      const tempParentAuth = getAuth(tempParentApp);
+      try {
+        const parentCreds = await createUserWithEmailAndPassword(tempParentAuth, parentEmail.trim(), tempParentPassword);
+        parentUid = parentCreds.user.uid;
+      } catch (err: any) {
+        await deleteApp(tempParentApp);
+        if (err.code === 'auth/email-already-in-use') {
+          throw new Error("L'adresse email du parent est déjà utilisée pour un autre type de compte.");
+        }
+        throw err;
+      }
+      await deleteApp(tempParentApp);
+    }
+
+    // 6. Enregistrer l'étudiant dans la liste de l'université
+    const studentUnivRef = ref(db, `universites/${universityId}/etudiants/${studentUid}`);
+    await set(studentUnivRef, {
+      ...studentInfo,
       id: studentUid,
+      studentId,
       universityId,
+      status: 'actif',
       createdAt: new Date().toISOString()
     });
 
-    // 2. Créer l'invitation dans /utilisateurs
-    const invitedUserRef = ref(db, `utilisateurs/${studentUid}`);
-    const prenom = student.name.split(' ')[0] || '';
-    const nom = student.name.split(' ').slice(1).join(' ') || student.name;
-
-    await set(invitedUserRef, {
+    // 7. Enregistrer le profil étudiant dans /utilisateurs
+    const studentUserRef = ref(db, `utilisateurs/${studentUid}`);
+    const sPrenom = studentInfo.name.split(' ')[0] || '';
+    const sNom = studentInfo.name.split(' ').slice(1).join(' ') || studentInfo.name;
+    await set(studentUserRef, {
       uid: studentUid,
-      email: student.email,
+      email: studentInfo.email.trim(),
       role: 'STUDENT',
-      status: 'invited',
+      status: 'active',
       universityId,
-      prenom,
-      nom,
+      prenom: sPrenom,
+      nom: sNom,
       telephone: '',
       adresse: '',
-      createdDate: new Date().toISOString()
+      createdDate: new Date().toISOString(),
+      mustChangePassword: true,
+      tempPassword: tempStudentPassword
     });
 
-    // 3. Envoyer un e-mail de simulation d'activation sécurisée
+    // 8. Enregistrer le profil parent dans /utilisateurs (fusionner les enfants s'il existe)
+    const parentUserRef = ref(db, `utilisateurs/${parentUid}`);
+    const pPrenom = parentName.split(' ')[0] || '';
+    const pNom = parentName.split(' ').slice(1).join(' ') || parentName;
+    
+    const parentSnap = await get(parentUserRef);
+    let parentChildren = {};
+    if (parentSnap.exists()) {
+      parentChildren = parentSnap.val().enfants || {};
+    }
+    const updatedChildren = { ...parentChildren, [studentUid]: true };
+
+    await set(parentUserRef, {
+      uid: parentUid,
+      email: parentEmail.trim(),
+      role: 'PARENT',
+      status: 'active',
+      universityId,
+      prenom: pPrenom,
+      nom: pNom,
+      telephone: parentSnap.exists() ? (parentSnap.val().telephone || '') : '',
+      adresse: parentSnap.exists() ? (parentSnap.val().adresse || '') : '',
+      createdDate: parentSnap.exists() ? (parentSnap.val().createdDate || new Date().toISOString()) : new Date().toISOString(),
+      mustChangePassword: parentSnap.exists() ? (parentSnap.val().mustChangePassword ?? true) : true,
+      tempPassword: parentSnap.exists() ? (parentSnap.val().tempPassword || tempParentPassword) : tempParentPassword,
+      enfants: updatedChildren
+    });
+
+    // 9. Envoyer les e-mails de bienvenue simulés
     const emailsRef = ref(db, `universites/${universityId}/emails_simules`);
-    const newEmailRef = push(emailsRef);
-    await set(newEmailRef, {
-      to: student.email,
-      recipientName: student.name,
-      subject: "Invitation à activer votre compte CAMPUS",
-      body: `Bonjour ${student.name},\n\nVotre établissement vous a inscrit sur la plateforme CAMPUS.\n\nVeuillez activer votre compte et configurer votre mot de passe en cliquant sur ce lien :\n${activationUrl}\n\nCordialement,\nL'administration académique`,
+    
+    // E-mail étudiant
+    const studentEmailRef = push(emailsRef);
+    await set(studentEmailRef, {
+      to: studentInfo.email.trim(),
+      recipientName: studentInfo.name,
+      subject: "Bienvenue sur CAMPUS - Vos accès Étudiant",
+      body: `Bonjour ${studentInfo.name},\n\nVotre inscription à l'université a été validée. Votre compte étudiant a été créé.\n\nVoici vos identifiants temporaires de connexion :\n- Email : ${studentInfo.email.trim()}\n- Matricule : ${studentId}\n- Mot de passe temporaire : ${tempStudentPassword}\n\nLors de votre première connexion, vous devrez obligatoirement changer ce mot de passe temporaire.\n\nCordialement,\nL'administration académique`,
+      sentAt: new Date().toISOString(),
+      type: 'welcome'
+    });
+
+    // E-mail parent
+    const parentEmailRef = push(emailsRef);
+    await set(parentEmailRef, {
+      to: parentEmail.trim(),
+      recipientName: parentName,
+      subject: "Bienvenue sur CAMPUS - Vos accès Parent",
+      body: `Bonjour ${parentName},\n\nVotre compte de suivi parent pour l'étudiant(e) ${studentInfo.name} (Matricule : ${studentId}) a été créé automatiquement.\n\nVoici vos identifiants temporaires de connexion :\n- Email : ${parentEmail.trim()}\n- Matricule de l'enfant : ${studentId}\n- Mot de passe temporaire : ${tempParentPassword}\n\nLors de votre première connexion, vous devrez obligatoirement changer ce mot de passe temporaire.\n\nCordialement,\nL'administration académique`,
       sentAt: new Date().toISOString(),
       type: 'welcome'
     });
@@ -532,10 +645,34 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   },
 
   deleteStudent: async (universityId, studentId) => {
+    // 1. Supprimer l'étudiant de l'université
     const studentRef = ref(db, `universites/${universityId}/etudiants/${studentId}`);
     await remove(studentRef);
+
+    // 2. Supprimer l'utilisateur dans /utilisateurs
     const userRef = ref(db, `utilisateurs/${studentId}`);
     await remove(userRef);
+
+    // 3. Supprimer le lien dans le profil parent
+    const usersRef = ref(db, 'utilisateurs');
+    const allUsersSnap = await get(usersRef);
+    if (allUsersSnap.exists()) {
+      const allUsers = allUsersSnap.val();
+      for (const [uid, u] of Object.entries(allUsers)) {
+        const profile = u as any;
+        if (profile && profile.role === 'PARENT' && profile.enfants && profile.enfants[studentId]) {
+          const parentChildRef = ref(db, `utilisateurs/${uid}/enfants/${studentId}`);
+          await remove(parentChildRef);
+
+          // Si le parent n'a plus d'autres enfants liés, supprimer son compte
+          const updatedEnfants = { ...profile.enfants };
+          delete updatedEnfants[studentId];
+          if (Object.keys(updatedEnfants).length === 0) {
+            await remove(ref(db, `utilisateurs/${uid}`));
+          }
+        }
+      }
+    }
   },
 
   deleteTeacher: async (universityId, teacherId) => {

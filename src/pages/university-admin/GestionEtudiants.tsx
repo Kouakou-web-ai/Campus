@@ -128,6 +128,9 @@ export default function GestionEtudiants() {
   const [annee, setAnnee] = useState(1);
   const [totalAmount, setTotalAmount] = useState(420000);
   const [paidAmount, setPaidAmount] = useState(0);
+  const [matricule, setMatricule] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
+  const [parentName, setParentName] = useState('');
 
   const filieres = [...new Set(students.map(s => s?.filiere).filter(Boolean))];
 
@@ -159,8 +162,8 @@ export default function GestionEtudiants() {
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.universityId) return;
-    if (!name || !email) {
-      ToastError("Veuillez remplir les champs obligatoires.");
+    if (!name || !email || !parentEmail || !parentName) {
+      ToastError("Veuillez remplir tous les champs obligatoires (nom, email étudiant, email parent, nom parent).");
       return;
     }
 
@@ -172,22 +175,26 @@ export default function GestionEtudiants() {
     }
 
     try {
-      const studentId = 'ETU-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000);
       await addStudent(user.universityId, {
         name,
         email,
-        studentId,
+        studentId: matricule ? matricule.trim() : undefined,
         filiere,
         annee: Number(annee),
-        status: 'en_attente',
+        status: 'actif',
         average: 0,
         absences: 0,
         paidAmount: Number(paidAmount),
-        totalAmount: Number(totalAmount)
+        totalAmount: Number(totalAmount),
+        parentEmail: parentEmail.trim(),
+        parentName: parentName.trim()
       });
-      ToastSuccess("Étudiant ajouté. Il pourra créer son mot de passe depuis la page de connexion.");
+      ToastSuccess("Étudiant et compte Parent créés avec succès ! Les mots de passe temporaires ont été générés.");
       setName('');
       setEmail('');
+      setMatricule('');
+      setParentEmail('');
+      setParentName('');
       setPaidAmount(0);
       setModalOpen(false);
     } catch (err: any) {
@@ -217,7 +224,9 @@ export default function GestionEtudiants() {
           average: 0,
           absences: 0,
           paidAmount: Number(item.paidAmount || 0),
-          totalAmount: Number(item.totalAmount || 420000)
+          totalAmount: Number(item.totalAmount || 420000),
+          parentEmail: item.parentEmail || `parent.${item.email}`,
+          parentName: item.parentName || `Parent de ${item.name}`
         });
       }
       ToastSuccess("Tous les étudiants ont été importés et les invitations envoyées.");
@@ -318,29 +327,42 @@ export default function GestionEtudiants() {
             </button>
             <h3 className="text-xl font-bold text-slate-800 mb-6">Ajouter un étudiant</h3>
             <form onSubmit={handleAddStudent} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom complet</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="ex: Yao Kouassi Serge"
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adresse Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="ex: serge.yao@gmail.com"
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom complet</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="ex: Yao Kouassi Serge"
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adresse Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="ex: serge.yao@gmail.com"
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Matricule (Optionnel)</label>
+                  <input
+                    type="text"
+                    value={matricule}
+                    onChange={e => setMatricule(e.target.value)}
+                    placeholder="ex: ETU-2026-9999"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Filière</label>
                   <select
@@ -355,6 +377,9 @@ export default function GestionEtudiants() {
                     <option value="Physique">Physique</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Année</label>
                   <select
@@ -368,8 +393,6 @@ export default function GestionEtudiants() {
                     <option value={4}>4ème année (Master 1)</option>
                   </select>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Scolarité totale (FCFA)</label>
                   <input
@@ -379,6 +402,9 @@ export default function GestionEtudiants() {
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Montant versé (FCFA)</label>
                   <input
@@ -387,6 +413,34 @@ export default function GestionEtudiants() {
                     onChange={e => setPaidAmount(Number(e.target.value))}
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                   />
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-3">
+                <h4 className="text-xs font-bold text-indigo-600 mb-2 uppercase tracking-wider">Informations Parent</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom du parent</label>
+                    <input
+                      type="text"
+                      value={parentName}
+                      onChange={e => setParentName(e.target.value)}
+                      placeholder="ex: Yao Kouassi Roger"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">E-mail du parent</label>
+                    <input
+                      type="email"
+                      value={parentEmail}
+                      onChange={e => setParentEmail(e.target.value)}
+                      placeholder="ex: roger.yao@gmail.com"
+                      required
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
                 </div>
               </div>
               <button

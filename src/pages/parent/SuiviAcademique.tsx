@@ -68,6 +68,7 @@ export default function SuiviAcademique() {
       code: course ? course.code : 'CODE-000',
       note,
       coeff: course ? course.credits || 4 : 4,
+      semester: course ? course.semester || 1 : 1,
       mention
     };
   });
@@ -110,19 +111,21 @@ export default function SuiviAcademique() {
         </div>
       ) : (
         <>
-          {/* Child selection dropdown */}
-          <div className="card-premium p-4 flex items-center gap-3">
-            <label className="text-sm font-semibold text-slate-600 flex-shrink-0">Sélectionner votre enfant :</label>
-            <select
-              value={selectedStudentId}
-              onChange={e => setSelectedStudentId(e.target.value)}
-              className="input-premium flex-1 max-w-xs px-3 py-2 text-sm"
-            >
-              {myChildren.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.studentId})</option>
-              ))}
-            </select>
-          </div>
+          {/* Child selection dropdown - ONLY visible if multiple children exist */}
+          {myChildren.length > 1 && (
+            <div className="card-premium p-4 flex items-center gap-3">
+              <label className="text-sm font-semibold text-slate-600 flex-shrink-0">Sélectionner votre enfant :</label>
+              <select
+                value={selectedStudentId}
+                onChange={e => setSelectedStudentId(e.target.value)}
+                className="input-premium flex-1 max-w-xs px-3 py-2 text-sm"
+              >
+                {myChildren.map(s => (
+                  <option key={s.id} value={s.id}>{s.name} ({s.studentId})</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {child && (
             <>
@@ -172,7 +175,7 @@ export default function SuiviAcademique() {
                           <div key={i} className="flex items-center gap-4 px-6 py-4 flex-wrap sm:flex-nowrap">
                             <div className="w-48 flex-shrink-0">
                               <p className="text-sm font-semibold text-slate-700">{sub.name}</p>
-                              <p className="text-[10px] text-slate-400">Coeff. {sub.coeff} · {sub.code}</p>
+                              <p className="text-[10px] text-slate-400">Semestre {sub.semester} · Coeff. {sub.coeff} · {sub.code}</p>
                             </div>
                             <div className="flex-1 min-w-[150px]">
                               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

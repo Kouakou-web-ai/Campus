@@ -5,6 +5,8 @@ import { useAuthStore } from '../../store/authStore';
 import { getPostLoginPath } from '../../constants/accountStatus';
 import { ToastError, ToastSuccess } from '../../controllers/Toast-emitter';
 import { findInvitedUserByEmail } from '../../services/invitationService';
+import { db } from '../../../firebase-config';
+import { ref, get, query, orderByChild, equalTo } from 'firebase/database';
 
 export default function ConnexionPage() {
   const { loginWithFirebase, loginWithGoogle, sendPasswordReset, loading } = useAuthStore();
@@ -18,6 +20,9 @@ export default function ConnexionPage() {
   const [resetEmail, setResetEmail] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+
+  const [isParent, setIsParent] = useState(false);
+  const [childMatricule, setChildMatricule] = useState('');
 
   const handlePasswordResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +87,48 @@ export default function ConnexionPage() {
         return;
       }
 
+      // Si connexion parent, valider le matricule de l'enfant d'abord
+      if (isParent) {
+        if (!childMatricule) {
+          ToastError("Veuillez saisir le matricule de votre enfant.");
+          return;
+        }
+
+        // 1. Rechercher le parent par email
+        const usersRef = ref(db, 'utilisateurs');
+        const emailQuery = query(usersRef, orderByChild('email'), equalTo(email.trim().toLowerCase()));
+        const userSnapshot = await get(emailQuery);
+
+        if (!userSnapshot.exists()) {
+          ToastError("Aucun compte parent trouvé avec cette adresse email.");
+          return;
+        }
+
+        const userData = Object.values(userSnapshot.val())[0] as any;
+        if (userData.role !== 'PARENT') {
+          ToastError("Cet e-mail n'est pas associé à un compte parent.");
+          return;
+        }
+
+        // 2. Vérifier le matricule de l'enfant
+        let childMatched = false;
+        if (userData.enfants) {
+          for (const childUid of Object.keys(userData.enfants)) {
+            const childRef = ref(db, `universites/${userData.universityId}/etudiants/${childUid}`);
+            const childSnap = await get(childRef);
+            if (childSnap.exists() && childSnap.val().studentId?.trim().toLowerCase() === childMatricule.trim().toLowerCase()) {
+              childMatched = true;
+              break;
+            }
+          }
+        }
+
+        if (!childMatched) {
+          ToastError("Le matricule saisi ne correspond pas à un enfant lié à ce compte parent.");
+          return;
+        }
+      }
+
       await loginWithFirebase(email, password);
       ToastSuccess("Connexion réussie !");
 
@@ -126,6 +173,38 @@ export default function ConnexionPage() {
             />
           </div>
         </div>
+
+        <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 p-3 rounded-2xl">
+          <input
+            type="checkbox"
+            id="parent-toggle"
+            checked={isParent}
+            onChange={(e) => {
+              setIsParent(e.target.checked);
+              if (!e.target.checked) setChildMatricule('');
+            }}
+            className="checkbox checkbox-primary checkbox-sm rounded-lg"
+          />
+          <label htmlFor="parent-toggle" className="text-xs font-semibold text-slate-600 cursor-pointer select-none">
+            Se connecter en tant que Parent d'élève
+          </label>
+        </div>
+
+        {isParent && (
+          <div className="space-y-2 animate-fade-down">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Matricule de l'enfant</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={childMatricule}
+                onChange={e => setChildMatricule(e.target.value)}
+                placeholder="ex: ETU-2026-1234"
+                required={isParent}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="flex justify-between items-center">

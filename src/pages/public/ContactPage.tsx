@@ -26,7 +26,7 @@ const CONTACT_INFO = [
 ];
 
 const SUBJECTS = [
-  'Demande de démo', 'Question tarif', 'Support technique', 'Partenariat', 'Autre',
+  'Demande de devis', 'Question tarif', 'Support technique', 'Partenariat', 'Autre',
 ];
 
 export default function ContactPage() {

@@ -46,6 +46,10 @@ export default function ParametresProfil() {
 
       // Check Security tab changes
       if (activeTab === 'securite') {
+        if (user?.role === 'STUDENT') {
+          ToastError("Les étudiants ne sont pas autorisés à modifier leur mot de passe.");
+          return;
+        }
         if (currentPassword && newPassword) {
           if (newPassword !== confirmPassword) {
             ToastError(t('settings.security.password_mismatch'));
@@ -109,14 +113,16 @@ export default function ParametresProfil() {
                   <User size={18} /> {t('settings.tab.profil')}
                 </a>
               </li>
-              <li>
-                <a 
-                  className={`${activeTab === 'securite' ? 'active bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : ''}`}
-                  onClick={() => setActiveTab('securite')}
-                >
-                  <Shield size={18} /> {t('settings.tab.securite')}
-                </a>
-              </li>
+              {user.role !== 'STUDENT' && (
+                <li>
+                  <a 
+                    className={`${activeTab === 'securite' ? 'active bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : ''}`}
+                    onClick={() => setActiveTab('securite')}
+                  >
+                    <Shield size={18} /> {t('settings.tab.securite')}
+                  </a>
+                </li>
+              )}
               <li>
                 <a 
                   className={`${activeTab === 'preferences' ? 'active bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : ''}`}

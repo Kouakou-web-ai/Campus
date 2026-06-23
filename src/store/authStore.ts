@@ -22,6 +22,8 @@ export interface User {
   filiere?: string;
   annee?: number;
   specialite?: string;
+  mustChangePassword?: boolean;
+  tempPassword?: string;
 }
 
 interface AuthState {
@@ -128,6 +130,8 @@ export const useAuthStore = create<AuthState>((set) => ({
           filiere: userData.filiere,
           annee: userData.annee,
           specialite: userData.specialite,
+          mustChangePassword: userData.mustChangePassword || false,
+          tempPassword: userData.tempPassword || undefined,
         },
         isAuthenticated: true,
         loading: false
@@ -407,6 +411,8 @@ export const useAuthStore = create<AuthState>((set) => ({
             filiere: userData.filiere ?? state.user.filiere,
             annee: userData.annee ?? state.user.annee,
             specialite: userData.specialite ?? state.user.specialite,
+            mustChangePassword: userData.mustChangePassword || false,
+            tempPassword: userData.tempPassword || undefined,
           }
         : null,
     }));

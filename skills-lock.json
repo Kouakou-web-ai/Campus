@@ -13,6 +13,12 @@
       "skillPath": "data/skills/data-visualization/SKILL.md",
       "computedHash": "a238cd5981b2da6bd7ecc24cfb3d7238be993ee5a2ad97acb414f9758aba13dd"
     },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "93f53fd1c0352d3d7ec17b8f73d7351bf76f4821e55d123c9d2abc2c53ba48e4"
+    },
     "responsive-web-design": {
       "source": "secondsky/claude-skills",
       "sourceType": "github",

@@ -42,6 +42,7 @@ const GestionAbsences        = React.lazy(() => import('../pages/teacher/Gestion
 const EmailsSimules          = React.lazy(() => import('../pages/shared/EmailsSimules'));
 const Messagerie             = React.lazy(() => import('../pages/shared/Messagerie'));
 const ParametresProfil       = React.lazy(() => import('../pages/shared/ParametresProfil'));
+const EvaluationSuggestions  = React.lazy(() => import('../pages/shared/EvaluationSuggestions'));
 
 // ─── Student ──────────────────────────────────────────────────────────────────
 const PortailApprentissage   = React.lazy(() => import('../pages/student/PortailApprentissage'));
@@ -185,6 +186,11 @@ function AnimatedRoutes() {
 
             {/* Paramètres partagés pour tous les rôles */}
             <Route path="parametres" element={<ParametresProfil />} />
+
+            {/* Évaluation & Suggestions partagées pour Étudiant, Enseignant et Parent */}
+            <Route element={<RoleGuard allowedRoles={['STUDENT', 'TEACHER', 'PARENT']} />}>
+              <Route path="evaluation-suggestions" element={<EvaluationSuggestions />} />
+            </Route>
           </Route>
 
           {/* Catch-all → 404 */}
