@@ -47,8 +47,15 @@ export default function GestionAbsences() {
   }, [user?.universityId, selectedCourseId]);
 
   const course = myCourses.find((c) => c.id === selectedCourseId);
-  // Filter students by course's filiere
-  const courseStudents = course ? students.filter((s) => s.filiere === course.filiere) : [];
+  // Filter students by course's class (prioritized), or teacher's class, or course's filiere
+  const courseStudents = course 
+    ? students.filter((s) => {
+        if (course.classeId) {
+          return s.classeId === course.classeId;
+        }
+        return user?.classeId ? s.classeId === user.classeId : s.filiere === course.filiere;
+      })
+    : [];
 
   // Reconstruct all past absences for this teacher's courses
   const absenceHistory: any[] = [];

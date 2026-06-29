@@ -6,7 +6,7 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { useAuthStore } from '../../store/authStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
-import type { Course, StatusType } from '../../types';
+import type { Course, StatusType, Class, Student } from '../../types';
 
 const COLUMNS: Array<StatusType> = ['planifie', 'en_cours', 'termine'];
 const COLUMN_LABELS: Record<string, string> = {
@@ -20,10 +20,13 @@ const COLUMN_COLORS: Record<string, string> = {
   termine: 'bg-emerald-50 border-emerald-200',
 };
 
-function CourseCard({ course, onDelete }: { course: Course; onDelete: (id: string) => void }) {
+function CourseCard({ course, onDelete, classes, students }: { course: Course; onDelete: (id: string) => void; classes: Class[]; students: Student[] }) {
   const max = course.studentsMax || 60;
-  const enrolled = course.studentsEnrolled || 0;
+  const enrolled = course.classeId 
+    ? students.filter(s => s.classeId === course.classeId).length 
+    : course.studentsEnrolled || 0;
   const pct = Math.min(100, Math.round((enrolled / max) * 100));
+  const classObj = course.classeId ? classes.find(c => c.id === course.classeId) : null;
 
   return (
     <div className="card-premium p-4 group animate-fade-up">
@@ -43,6 +46,12 @@ function CourseCard({ course, onDelete }: { course: Course; onDelete: (id: strin
           </button>
         </div>
       </div>
+
+      {classObj && (
+        <span className="inline-block bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full mb-2 border border-indigo-100/50">
+          🏫 {classObj.name}
+        </span>
+      )}
 
       <p className="text-xs text-slate-500 mb-3">{course.teacher || 'Aucun enseignant assigné'}</p>
 
@@ -92,6 +101,7 @@ export default function GestionCours() {
   const {
     courses,
     teachers,
+    students,
     scheduleEvents,
     addCourse,
     deleteCourse,
@@ -99,10 +109,13 @@ export default function GestionCours() {
     loading,
     filieres,
     classes,
+    salles,
     addFiliere,
     deleteFiliere,
     addClass,
-    deleteClass
+    deleteClass,
+    addSalle,
+    deleteSalle
   } = useRealtimeDataStore();
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -136,9 +149,25 @@ export default function GestionCours() {
   const [semester, setSemester] = useState(1);
   const [credits, setCredits] = useState(4);
   const [studentsMax, setStudentsMax] = useState(60);
+  const [courseClasseId, setCourseClasseId] = useState('');
+
+  useEffect(() => {
+    if (classes.length > 0 && !courseClasseId) {
+      setCourseClasseId(classes[0].id);
+    }
+  }, [classes, courseClasseId]);
+
+  useEffect(() => {
+    if (courseClasseId) {
+      const selectedClass = classes.find(c => c.id === courseClasseId);
+      if (selectedClass) {
+        setFiliere(selectedClass.filiere);
+      }
+    }
+  }, [courseClasseId, classes]);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'courses' | 'filieres' | 'classes'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'filieres' | 'classes' | 'salles'>('courses');
 
   // Filières states & actions
   const [newFiliereName, setNewFiliereName] = useState('');
@@ -198,6 +227,33 @@ export default function GestionCours() {
     }
   };
 
+  // Salles states & actions
+  const [newSalleName, setNewSalleName] = useState('');
+
+  const handleAddSalleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSalleName.trim() || !user?.universityId) return;
+    try {
+      await addSalle(user.universityId, newSalleName.trim());
+      ToastSuccess("Salle ajoutée avec succès.");
+      setNewSalleName('');
+    } catch (err) {
+      ToastError("Impossible d'ajouter la salle.");
+    }
+  };
+
+  const handleDeleteSalleClick = async (name: string) => {
+    if (!user?.universityId) return;
+    if (window.confirm(`Voulez-vous vraiment supprimer la salle "${name}" ?`)) {
+      try {
+        await deleteSalle(user.universityId, name);
+        ToastSuccess("Salle supprimée.");
+      } catch (err) {
+        ToastError("Impossible de supprimer la salle.");
+      }
+    }
+  };
+
   const handleDeleteClassClick = async (classId: string) => {
     if (!user?.universityId) return;
     if (window.confirm("Voulez-vous vraiment supprimer cette classe ?")) {
@@ -214,7 +270,15 @@ export default function GestionCours() {
   const [date, setDate] = useState(''); // YYYY-MM-DD
   const [startTime, setStartTime] = useState(''); // HH:MM
   const [duration, setDuration] = useState(2); // hours
-  const [room, setRoom] = useState('Salle 101');
+  const [room, setRoom] = useState('');
+
+  useEffect(() => {
+    if (salles && salles.length > 0) {
+      if (!room) setRoom(salles[0]);
+    } else {
+      if (!room) setRoom('Salle 101');
+    }
+  }, [salles, room]);
 
   const filtered = courses.filter(c => {
     if (!c) return false;
@@ -229,8 +293,8 @@ export default function GestionCours() {
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.universityId) return;
-    if (!title || !code || !date || !startTime) {
-      ToastError("Veuillez remplir les champs obligatoires (Titre, Code, Date, Heure).");
+    if (!title || !code || !date || !startTime || !courseClasseId) {
+      ToastError("Veuillez remplir les champs obligatoires (Titre, Code, Classe, Date, Heure).");
       return;
     }
     try {
@@ -271,15 +335,17 @@ export default function GestionCours() {
 
 
       // 1. Add course record
+      const initialEnrolledCount = students.filter(s => s.classeId === courseClasseId).length;
       await addCourse(user.universityId, {
         title,
         code,
         teacher: teacherName,
         teacherId: teacherId || '',
         filiere,
+        classeId: courseClasseId,
         semester: Number(semester),
         credits: Number(credits),
-        studentsEnrolled: 0,
+        studentsEnrolled: initialEnrolledCount,
         studentsMax: Number(studentsMax),
         status: 'planifie',
         date,
@@ -318,6 +384,7 @@ export default function GestionCours() {
       setCode('');
       setDate('');
       setStartTime('');
+      setCourseClasseId(classes[0]?.id || '');
       setModalOpen(false);
     } catch (err: any) {
       ToastError(err.message || "Erreur lors de l'ajout.");
@@ -401,6 +468,16 @@ export default function GestionCours() {
         >
           Classes
         </button>
+        <button
+          onClick={() => setActiveTab('salles')}
+          className={`px-5 py-3 text-sm font-semibold border-b-2 transition-all ${
+            activeTab === 'salles'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          Salles
+        </button>
       </div>
 
       {activeTab === 'courses' && (
@@ -420,7 +497,7 @@ export default function GestionCours() {
                     <div className="text-center py-8 text-slate-400 text-sm bg-white/50 rounded-xl border border-dashed border-slate-200">Aucun cours</div>
                   ) : (
                     colCourses.map(course => (
-                      <CourseCard key={course.id} course={course} onDelete={handleDeleteCourse} />
+                      <CourseCard key={course.id} course={course} onDelete={handleDeleteCourse} classes={classes} students={students} />
                     ))
                   )}
                 </div>
@@ -487,12 +564,20 @@ export default function GestionCours() {
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom de la classe</label>
                 <input
                   type="text"
+                  list="class-name-suggestions"
                   value={newClassName}
                   onChange={e => setNewClassName(e.target.value)}
                   placeholder="ex: Licence 3 Génie Logiciel"
                   required
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                 />
+                <datalist id="class-name-suggestions">
+                  <option value="Licence 1" />
+                  <option value="Licence 2" />
+                  <option value="Licence 3" />
+                  <option value="Master 1" />
+                  <option value="Master 2" />
+                </datalist>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Filière</label>
@@ -508,17 +593,23 @@ export default function GestionCours() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Année d'étude</label>
-                <select
+                <input
+                  type="number"
+                  min={1}
+                  list="class-annee-suggestions"
                   value={newClassAnnee}
                   onChange={e => setNewClassAnnee(Number(e.target.value))}
+                  placeholder="ex: 1"
+                  required
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                >
-                  <option value={1}>1ère année (Licence 1)</option>
-                  <option value={2}>2ème année (Licence 2)</option>
-                  <option value={3}>3ème année (Licence 3)</option>
-                  <option value={4}>4ème année (Master 1)</option>
-                  <option value={5}>5ème année (Master 2)</option>
-                </select>
+                />
+                <datalist id="class-annee-suggestions">
+                  <option value={1} />
+                  <option value={2} />
+                  <option value={3} />
+                  <option value={4} />
+                  <option value={5} />
+                </datalist>
               </div>
               <button type="submit" className="w-full py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors">
                 <Plus size={16} />
@@ -562,6 +653,63 @@ export default function GestionCours() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'salles' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="card-premium p-6 h-fit">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Ajouter une salle</h3>
+            <form onSubmit={handleAddSalleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom de la salle / Amphi</label>
+                <input
+                  type="text"
+                  list="salles-names-list"
+                  value={newSalleName}
+                  onChange={e => setNewSalleName(e.target.value)}
+                  placeholder="ex: Amphi 1"
+                  required
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                />
+                <datalist id="salles-names-list">
+                  <option value="Amphi 1" />
+                  <option value="Amphithéâtre A" />
+                  <option value="Amphithéâtre B" />
+                  <option value="Salle 101" />
+                  <option value="Salle 102" />
+                  <option value="Salle de TD 1" />
+                </datalist>
+              </div>
+              <button type="submit" className="w-full py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors">
+                <Plus size={16} />
+                Ajouter la salle
+              </button>
+            </form>
+          </div>
+
+          <div className="md:col-span-2 card-premium p-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Salles enregistrées</h3>
+            {salles.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">Aucune salle enregistrée.</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {salles.map(s => (
+                  <div key={s} className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-xl">
+                    <span className="font-medium text-slate-800 dark:text-slate-200 text-sm">{s}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSalleClick(s)}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors"
+                      title="Supprimer la salle"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -627,18 +775,29 @@ export default function GestionCours() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Classe concernée</label>
+                <select
+                  value={courseClasseId}
+                  onChange={e => setCourseClasseId(e.target.value)}
+                  required
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">Sélectionner une classe…</option>
+                  {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Filière</label>
-                  <select
-                    value={filiere}
-                    onChange={e => setFiliere(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
-                  >
-                    {filieres.map(f => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
+                  <input
+                    type="text"
+                    value={filiere || 'Sélectionnez une classe'}
+                    disabled
+                    className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 focus:outline-none cursor-not-allowed"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Semestre</label>
@@ -665,18 +824,29 @@ export default function GestionCours() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Salle de classe</label>
-                  <select
+                  <input
+                    type="text"
+                    list="salles-suggestions"
                     value={room}
                     onChange={e => setRoom(e.target.value)}
+                    placeholder="ex: Amphi 1"
                     className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="Salle 101">Salle 101</option>
-                    <option value="Salle 102">Salle 102</option>
-                    <option value="Salle 103">Salle 103</option>
-                    <option value="Amphithéâtre A">Amphithéâtre A</option>
-                    <option value="Amphithéâtre B">Amphithéâtre B</option>
-                    <option value="Labo Informatique">Labo Informatique</option>
-                  </select>
+                  />
+                  <datalist id="salles-suggestions">
+                    {salles.map(s => (
+                      <option key={s} value={s} />
+                    ))}
+                    {salles.length === 0 && (
+                      <>
+                        <option value="Amphi 1" />
+                        <option value="Amphithéâtre A" />
+                        <option value="Amphithéâtre B" />
+                        <option value="Salle 101" />
+                        <option value="Salle 102" />
+                        <option value="Labo Informatique" />
+                      </>
+                    )}
+                  </datalist>
                 </div>
               </div>
               

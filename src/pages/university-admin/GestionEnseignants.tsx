@@ -115,7 +115,13 @@ export default function GestionEnseignants() {
     if (!t) return null;
     const teacherCourses = courses.filter(c => c.teacherId === t.id);
     const teacherFilieres = [...new Set(teacherCourses.map(c => c.filiere))];
-    const teacherStudents = students.filter(s => teacherFilieres.includes(s.filiere));
+    const teacherStudents = students.filter(s => {
+      const teachesStudentInCourse = teacherCourses.some(c => c.classeId && s.classeId === c.classeId);
+      if (teachesStudentInCourse) return true;
+      const anyCourseHasClass = teacherCourses.some(c => c.classeId);
+      if (anyCourseHasClass) return false;
+      return (t.classeId && s.classeId === t.classeId) || teacherFilieres.includes(s.filiere);
+    });
     return {
       ...t,
       coursCount: teacherCourses.length,
@@ -196,17 +202,7 @@ export default function GestionEnseignants() {
                     <StatusBadge status={teacher.status} />
                   </div>
 
-                  {/* Rating */}
-                  <div className="flex items-center gap-1 mt-2">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        size={13}
-                        className={i < Math.floor(teacher.rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}
-                      />
-                    ))}
-                    <span className="text-xs text-slate-500 ml-1">{teacher.rating}/5</span>
-                  </div>
+
                 </div>
               </div>
 

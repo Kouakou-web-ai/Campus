@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Download, AlertCircle, Link2 } from 'lucide-react';
+import { Download, Link2 } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useAuthStore } from '../../store/authStore';
@@ -15,11 +15,6 @@ export default function Scolarite() {
 
   const [linkedIds, setLinkedIds] = useState<string[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  
-  const [payModalOpen, setPayModalOpen] = useState(false);
-  const [operator, setOperator] = useState<'wave' | 'orange' | 'mtn'>('wave');
-  const [phone, setPhone] = useState(user?.telephone || '');
-  const [processing, setProcessing] = useState(false);
 
   // Subscribe to parent's linked children in Firebase
   useEffect(() => {
@@ -54,47 +49,7 @@ export default function Scolarite() {
   // Filter student transactions
   const studentTrans = transactions.filter(t => t.studentName === student?.name);
 
-  // Generate dynamic milestones
-  const PAYMENT_SCHEDULE = [
-    { label: 'Acompte inscription (20%)', amount: Math.round(totalAmount * 0.2), dueDate: '2025-09-01', status: paidAmount >= totalAmount * 0.2 ? 'paye' as const : 'en_attente' as const },
-    { label: 'Semestre 1 — Solde (40%)', amount: Math.round(totalAmount * 0.4), dueDate: '2025-12-01', status: paidAmount >= totalAmount * 0.6 ? 'paye' as const : 'en_attente' as const },
-    { label: 'Semestre 2 — Solde (40%)', amount: Math.round(totalAmount * 0.4), dueDate: '2026-04-01', status: paidAmount >= totalAmount ? 'paye' as const : 'en_attente' as const },
-  ];
 
-  const nextPayment = PAYMENT_SCHEDULE.find(p => p.status === 'en_attente');
-  const daysUntilNext = nextPayment
-    ? Math.ceil((new Date(nextPayment.dueDate).getTime() - Date.now()) / 86400000)
-    : null;
-
-  const handleSimulatePayment = async () => {
-    if (!user || !student || !nextPayment) return;
-    setProcessing(true);
-    try {
-      const amountToPay = nextPayment.amount;
-
-      // 1. Add real transaction record under university node
-      await addTransaction(student.universityId, {
-        studentName: student.name,
-        type: nextPayment.label,
-        method: `${operator.toUpperCase()} Money`,
-        date: new Date().toISOString().split('T')[0],
-        amount: amountToPay,
-        status: 'paye'
-      });
-
-      // 2. Increment paidAmount on student profile
-      await updateStudent(student.universityId, student.id, {
-        paidAmount: (student.paidAmount || 0) + amountToPay
-      });
-
-      ToastSuccess("Paiement effectué avec succès par Mobile Money !");
-      setPayModalOpen(false);
-    } catch (e: any) {
-      ToastError("Échec du paiement.");
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -181,82 +136,10 @@ export default function Scolarite() {
             </div>
           </div>
 
-          {nextPayment && (
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10 flex-shrink-0 text-center w-full md:w-auto min-w-48">
-              <p className="text-slate-400 text-xs mb-2">Prochaine échéance</p>
-              <div className="text-xl font-bold text-white mb-1">{nextPayment.amount.toLocaleString('fr-FR')} FCFA</div>
-              <p className="text-xs text-slate-300">{new Date(nextPayment.dueDate).toLocaleDateString('fr-FR')}</p>
-              {daysUntilNext !== null && daysUntilNext < 30 && (
-                <div className={`mt-2 text-xs font-bold px-2.5 py-0.5 rounded-full ${daysUntilNext < 7 ? 'bg-red-500/20 text-red-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                  Dans {daysUntilNext} jours
-                </div>
-              )}
-              <button 
-                onClick={() => setPayModalOpen(true)}
-                className="mt-3 w-full py-2.5 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95"
-              >
-                <CreditCard size={12} />
-                Payer maintenant (Mobile Money)
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Alert */}
-      {nextPayment && daysUntilNext !== null && daysUntilNext < 30 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 flex items-center gap-3">
-          <AlertCircle size={16} className="text-amber-500 flex-shrink-0" />
-          <p className="text-sm text-amber-800">
-            <strong>Rappel :</strong> Votre prochain paiement de {nextPayment.amount.toLocaleString('fr-FR')} FCFA est dû le{' '}
-            {new Date(nextPayment.dueDate).toLocaleDateString('fr-FR')}.
-          </p>
-        </div>
-      )}
 
-      {/* Échéancier */}
-      <div className="card-premium overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-800">Échéancier de paiement</h3>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {PAYMENT_SCHEDULE.map((payment, i) => (
-            <div key={i} className="flex items-center gap-4 px-6 py-4 flex-wrap sm:flex-nowrap">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                payment.status === 'paye' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
-              }`}>
-                {payment.status === 'paye' ? '✓' : i + 1}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-800 text-sm truncate">{payment.label}</p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Échéance : {new Date(payment.dueDate).toLocaleDateString('fr-FR')}
-                </p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="font-bold text-slate-800 text-sm">{payment.amount.toLocaleString('fr-FR')} FCFA</p>
-              </div>
-              <StatusBadge status={payment.status} />
-              {payment.status === 'paye' && (
-                <button 
-                  onClick={() => exportReceiptPDF(
-                    student?.name || 'Étudiant',
-                    `PAY-${payment.dueDate}`,
-                    payment.amount,
-                    payment.dueDate,
-                    payment.label,
-                    0
-                  )}
-                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex-shrink-0" 
-                  title="Télécharger reçu"
-                >
-                  <Download size={14} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Transactions */}
       <div className="card-premium overflow-hidden">
@@ -315,81 +198,7 @@ export default function Scolarite() {
         )}
       </div>
 
-      {/* Mobile Money Sandbox Simulator Modal */}
-      {payModalOpen && nextPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative animate-fade-up">
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Simulateur Mobile Money</h3>
-            <p className="text-xs text-slate-500 mb-6">Simulation de paiement sécurisée sans passerelle réelle.</p>
-            
-            {/* Amount details */}
-            <div className="bg-slate-50 rounded-2xl p-4 mb-5 border border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Montant à régler</span>
-              <p className="text-xl font-extrabold text-slate-800">{nextPayment.amount.toLocaleString('fr-FR')} FCFA</p>
-              <p className="text-xs text-slate-500 mt-1">{nextPayment.label}</p>
-            </div>
 
-            {/* Operator select */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Opérateur</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'wave', label: 'Wave', color: 'border-cyan-400 bg-cyan-50/30 text-cyan-600' },
-                    { id: 'orange', label: 'Orange', color: 'border-orange-400 bg-orange-50/30 text-orange-600' },
-                    { id: 'mtn', label: 'MTN', color: 'border-yellow-400 bg-yellow-50/30 text-yellow-600' }
-                  ].map(op => (
-                    <button
-                      key={op.id}
-                      type="button"
-                      onClick={() => setOperator(op.id as any)}
-                      className={`py-3 px-2 border-2 rounded-xl text-xs font-bold transition-all ${
-                        operator === op.id ? op.color : 'border-slate-100 hover:bg-slate-50 text-slate-500'
-                      }`}
-                    >
-                      {op.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Numéro de téléphone</label>
-                <input
-                  type="tel"
-                  placeholder="07 00 00 00 00"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500 transition-all font-mono"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setPayModalOpen(false)}
-                  disabled={processing}
-                  className="flex-1 py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSimulatePayment}
-                  disabled={processing || !phone.trim()}
-                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                >
-                  {processing ? (
-                    <span className="loading loading-spinner loading-xs" />
-                  ) : (
-                    'Confirmer'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

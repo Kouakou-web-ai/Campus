@@ -12,7 +12,12 @@ interface FaireAppelModalProps {
 export default function FaireAppelModal({ courseId, universityId, onClose }: FaireAppelModalProps) {
   const { students, courses, markAttendance, addTransaction, updateStudent } = useRealtimeDataStore();
   const course = courses.find(c => c.id === courseId);
-  const courseStudents = students.filter(s => s.filiere === course?.filiere);
+  const courseStudents = students.filter(s => {
+    if (course?.classeId) {
+      return s.classeId === course.classeId;
+    }
+    return s.filiere === course?.filiere;
+  });
 
   const [attendances, setAttendances] = useState<Record<string, 'present' | 'absent' | 'retard'>>({});
   const [saving, setSaving] = useState(false);

@@ -112,6 +112,8 @@ export interface Course {
   duration: number; // in minutes
   progress: number;
   universityId: string;
+  classeId?: string;
+  classeName?: string;
 }
 
 export interface Attendance {

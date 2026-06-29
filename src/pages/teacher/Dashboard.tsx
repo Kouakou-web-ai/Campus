@@ -39,8 +39,14 @@ export function TeacherDashboard() {
   const myAssignments = assignments.filter((a) => myCourseIds.includes(a.courseId));
   const totalSubmissions = myAssignments.reduce((sum, a) => sum + (a.submissionsCount || 0), 0);
 
-  // Filter students who are in the same filière as the teacher's courses
-  const myStudents = students.filter((s) => myFilieres.includes(s.filiere));
+  // Filter students who are in the classes of the teacher's courses
+  const myStudents = students.filter((s) => {
+    const teachesStudentInCourse = myCourses.some(c => c.classeId && s.classeId === c.classeId);
+    if (teachesStudentInCourse) return true;
+    const anyCourseHasClass = myCourses.some(c => c.classeId);
+    if (anyCourseHasClass) return false;
+    return myFilieres.includes(s.filiere);
+  });
   const totalStudentsCount = myStudents.length;
 
   // Filter teacher's schedule events

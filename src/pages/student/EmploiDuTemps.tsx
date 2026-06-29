@@ -21,15 +21,20 @@ export default function EmploiDuTemps() {
   // Find logged-in student profile
   const studentProfile = students.find(s => s.id === user?.id);
 
-  // Filter events by student's filiere & academic year
+  // Filter events by student's class (prioritized) or filiere & academic year
   const filteredEvents = scheduleEvents.filter(event => {
     if (!studentProfile) return true;
     
-    // Find course of this event to match its filiere
+    // Find course of this event to match its class/filiere
     const course = courses.find(c => c.code === event.courseCode);
     if (!course) {
       // Fallback: match by title keywords if course doesn't match
       return event.title.toLowerCase().includes(studentProfile.filiere.toLowerCase());
+    }
+
+    // Match by class if both class information exists
+    if (studentProfile.classeId && course.classeId) {
+      return course.classeId === studentProfile.classeId;
     }
 
     const filiereMatches = course.filiere.toLowerCase() === studentProfile.filiere.toLowerCase();

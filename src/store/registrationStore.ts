@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useAuthStore, type UserRole } from './authStore';
-import { auth } from '../../firebase-config';
+import { auth, db } from '../../firebase-config';
+import { ref, get as dbGet } from 'firebase/database';
 import type { RegistrationRequest, UserStatus } from '../types/userAccount';
 import {
   subscribeToUsers,
@@ -43,8 +44,36 @@ export const useRegistrationStore = create<RegistrationState>((set, get) => ({
     if (get().unsubscribe) return;
 
     set({ loading: true });
-    const unsub = subscribeToUsers((users) => {
-      set({ requests: withUniversityNames(users), loading: false });
+    const unsub = subscribeToUsers(async (users) => {
+      // 1. Initial fast sync map
+      const initialRequests = withUniversityNames(users);
+      set({ requests: initialRequests, loading: false });
+
+      // 2. Async resolution from Firebase Database in the background
+      const resolvedRequests = await Promise.all(
+        users.map(async (user) => {
+          if (!user.universityId) {
+            return { ...user, universityName: '—' };
+          }
+          const mock = mockUniversities.find((u) => u.id === user.universityId);
+          if (mock) {
+            return { ...user, universityName: mock.name };
+          }
+          try {
+            const nameRef = ref(db, `universites/${user.universityId}/branding/name`);
+            const snapshot = await dbGet(nameRef);
+            return {
+              ...user,
+              universityName: snapshot.exists() ? snapshot.val() : (user.universityId || '—'),
+            };
+          } catch (err) {
+            console.error("Erreur lors de la récupération du nom de l'université:", err);
+            return { ...user, universityName: user.universityId || '—' };
+          }
+        })
+      );
+
+      set({ requests: resolvedRequests });
     });
     set({ unsubscribe: unsub });
   },

@@ -56,16 +56,20 @@ export default function SuiviEnfant() {
   // Filter child transactions
   const childTransactions = child ? transactions.filter(t => t.studentName === child.name) : [];
 
-  // Reconstruct detailed absences history for selected child
+  // Reconstruct detailed absences history for selected child & calculate attendance rate dynamically
   const childAbsencesList: any[] = [];
+  let totalCalls = 0;
+  let childAbsencesCount = 0;
   if (child && appels) {
     Object.entries(appels).forEach(([courseId, dates]: [string, any]) => {
       const course = courses.find(c => c.id === courseId);
       if (dates) {
         Object.entries(dates).forEach(([dateKey, studentsList]: [string, any]) => {
           if (studentsList && studentsList[child.id]) {
+            totalCalls++;
             const record = studentsList[child.id];
             if (record.status === 'absent_justifie' || record.status === 'absent_non_justifie') {
+              childAbsencesCount++;
               childAbsencesList.push({
                 id: `${courseId}-${dateKey}-${child.id}`,
                 studentName: child.name,
@@ -84,6 +88,10 @@ export default function SuiviEnfant() {
   }
   // Sort absences by date descending
   childAbsencesList.sort((a, b) => b.date.localeCompare(a.date));
+
+  const childAttendanceRate = totalCalls > 0
+    ? Math.round(((totalCalls - childAbsencesCount) / totalCalls) * 100)
+    : 0;
 
   // Generate activities based on real database records
   const activities: { icon: string; text: string; time: string }[] = [];
@@ -274,8 +282,8 @@ export default function SuiviEnfant() {
                   <p className="text-xs text-slate-400">Moyenne générale</p>
                 </div>
                 <div className="card-premium p-5 flex flex-col items-center text-center">
-                  <ProgressRing value={100 - (child.absences || 0) * 5} size={70} color="#10b981" />
-                  <p className="text-sm font-semibold text-slate-700 mt-2">{100 - (child.absences || 0) * 5}%</p>
+                  <ProgressRing value={childAttendanceRate} size={70} color="#10b981" />
+                  <p className="text-sm font-semibold text-slate-700 mt-2">{childAttendanceRate}%</p>
                   <p className="text-xs text-slate-400">Assiduité</p>
                 </div>
                 <div className="card-premium p-5 flex flex-col items-center text-center">

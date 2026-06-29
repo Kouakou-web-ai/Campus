@@ -26,6 +26,7 @@ interface RealtimeDataState {
   loading: boolean;
   filieres: string[];
   classes: Class[];
+  salles: string[];
   evaluations: any[];
   suggestions: any[];
   
@@ -68,8 +69,20 @@ interface RealtimeDataState {
   deleteFiliere: (universityId: string, name: string) => Promise<void>;
   addClass: (universityId: string, cls: Omit<Class, 'id'>) => Promise<void>;
   deleteClass: (universityId: string, classId: string) => Promise<void>;
+  addSalle: (universityId: string, name: string) => Promise<void>;
+  deleteSalle: (universityId: string, name: string) => Promise<void>;
   assignTeacherToCourse: (universityId: string, teacherId: string, teacherName: string, courseId: string) => Promise<void>;
   updateSuggestion: (universityId: string, suggestionId: string, data: Partial<any>) => Promise<void>;
+  markAttendance: (
+    universityId: string,
+    courseId: string,
+    attendance: {
+      studentId: string;
+      studentName: string;
+      status: 'present' | 'absent' | 'retard';
+      markedAt: string;
+    }
+  ) => Promise<void>;
 }
 
 export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStore) => ({
@@ -92,6 +105,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   loading: false,
   filieres: [],
   classes: [],
+  salles: [],
   evaluations: [],
   suggestions: [],
 
@@ -334,8 +348,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       if (val) {
         setStore({ filieres: Object.values(val) });
       } else {
-        const defaultFilieres = ['Informatique', 'Mathématiques', 'Économie', 'Droit', 'Physique'];
-        setStore({ filieres: defaultFilieres });
+        setStore({ filieres: [] });
       }
     }));
 
@@ -345,13 +358,17 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       if (val) {
         setStore({ classes: Object.keys(val).map(key => ({ id: key, ...val[key] })), loading: false });
       } else {
-        const defaultClasses: Class[] = [
-          { id: 'c1', name: 'Licence 1 Informatique', filiere: 'Informatique', annee: 1 },
-          { id: 'c2', name: 'Licence 2 Informatique', filiere: 'Informatique', annee: 2 },
-          { id: 'c3', name: 'Licence 3 Informatique', filiere: 'Informatique', annee: 3 },
-          { id: 'c4', name: 'Licence 1 Mathématiques', filiere: 'Mathématiques', annee: 1 },
-        ];
-        setStore({ classes: defaultClasses, loading: false });
+        setStore({ classes: [], loading: false });
+      }
+    }));
+
+    // 23. Salles
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/salles`), (snap) => {
+      const val = snap.val();
+      if (val) {
+        setStore({ salles: Object.values(val) });
+      } else {
+        setStore({ salles: [] });
       }
     }));
 
@@ -912,75 +929,32 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   },
 
   addFiliere: async (universityId, name) => {
-    const filieresRef = ref(db, `universites/${universityId}/filieres`);
-    const snapshot = await get(filieresRef);
-    if (!snapshot.exists()) {
-      const defaults = ['Informatique', 'Mathématiques', 'Économie', 'Droit', 'Physique'];
-      for (const d of defaults) {
-        await set(ref(db, `universites/${universityId}/filieres/${d.replace(/[.#$[\]]/g, '_')}`), d);
-      }
-    }
     const sanitized = name.replace(/[.#$[\]]/g, '_');
     await set(ref(db, `universites/${universityId}/filieres/${sanitized}`), name);
   },
 
   deleteFiliere: async (universityId, name) => {
-    const filieresRef = ref(db, `universites/${universityId}/filieres`);
-    const snapshot = await get(filieresRef);
-    if (!snapshot.exists()) {
-      const defaults = ['Informatique', 'Mathématiques', 'Économie', 'Droit', 'Physique'];
-      for (const d of defaults) {
-        if (d !== name) {
-          await set(ref(db, `universites/${universityId}/filieres/${d.replace(/[.#$[\]]/g, '_')}`), d);
-        }
-      }
-    } else {
-      const sanitized = name.replace(/[.#$[\]]/g, '_');
-      await remove(ref(db, `universites/${universityId}/filieres/${sanitized}`));
-    }
+    const sanitized = name.replace(/[.#$[\]]/g, '_');
+    await remove(ref(db, `universites/${universityId}/filieres/${sanitized}`));
   },
 
   addClass: async (universityId, cls) => {
-    const classesRef = ref(db, `universites/${universityId}/classes`);
-    const snapshot = await get(classesRef);
-    if (!snapshot.exists()) {
-      const defaultClasses = [
-        { name: 'Licence 1 Informatique', filiere: 'Informatique', annee: 1 },
-        { name: 'Licence 2 Informatique', filiere: 'Informatique', annee: 2 },
-        { name: 'Licence 3 Informatique', filiere: 'Informatique', annee: 3 },
-        { name: 'Licence 1 Mathématiques', filiere: 'Mathématiques', annee: 1 },
-      ];
-      for (const dc of defaultClasses) {
-        const newRef = push(ref(db, `universites/${universityId}/classes`));
-        await set(newRef, dc);
-      }
-    }
     const newClassRef = push(ref(db, `universites/${universityId}/classes`));
     await set(newClassRef, cls);
   },
 
   deleteClass: async (universityId, classId) => {
-    const classesRef = ref(db, `universites/${universityId}/classes`);
-    const snapshot = await get(classesRef);
-    if (!snapshot.exists()) {
-      const defaultClasses = [
-        { id: 'c1', name: 'Licence 1 Informatique', filiere: 'Informatique', annee: 1 },
-        { id: 'c2', name: 'Licence 2 Informatique', filiere: 'Informatique', annee: 2 },
-        { id: 'c3', name: 'Licence 3 Informatique', filiere: 'Informatique', annee: 3 },
-        { id: 'c4', name: 'Licence 1 Mathématiques', filiere: 'Mathématiques', annee: 1 },
-      ];
-      for (const dc of defaultClasses) {
-        if (dc.id !== classId) {
-          await set(ref(db, `universites/${universityId}/classes/${dc.id}`), {
-            name: dc.name,
-            filiere: dc.filiere,
-            annee: dc.annee
-          });
-        }
-      }
-    } else {
-      await remove(ref(db, `universites/${universityId}/classes/${classId}`));
-    }
+    await remove(ref(db, `universites/${universityId}/classes/${classId}`));
+  },
+
+  addSalle: async (universityId, name) => {
+    const sanitized = name.replace(/[.#$[\]]/g, '_');
+    await set(ref(db, `universites/${universityId}/salles/${sanitized}`), name);
+  },
+
+  deleteSalle: async (universityId, name) => {
+    const sanitized = name.replace(/[.#$[\]]/g, '_');
+    await remove(ref(db, `universites/${universityId}/salles/${sanitized}`));
   },
 
   assignTeacherToCourse: async (universityId, teacherId, teacherName, courseId) => {
@@ -992,5 +966,15 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
   updateSuggestion: async (universityId, suggestionId, data) => {
     await update(ref(db, `universites/${universityId}/suggestions/${suggestionId}`), data);
+  },
+
+  markAttendance: async (universityId, courseId, attendance) => {
+    const dateKey = attendance.markedAt.split('T')[0];
+    const status = attendance.status === 'absent' ? 'absent_non_justifie' : attendance.status;
+    const callRef = ref(db, `universites/${universityId}/appels/${courseId}/${dateKey}/${attendance.studentId}`);
+    await set(callRef, {
+      status,
+      updatedAt: attendance.markedAt
+    });
   }
 }));

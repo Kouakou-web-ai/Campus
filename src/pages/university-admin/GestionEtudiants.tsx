@@ -97,7 +97,7 @@ export default function GestionEtudiants() {
             onClick={() => handleOpenEditModal(row)}
             className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-all"
           >
-            Modifier / Affecter
+            Affecter
           </button>
           <a href={`mailto:${row.email}`} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block" title="Envoyer email">
             <Mail size={14} />
@@ -180,21 +180,15 @@ export default function GestionEtudiants() {
 
     try {
       await updateStudent(user.universityId, editingStudent.id, {
-        nom: editNom.trim(),
-        prenom: editPrenom.trim(),
-        name: `${editPrenom.trim()} ${editNom.trim()}`,
-        dateNaissance: editDateNaissance,
-        lieuNaissance: editLieuNaissance,
-        sexe: editSexe,
         classeId: editClasseId,
         filiere: studentFiliere,
         annee: studentAnnee
       });
-      ToastSuccess("Profil de l'étudiant mis à jour avec succès.");
+      ToastSuccess("Classe affectée avec succès.");
       setEditModalOpen(false);
       setEditingStudent(null);
     } catch (err) {
-      ToastError("Impossible de mettre à jour le profil de l'étudiant.");
+      ToastError("Impossible d'affecter la classe.");
     }
   };
 
@@ -219,10 +213,10 @@ export default function GestionEtudiants() {
   const avgGrade = students.length > 0 ? (students.reduce((sum, s) => sum + ((s && s.average) || 0), 0) / students.length) : 0;
 
   const STATS = [
-    { title: 'Total étudiants', value: students.length, change: 5, trend: 'up' as const, icon: <Users size={20} className="text-indigo-600" />, gradient: 'bg-indigo-100' },
-    { title: 'Actifs', value: activeStudents, change: 3, trend: 'up' as const, icon: <CheckCircle size={20} className="text-emerald-600" />, gradient: 'bg-emerald-100' },
-    { title: 'Nouveaux ce mois', value: students.length > 0 ? Math.ceil(students.length * 0.1) : 0, change: 20, trend: 'up' as const, icon: <UserPlus size={20} className="text-blue-600" />, gradient: 'bg-blue-100' },
-    { title: 'Moyenne générale', value: `${avgGrade.toFixed(1)}/20`, change: 1.2, trend: 'up' as const, icon: <Award size={20} className="text-amber-600" />, gradient: 'bg-amber-100' },
+    { title: 'Total étudiants', value: students.length, icon: <Users size={20} className="text-indigo-600" />, gradient: 'bg-indigo-100' },
+    { title: 'Actifs', value: activeStudents, icon: <CheckCircle size={20} className="text-emerald-600" />, gradient: 'bg-emerald-100' },
+    { title: 'Nouveaux ce mois', value: students.length > 0 ? Math.ceil(students.length * 0.1) : 0, icon: <UserPlus size={20} className="text-blue-600" />, gradient: 'bg-blue-100' },
+    { title: 'Moyenne générale', value: `${avgGrade.toFixed(1)}/20`, icon: <Award size={20} className="text-amber-600" />, gradient: 'bg-amber-100' },
   ];
 
   const handleAddStudent = async (e: React.FormEvent) => {
@@ -680,86 +674,29 @@ export default function GestionEtudiants() {
             >
               <X size={18} />
             </button>
-            <h3 className="text-xl font-bold text-slate-800 mb-6">Modifier / Affecter Étudiant</h3>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">Affecter Étudiant</h3>
+            <p className="text-sm text-slate-500 mb-4">Affectez l'étudiant <strong>{editingStudent.name}</strong> à une classe.</p>
             <form onSubmit={handleSaveEdit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom</label>
-                  <input
-                    type="text"
-                    value={editNom}
-                    onChange={e => setEditNom(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Prénom(s)</label>
-                  <input
-                    type="text"
-                    value={editPrenom}
-                    onChange={e => setEditPrenom(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Date de naissance</label>
-                  <input
-                    type="date"
-                    value={editDateNaissance}
-                    onChange={e => setEditDateNaissance(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Lieu de naissance</label>
-                  <input
-                    type="text"
-                    value={editLieuNaissance}
-                    onChange={e => setEditLieuNaissance(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Sexe</label>
-                  <select
-                    value={editSexe}
-                    onChange={e => setEditSexe(e.target.value as 'M' | 'F')}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="M">Masculin</option>
-                    <option value="F">Féminin</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Affecter Classe</label>
-                  <select
-                    value={editClasseId}
-                    onChange={e => setEditClasseId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">Sélectionner une classe…</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Classe à affecter</label>
+                <select
+                  value={editClasseId}
+                  onChange={e => setEditClasseId(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">Sélectionner une classe…</option>
+                  {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
 
               <button
                 type="submit"
                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors mt-6"
               >
-                Sauvegarder les modifications
+                Affecter
               </button>
             </form>
           </div>

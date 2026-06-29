@@ -45,32 +45,24 @@ export default function UniversityAdminDashboard() {
     {
       title: 'Étudiants inscrits',
       value: totalStudents,
-      change: totalStudents > 0 ? 5 : 0,
-      trend: 'up' as const,
       icon: <Users size={20} className="text-indigo-650" />,
       gradient: 'bg-indigo-50'
     },
     {
       title: 'Enseignants actifs',
       value: totalTeachers,
-      change: 0,
-      trend: 'neutral' as const,
       icon: <GraduationCap size={20} className="text-emerald-650" />,
       gradient: 'bg-emerald-50'
     },
     {
       title: 'Cours programmés',
       value: totalCourses,
-      change: 0,
-      trend: 'neutral' as const,
       icon: <BookOpen size={20} className="text-blue-650" />,
       gradient: 'bg-blue-50'
     },
     {
       title: 'Moyenne Évaluations',
       value: `${averageRating} / 5`,
-      change: evaluations.length,
-      trend: 'up' as const,
       icon: <Star size={20} className="fill-amber-400 text-amber-400" />,
       gradient: 'bg-amber-50',
       description: 'Retours parents'
@@ -122,13 +114,6 @@ export default function UniversityAdminDashboard() {
         title={currentUniversity?.name || "Tableau de Bord"}
         description="Statistiques académiques, financières et retours en temps réel."
         breadcrumbs={[{ label: 'Admin' }, { label: 'Tableau de bord' }]}
-        actions={
-          <div className="flex items-center gap-2">
-            <span className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full border border-indigo-100">
-              Plan {currentUniversity?.plan ? currentUniversity.plan.toUpperCase() : 'PRO'}
-            </span>
-          </div>
-        }
       />
 
       {/* Grid of stats */}
@@ -210,81 +195,6 @@ export default function UniversityAdminDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Recent Evaluations */}
-        <div className="card-premium overflow-hidden flex flex-col justify-between min-h-[320px]">
-          <div>
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                  <Star size={16} className="text-amber-400 fill-amber-400" />
-                  Dernières Évaluations
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Avis et notes récents soumis par les parents</p>
-              </div>
-              <Link to="/app/evaluation-suggestions" className="text-xs text-indigo-600 font-semibold hover:underline">
-                Voir tout
-              </Link>
-            </div>
-            
-            <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto">
-              {evaluations.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs">Aucune évaluation enregistrée pour le moment.</div>
-              ) : (
-                evaluations.slice(0, 3).map((item) => (
-                  <div key={item.id} className="p-4 space-y-2 hover:bg-slate-50/55 transition-colors">
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-semibold text-slate-700">{item.userName}</span>
-                      <span className="text-slate-400">{new Date(item.submittedAt).toLocaleDateString('fr-FR')}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">
-                        Note: {item.average}/5
-                      </span>
-                      <p className="text-xs text-slate-655 italic truncate flex-1">&ldquo;{item.comment}&rdquo;</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Suggestions */}
-        <div className="card-premium overflow-hidden flex flex-col justify-between min-h-[320px]">
-          <div>
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                  <MessageSquare size={16} className="text-indigo-650" />
-                  Dernières Suggestions
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Idées et suggestions soumises par les parents</p>
-              </div>
-              <Link to="/app/evaluation-suggestions" className="text-xs text-indigo-600 font-semibold hover:underline">
-                Boîte à suggestions
-              </Link>
-            </div>
-
-            <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto">
-              {suggestions.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs">Aucune suggestion reçue.</div>
-              ) : (
-                suggestions.slice(0, 3).map((item) => (
-                  <div key={item.id} className="p-4 space-y-2 hover:bg-slate-50/55 transition-colors">
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full">{item.category}</span>
-                      <span className="text-slate-400">{new Date(item.submittedAt).toLocaleDateString('fr-FR')}</span>
-                    </div>
-                    <p className="text-xs font-bold text-slate-800 leading-tight truncate">{item.subject}</p>
-                    <p className="text-xs text-slate-500 truncate leading-snug">{item.content}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

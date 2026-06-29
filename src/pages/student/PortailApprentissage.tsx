@@ -30,7 +30,12 @@ export default function PortailApprentissage() {
   const studentId = currentStudent?.studentId || 'Non défini';
 
   // Filter student-related courses and PDFs
-  const studentCourses = courses.filter(c => c.filiere === currentStudent?.filiere);
+  const studentCourses = courses.filter(c => {
+    if (currentStudent?.classeId && c.classeId) {
+      return c.classeId === currentStudent.classeId;
+    }
+    return c.filiere === currentStudent?.filiere;
+  });
   const studentCourseIds = studentCourses.map(c => c.id);
   const studentPdfResources = resources.filter(res => res.type === 'pdf' && (!res.courseId || res.courseId === 'general' || studentCourseIds.includes(res.courseId)));
 

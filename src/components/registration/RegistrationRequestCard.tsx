@@ -27,6 +27,7 @@ export default function RegistrationRequestCard({
   showUniversity = false,
   loading = false,
   onAction,
+  onDelete,
 }: RegistrationRequestCardProps) {
   return (
     <div className="card bg-surface border border-border-subtle shadow-sm">

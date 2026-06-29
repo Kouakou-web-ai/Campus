@@ -13,10 +13,11 @@ import { useNotificationStore } from '../../store/notificationStore';
 
 export default function GestionNotes() {
   const { user } = useAuthStore();
-  const { courses, students, grades, addGrade, updateGrade, addSimulatedEmail, loading } = useRealtimeDataStore();
+  const { courses, students, grades, addGrade, updateGrade, addSimulatedEmail, loading, teachers } = useRealtimeDataStore();
   const [selectedCourse, setSelectedCourse] = useState('');
   
   const myCourses = courses.filter(c => c.teacherId === user?.id);
+  const teacherProfile = teachers.find(t => t.id === user?.id);
 
   // Local state for editing grades
   // Maps studentId -> { gradeId?: string, note?: number, appreciation?: string, submitted: boolean }
@@ -32,8 +33,14 @@ export default function GestionNotes() {
 
   const course = myCourses.find(c => c.id === selectedCourse);
   const courseStudents = useMemo(() => {
-    return course ? students.filter(s => s.filiere === course.filiere) : [];
-  }, [course, students]);
+    if (!course) return [];
+    return students.filter(s => {
+      if (course.classeId) {
+        return s.classeId === course.classeId;
+      }
+      return teacherProfile?.classeId ? s.classeId === teacherProfile.classeId : s.filiere === course.filiere;
+    });
+  }, [course, students, teacherProfile?.classeId]);
 
   // Load existing grades into local state when selected course or grades list change
   useEffect(() => {

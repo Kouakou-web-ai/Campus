@@ -73,10 +73,10 @@ export default function CentreFinancier() {
   const tauxRecouvrement = budgetTotal > 0 ? Math.round((recettesPerceptes / budgetTotal) * 100) : 0;
 
   const STATS = [
-    { title: 'Budget total attendu', value: `${budgetTotal.toLocaleString('fr-FR')} FCFA`, change: 0, trend: 'up' as const, icon: <DollarSign size={20} className="text-indigo-600" />, gradient: 'bg-indigo-100' },
-    { title: 'Recettes perçues', value: `${recettesPerceptes.toLocaleString('fr-FR')} FCFA`, change: 0, trend: 'up' as const, icon: <TrendingUp size={20} className="text-emerald-600" />, gradient: 'bg-emerald-100' },
-    { title: 'Relances en retard', value: latePaymentsCount, change: 0, trend: 'down' as const, icon: <AlertCircle size={20} className="text-red-500" />, gradient: 'bg-red-100' },
-    { title: 'Taux recouvrement', value: `${tauxRecouvrement}%`, change: 0, trend: 'up' as const, icon: <CheckCircle size={20} className="text-amber-600" />, gradient: 'bg-amber-100' },
+    { title: 'Budget total attendu', value: `${budgetTotal.toLocaleString('fr-FR')} FCFA`, icon: <DollarSign size={20} className="text-indigo-600" />, gradient: 'bg-indigo-100' },
+    { title: 'Recettes perçues', value: `${recettesPerceptes.toLocaleString('fr-FR')} FCFA`, icon: <TrendingUp size={20} className="text-emerald-600" />, gradient: 'bg-emerald-100' },
+    { title: 'Relances en retard', value: latePaymentsCount, icon: <AlertCircle size={20} className="text-red-500" />, gradient: 'bg-red-100' },
+    { title: 'Taux recouvrement', value: `${tauxRecouvrement}%`, icon: <CheckCircle size={20} className="text-amber-600" />, gradient: 'bg-amber-100' },
   ];
 
   // Group transaction revenues by month starting from the creation month of the university

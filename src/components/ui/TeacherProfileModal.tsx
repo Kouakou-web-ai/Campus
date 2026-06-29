@@ -62,16 +62,6 @@ export default function TeacherProfileModal({ isOpen, onClose, teacher }: Teache
               </div>
             </div>
             <p className="text-sm text-indigo-600 font-medium mt-1">{teacher.specialite}</p>
-            <div className="flex items-center justify-center sm:justify-start gap-1 mt-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star
-                  key={i}
-                  size={14}
-                  className={i < Math.floor(teacher.rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}
-                />
-              ))}
-              <span className="text-xs text-slate-500 ml-1">{teacher.rating.toFixed(1)}/5</span>
-            </div>
           </div>
         </div>
 
