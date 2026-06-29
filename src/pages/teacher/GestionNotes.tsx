@@ -9,6 +9,7 @@ import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { useAuthStore } from '../../store/authStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 import { Check, Download, Send, BookOpen } from 'lucide-react';
+import { useNotificationStore } from '../../store/notificationStore';
 
 export default function GestionNotes() {
   const { user } = useAuthStore();
@@ -131,6 +132,14 @@ export default function GestionNotes() {
       });
 
       await Promise.all(promises);
+
+      // Notification globale (simulée pour les étudiants)
+      useNotificationStore.getState().addNotification(
+        "Nouvelle note publiée",
+        `Le professeur ${user?.name} a publié les notes pour le cours de ${course?.title}. Vous pouvez consulter vos résultats dans votre espace.`,
+        "success"
+      );
+
       ToastSuccess("Notes publiées avec succès !");
       setSaved(true);
     } catch (err: any) {

@@ -29,8 +29,8 @@ export default function AnalytiquesRevenu() {
   ];
 
   const STATS = [
-    { title: 'MRR Actuel', value: `${totalMRR.toLocaleString('fr-FR')} FCFA`, change: 0, trend: 'neutral' as const, icon: <DollarSign size={20} className="text-emerald-600" />, gradient: 'bg-emerald-100' },
-    { title: 'ARR Projeté', value: `${totalARR.toLocaleString('fr-FR')} FCFA`, change: 0, trend: 'neutral' as const, icon: <TrendingUp size={20} className="text-indigo-600" />, gradient: 'bg-indigo-100' },
+    { title: 'Abonnements mensuels', value: `${totalMRR.toLocaleString('fr-FR')} FCFA`, change: 0, trend: 'neutral' as const, icon: <DollarSign size={20} className="text-emerald-600" />, gradient: 'bg-emerald-100' },
+    { title: 'Projections annuelles', value: `${totalARR.toLocaleString('fr-FR')} FCFA`, change: 0, trend: 'neutral' as const, icon: <TrendingUp size={20} className="text-indigo-600" />, gradient: 'bg-indigo-100' },
     { title: 'Clients actifs', value: universities.length, change: 0, trend: 'neutral' as const, icon: <Users size={20} className="text-violet-600" />, gradient: 'bg-violet-100' },
     { title: 'Taux désabonnement', value: '0.0%', change: 0, trend: 'neutral' as const, icon: <Percent size={20} className="text-rose-500" />, gradient: 'bg-rose-100', description: 'Uptime 100%' },
   ];
@@ -80,7 +80,7 @@ export default function AnalytiquesRevenu() {
     <div className="page-transition space-y-6">
       <PageHeader
         title="Analytiques revenus"
-        description="Suivi financier détaillé — MRR, ARR, répartition par plan en temps réel"
+        description="Suivi financier détaillé — Abonnements mensuels, Projections annuelles, répartition par plan en temps réel"
         breadcrumbs={[{ label: 'Super Admin' }, { label: 'Analytiques revenus' }]}
         actions={
           <button className="btn-gradient text-sm px-4 py-2 rounded-full font-semibold text-white">
@@ -99,7 +99,7 @@ export default function AnalytiquesRevenu() {
       {/* Revenue + Donut */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <ChartCard
-          title="Croissance MRR"
+          title="Croissance des abonnements"
           subtitle="Évolution mensuelle sur 6 mois"
           className="lg:col-span-2"
         >
@@ -118,13 +118,13 @@ export default function AnalytiquesRevenu() {
                 formatter={(v: any) => [`${v.toLocaleString('fr-FR')} FCFA`]}
                 contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 12, color: '#fff', fontSize: 12 }}
               />
-              <Area type="monotone" dataKey="revenus" name="MRR" stroke="#6366f1" strokeWidth={3} fill="url(#mrrGrad)" />
+              <Area type="monotone" dataKey="revenus" name="Abonnement" stroke="#6366f1" strokeWidth={3} fill="url(#mrrGrad)" />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
 
         {/* Répartition plans */}
-        <ChartCard title="Répartition par plan" subtitle={`MRR Total: ${totalMRR.toLocaleString('fr-FR')} FCFA`}>
+        <ChartCard title="Répartition par plan" subtitle={`Total Abonnements: ${totalMRR.toLocaleString('fr-FR')} FCFA`}>
           <div className="flex flex-col items-center">
             <PieChart width={160} height={160}>
               <Pie

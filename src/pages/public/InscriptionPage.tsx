@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, GraduationCap, User, Mail, Phone, MapPin, Lock, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, GraduationCap, User, Mail, Phone, MapPin, Lock, UserPlus, ArrowLeft } from 'lucide-react';
 import { useAuthStore, type UserRole } from '../../store/authStore';
 import { ToastError, ToastSuccess } from '../../controllers/Toast-emitter';
 import { mockUniversities } from '../../constants/mockData';
-import { ref, get } from 'firebase/database';
+import { ref, get, set, update } from 'firebase/database';
 import { db } from '../../../firebase-config';
 import { getPostLoginPath } from '../../constants/accountStatus';
 
@@ -18,7 +18,7 @@ export default function InscriptionPage() {
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
   const [adresse, setAdresse] = useState('');
-  const [role, setRole] = useState<UserRole>('TEACHER');
+  const [role, setRole] = useState<UserRole>('UNIVERSITY_ADMIN');
   const [universityId, setUniversityId] = useState('univ-ufhb');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -26,17 +26,56 @@ export default function InscriptionPage() {
   const [annee, setAnnee] = useState(1);
   const [specialite, setSpecialite] = useState('');
 
+  const [existingUniversities, setExistingUniversities] = useState<Array<{ id: string; name: string }>>([]);
+  const [universityName, setUniversityName] = useState('');
+  const [suggestions, setSuggestions] = useState<Array<{ id: string; name: string }>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedUniversityId, setSelectedUniversityId] = useState<string | null>(null);
+
   const [isInvited, setIsInvited] = useState(false);
   const [invitedUid, setInvitedUid] = useState('');
   const [checkingInvite, setCheckingInvite] = useState(false);
 
   useEffect(() => {
-    const emailParam = searchParams.get('email');
-    if (emailParam) {
-      setEmail(emailParam);
-      checkIfEmailIsInvited(emailParam);
+    const fetchUniversities = async () => {
+      try {
+        const univRef = ref(db, 'universites');
+        const snapshot = await get(univRef);
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const list = Object.entries(data).map(([id, u]: [string, any]) => ({
+            id,
+            name: u.branding?.name || id,
+          }));
+          setExistingUniversities(list);
+        }
+      } catch (err) {
+        console.error("Erreur lors de la récupération des universités:", err);
+      }
+    };
+    fetchUniversities();
+  }, []);
+
+  const handleUniversityChange = (val: string) => {
+    setUniversityName(val);
+    setSelectedUniversityId(null);
+    if (!val.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
     }
-  }, [searchParams]);
+    const filtered = existingUniversities.filter(u =>
+      u.name.toLowerCase().includes(val.toLowerCase())
+    );
+    setSuggestions(filtered);
+    setShowSuggestions(true);
+  };
+
+  const handleSelectSuggestion = (univ: { id: string; name: string }) => {
+    setUniversityName(univ.name);
+    setSelectedUniversityId(univ.id);
+    setShowSuggestions(false);
+  };
 
   const checkIfEmailIsInvited = async (targetEmail: string) => {
     if (!targetEmail) return;
@@ -58,7 +97,22 @@ export default function InscriptionPage() {
           setTelephone(userProfile.telephone || '');
           setAdresse(userProfile.adresse || '');
           setRole(userProfile.role || 'TEACHER');
-          setUniversityId(userProfile.universityId || 'univ-ufhb');
+          const uId = userProfile.universityId || 'univ-ufhb';
+          setUniversityId(uId);
+          setSelectedUniversityId(uId);
+
+          try {
+            const uRef = ref(db, `universites/${uId}/branding/name`);
+            const uSnap = await get(uRef);
+            if (uSnap.exists()) {
+              setUniversityName(uSnap.val());
+            } else {
+              setUniversityName(uId);
+            }
+          } catch (err) {
+            setUniversityName(uId);
+          }
+
           ToastSuccess("Invitation détectée ! Veuillez choisir un mot de passe pour activer votre compte.");
         }
       }
@@ -103,7 +157,45 @@ export default function InscriptionPage() {
         return;
       }
 
-      if (role === 'UNIVERSITY_ADMIN') {
+      let finalUniversityId = selectedUniversityId;
+
+      if (!isInvited) {
+        if (!universityName.trim()) {
+          ToastError("Veuillez saisir le nom de votre université.");
+          return;
+        }
+
+        const matched = existingUniversities.find(
+          u => u.name.trim().toLowerCase() === universityName.trim().toLowerCase()
+        );
+
+        if (matched) {
+          finalUniversityId = matched.id;
+        } else {
+          finalUniversityId = 'univ-' + Math.random().toString(36).substring(2, 9);
+          const brandRef = ref(db, `universites/${finalUniversityId}/branding`);
+          await set(brandRef, {
+            name: universityName.trim(),
+            city: 'Abidjan',
+            country: "Côte d'Ivoire",
+          });
+          const metaRef = ref(db, `universites/${finalUniversityId}`);
+          await update(metaRef, {
+            plan: 'starter',
+            status: 'pending',
+            createdAt: new Date().toISOString().split('T')[0],
+          });
+        }
+      }
+
+      const activeUnivId = isInvited ? universityId : finalUniversityId;
+
+      if (!activeUnivId) {
+        ToastError("Une erreur s'est produite lors de l'identification de l'université.");
+        return;
+      }
+
+      if (role === 'UNIVERSITY_ADMIN' && !isInvited) {
         const usersRef = ref(db, 'utilisateurs');
         const snapshot = await get(usersRef);
         if (snapshot.exists()) {
@@ -111,7 +203,7 @@ export default function InscriptionPage() {
           const hasAdmin = Object.values(usersData).some(
             (u: any) =>
               u &&
-              u.universityId === universityId &&
+              u.universityId === activeUnivId &&
               u.role === 'UNIVERSITY_ADMIN' &&
               (u.status === 'active' || u.status === 'pending')
           );
@@ -130,7 +222,7 @@ export default function InscriptionPage() {
         telephone,
         adresse,
         role,
-        universityId,
+        activeUnivId,
         role === 'STUDENT' ? filiere : undefined,
         role === 'STUDENT' ? Number(annee) : undefined
       );
@@ -156,6 +248,15 @@ export default function InscriptionPage() {
 
   return (
     <div className="relative min-h-[85vh] flex items-center justify-center py-12 px-4 overflow-hidden">
+      {/* Bouton Retour */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute top-6 left-6 flex items-center gap-2 px-3 py-1.5 bg-surface/80 backdrop-blur-md border border-border hover:bg-surface-raised text-content-secondary hover:text-content text-xs font-semibold rounded-xl transition-all duration-200 shadow-sm active:scale-95 cursor-pointer z-50 animate-fade-down"
+      >
+        <ArrowLeft size={14} />
+        Retour
+      </button>
+
       {/* Premium background gradient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-gradient-to-tr from-indigo-500/10 to-violet-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -268,33 +369,41 @@ export default function InscriptionPage() {
             </div>
           </div>
 
-          {/* Rôle & Université */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-content-secondary uppercase tracking-wider">Rôle</label>
-              <select
-                value={role}
-                onChange={e => setRole(e.target.value as UserRole)}
-                disabled={isInvited}
-                className="w-full px-4 py-3.5 bg-surface-raised border border-border rounded-xl text-sm text-content focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200 disabled:opacity-80 disabled:cursor-not-allowed"
-              >
-                <option value="TEACHER">Enseignant</option>
-                <option value="UNIVERSITY_ADMIN">Administrateur</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-content-secondary uppercase tracking-wider">Université</label>
-              <select
-                value={universityId}
-                onChange={e => setUniversityId(e.target.value)}
-                disabled={isInvited}
-                className="w-full px-4 py-3.5 bg-surface-raised border border-border rounded-xl text-sm text-content focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200 disabled:opacity-80 disabled:cursor-not-allowed"
-              >
-                {mockUniversities.map(u => (
-                  <option key={u.id} value={u.id}>{u.name.split(' (')[0]}</option>
+          {/* Université */}
+          <div className="space-y-2 relative">
+            <label className="block text-xs font-bold text-content-secondary uppercase tracking-wider">Université</label>
+            <input
+              type="text"
+              value={universityName}
+              onChange={e => handleUniversityChange(e.target.value)}
+              onFocus={() => {
+                if (universityName.trim() && suggestions.length > 0) {
+                  setShowSuggestions(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
+              disabled={isInvited}
+              placeholder="Saisissez le nom de votre université"
+              required
+              className="w-full px-4 py-3.5 bg-surface-raised border border-border rounded-xl text-sm text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200 disabled:opacity-80 disabled:cursor-not-allowed"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul className="absolute z-20 w-full bg-surface border border-border rounded-xl shadow-lg max-h-60 overflow-y-auto mt-1 p-2 space-y-1">
+                {suggestions.map(u => (
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSuggestion(u)}
+                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-content transition-colors"
+                    >
+                      {u.name}
+                    </button>
+                  </li>
                 ))}
-              </select>
-            </div>
+              </ul>
+            )}
           </div>
 
           {/* Conditional Student / Teacher fields */}
@@ -372,38 +481,7 @@ export default function InscriptionPage() {
             )}
           </button>
 
-          <div className="flex items-center gap-3 my-2">
-            <div className="flex-1 h-px bg-border-subtle"></div>
-            <span className="text-xs text-content-muted">ou</span>
-            <div className="flex-1 h-px bg-border-subtle"></div>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                fill="#4285F4"
-              />
-              <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.16v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853"
-              />
-              <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.16C1.43 8.55 1 10.22 1 12s.43 3.45 1.16 4.93l2.45-1.89l1.23-.95z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.16 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.18-4.53z"
-                fill="#EA4335"
-              />
-            </svg>
-            S'inscrire avec Google
-          </button>
 
           <p className="text-center text-sm text-content-secondary pt-2">
             Déjà inscrit ?{' '}

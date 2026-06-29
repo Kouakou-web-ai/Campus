@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import { useNotificationStore } from './notificationStore';
 import { db, auth, firebaseConfig } from '../../firebase-config';
 import { ref, onValue, set, push, update, remove, get } from 'firebase/database';
-import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData, StatusType } from '../types';
+import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData, StatusType, Class } from '../types';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 
@@ -23,6 +24,10 @@ interface RealtimeDataState {
   quizzes: any[];
   appels: any;
   loading: boolean;
+  filieres: string[];
+  classes: Class[];
+  evaluations: any[];
+  suggestions: any[];
   
   subscribeToUniversity: (universityId: string) => () => void;
   subscribeToSuperAdmin: () => () => void;
@@ -34,9 +39,9 @@ interface RealtimeDataState {
       parentEmail: string;
       parentName: string;
     }
-  ) => Promise<void>;
+  ) => Promise<{ studentId: string; tempStudentPassword: string; tempParentPassword: string }>;
   updateStudent: (universityId: string, studentId: string, data: Partial<Student>) => Promise<void>;
-  addTeacher: (universityId: string, teacher: Omit<Teacher, 'id' | 'universityId'>) => Promise<void>;
+  addTeacher: (universityId: string, teacher: Omit<Teacher, 'id' | 'universityId'>) => Promise<{ tempTeacherPassword: string; teacherEmail: string; teacherName: string }>;
   updateTeacher: (universityId: string, teacherId: string, data: Partial<Teacher>) => Promise<void>;
   addCourse: (universityId: string, course: Omit<Course, 'id' | 'universityId'>) => Promise<void>;
   updateCourse: (universityId: string, courseId: string, data: Partial<Course>) => Promise<void>;
@@ -44,6 +49,7 @@ interface RealtimeDataState {
   addGrade: (universityId: string, grade: Omit<Grade, 'id'>) => Promise<void>;
   updateGrade: (universityId: string, gradeId: string, data: Partial<Grade>) => Promise<void>;
   addAssignment: (universityId: string, assignment: Omit<Assignment, 'id'>) => Promise<void>;
+  updateAssignment: (universityId: string, assignmentId: string, data: Partial<Assignment>) => Promise<void>;
   addResource: (universityId: string, resource: Omit<Resource, 'id'>) => Promise<void>;
   addScheduleEvent: (universityId: string, event: Omit<ScheduleEvent, 'id'>) => Promise<void>;
   addUniversity: (univ: Omit<University, 'id'>) => Promise<void>;
@@ -58,6 +64,12 @@ interface RealtimeDataState {
   deleteScheduleEvent: (universityId: string, eventId: string) => Promise<void>;
   deleteUniversity: (universityId: string) => Promise<void>;
   updateUniversity: (universityId: string, data: Partial<Omit<University, 'id' | 'studentsCount' | 'teachersCount' | 'mrr'>>) => Promise<void>;
+  addFiliere: (universityId: string, name: string) => Promise<void>;
+  deleteFiliere: (universityId: string, name: string) => Promise<void>;
+  addClass: (universityId: string, cls: Omit<Class, 'id'>) => Promise<void>;
+  deleteClass: (universityId: string, classId: string) => Promise<void>;
+  assignTeacherToCourse: (universityId: string, teacherId: string, teacherName: string, courseId: string) => Promise<void>;
+  updateSuggestion: (universityId: string, suggestionId: string, data: Partial<any>) => Promise<void>;
 }
 
 export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStore) => ({
@@ -78,6 +90,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   quizzes: [],
   appels: {},
   loading: false,
+  filieres: [],
+  classes: [],
+  evaluations: [],
+  suggestions: [],
 
   subscribeToUniversity: (universityId: string) => {
     setStore({ loading: true });
@@ -235,7 +251,108 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
     // 20. Appels (Absences)
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/appels`), (snap) => {
-      setStore({ appels: snap.val() || {}, loading: false });
+      setStore({ appels: snap.val() || {} });
+    }));
+
+    // Evaluations real-time listener for admins
+    let isInitialEvals = true;
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/evaluations`), (snap) => {
+      const data = snap.val();
+      const list = parseList(data);
+      list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+      setStore({ evaluations: list });
+
+      if (isInitialEvals) {
+        isInitialEvals = false;
+        return;
+      }
+      const userRole = useAuthStore.getState().user?.role;
+      if (data && (userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN')) {
+        const newest = list[0];
+        if (newest) {
+          const elapsed = Date.now() - new Date(newest.submittedAt).getTime();
+          if (elapsed < 10000) {
+            useNotificationStore.getState().addNotification(
+              `⭐ Nouvelle note — Évaluation`,
+              `${newest.userName} (${newest.userRole === 'PARENT' ? 'Parent' : 'Étudiant'}) a attribué ${newest.average}/5.`,
+              'success',
+              {
+                type: 'evaluation',
+                userName: newest.userName,
+                userRole: newest.userRole,
+                ratings: newest.ratings,
+                average: newest.average,
+                comment: newest.comment,
+                submittedAt: newest.submittedAt
+              }
+            );
+          }
+        }
+      }
+    }));
+
+    // Suggestions real-time listener for admins
+    let isInitialSuggs = true;
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/suggestions`), (snap) => {
+      const data = snap.val();
+      const list = parseList(data);
+      list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+      setStore({ suggestions: list });
+
+      if (isInitialSuggs) {
+        isInitialSuggs = false;
+        return;
+      }
+      const userRole = useAuthStore.getState().user?.role;
+      if (data && (userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN')) {
+        const newest = list[0];
+        if (newest) {
+          const elapsed = Date.now() - new Date(newest.submittedAt).getTime();
+          if (elapsed < 10000) {
+            useNotificationStore.getState().addNotification(
+              `💡 Nouvelle suggestion`,
+              `${newest.userName} (${newest.userRole === 'PARENT' ? 'Parent' : 'Étudiant'}) : ${newest.subject}`,
+              'info',
+              {
+                type: 'suggestion',
+                userName: newest.userName,
+                userRole: newest.userRole,
+                category: newest.category,
+                subject: newest.subject,
+                content: newest.content,
+                submittedAt: newest.submittedAt
+              }
+            );
+          }
+        }
+      }
+    }));
+
+    // 21. Filières
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/filieres`), (snap) => {
+      const val = snap.val();
+      if (val) {
+        setStore({ filieres: Object.values(val) });
+      } else {
+        const defaultFilieres = ['Informatique', 'Mathématiques', 'Économie', 'Droit', 'Physique'];
+        setStore({ filieres: defaultFilieres });
+      }
+    }));
+
+    // 22. Classes
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/classes`), (snap) => {
+      const val = snap.val();
+      if (val) {
+        setStore({ classes: Object.keys(val).map(key => ({ id: key, ...val[key] })), loading: false });
+      } else {
+        const defaultClasses: Class[] = [
+          { id: 'c1', name: 'Licence 1 Informatique', filiere: 'Informatique', annee: 1 },
+          { id: 'c2', name: 'Licence 2 Informatique', filiere: 'Informatique', annee: 2 },
+          { id: 'c3', name: 'Licence 3 Informatique', filiere: 'Informatique', annee: 3 },
+          { id: 'c4', name: 'Licence 1 Mathématiques', filiere: 'Mathématiques', annee: 1 },
+        ];
+        setStore({ classes: defaultClasses, loading: false });
+      }
     }));
 
     return () => {
@@ -380,6 +497,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   addStudent: async (universityId, studentData) => {
     const { parentEmail, parentName, studentId: customStudentId, ...studentInfo } = studentData;
 
+    if (studentInfo.email.trim().toLowerCase() === parentEmail.trim().toLowerCase()) {
+      throw new Error("L'email de l'étudiant et du parent doivent être différents.");
+    }
+
     // 1. Générer le matricule étudiant si non renseigné
     const studentId = customStudentId?.trim() || `ETU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -449,8 +570,8 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
     // 7. Enregistrer le profil étudiant dans /utilisateurs
     const studentUserRef = ref(db, `utilisateurs/${studentUid}`);
-    const sPrenom = studentInfo.name.split(' ')[0] || '';
-    const sNom = studentInfo.name.split(' ').slice(1).join(' ') || studentInfo.name;
+    const sPrenom = (studentInfo as any).prenom || studentInfo.name.split(' ')[0] || '';
+    const sNom = (studentInfo as any).nom || studentInfo.name.split(' ').slice(1).join(' ') || studentInfo.name;
     await set(studentUserRef, {
       uid: studentUid,
       email: studentInfo.email.trim(),
@@ -518,6 +639,12 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       sentAt: new Date().toISOString(),
       type: 'welcome'
     });
+
+    return {
+      studentId,
+      tempStudentPassword,
+      tempParentPassword
+    };
   },
 
   updateStudent: async (universityId, studentId, data) => {
@@ -526,49 +653,73 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   },
 
   addTeacher: async (universityId, teacher) => {
-    const teachersRef = ref(db, `universites/${universityId}/enseignants`);
-    const newTeacherRef = push(teachersRef);
-    const teacherUid = newTeacherRef.key;
-    if (!teacherUid) return;
-    const activationUrl = `${window.location.origin}/activation-compte?email=${encodeURIComponent(teacher.email)}`;
+    // 1. Generate temp teacher password
+    const tempTeacherPassword = 'ENS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
-    // 1. Enregistrer l'enseignant dans l'université avec son identifiant UID temporaire
-    await set(newTeacherRef, {
+    // 2. Create in Firebase Auth using a secondary app
+    let teacherUid = '';
+    const tempAppName = `temp-teacher-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = getAuth(tempApp);
+    try {
+      const creds = await createUserWithEmailAndPassword(tempAuth, teacher.email.trim(), tempTeacherPassword);
+      teacherUid = creds.user.uid;
+    } catch (err: any) {
+      await deleteApp(tempApp);
+      if (err.code === 'auth/email-already-in-use') {
+        throw new Error("L'adresse email de l'enseignant est déjà utilisée.");
+      }
+      throw err;
+    }
+    await deleteApp(tempApp);
+
+    // 3. Enregistrer l'enseignant dans l'université
+    const teacherRef = ref(db, `universites/${universityId}/enseignants/${teacherUid}`);
+    await set(teacherRef, {
       ...teacher,
       id: teacherUid,
       universityId,
+      status: 'actif',
       createdAt: new Date().toISOString()
     });
 
-    // 2. Créer l'invitation dans /utilisateurs
-    const invitedUserRef = ref(db, `utilisateurs/${teacherUid}`);
+    // 4. Create teacher profile in /utilisateurs
+    const userRef = ref(db, `utilisateurs/${teacherUid}`);
     const prenom = teacher.name.split(' ')[0] || '';
     const nom = teacher.name.split(' ').slice(1).join(' ') || teacher.name;
 
-    await set(invitedUserRef, {
+    await set(userRef, {
       uid: teacherUid,
-      email: teacher.email,
+      email: teacher.email.trim(),
       role: 'TEACHER',
-      status: 'invited',
+      status: 'active',
       universityId,
       prenom,
       nom,
       telephone: '',
       adresse: '',
-      createdDate: new Date().toISOString()
+      createdDate: new Date().toISOString(),
+      mustChangePassword: true,
+      tempPassword: tempTeacherPassword
     });
 
-    // 3. Envoyer un e-mail de simulation d'activation sécurisée
+    // 5. Send welcome email with temp password
     const emailsRef = ref(db, `universites/${universityId}/emails_simules`);
     const newEmailRef = push(emailsRef);
     await set(newEmailRef, {
-      to: teacher.email,
+      to: teacher.email.trim(),
       recipientName: teacher.name,
-      subject: "Invitation à activer votre compte Enseignant CAMPUS",
-      body: `Bonjour ${teacher.name},\n\nVotre établissement vous a inscrit en tant qu'enseignant sur la plateforme CAMPUS.\n\nVeuillez activer votre compte et configurer votre mot de passe en cliquant sur ce lien :\n${activationUrl}\n\nCordialement,\nL'administration académique`,
+      subject: "Bienvenue sur CAMPUS - Vos accès Enseignant",
+      body: `Bonjour ${teacher.name},\n\nVotre établissement vous a inscrit en tant qu'enseignant sur la plateforme CAMPUS.\n\nVoici vos identifiants temporaires de connexion :\n- Email : ${teacher.email.trim()}\n- Mot de passe temporaire : ${tempTeacherPassword}\n\nLors de votre première connexion, vous devrez obligatoirement changer ce mot de passe temporaire.\n\nCordialement,\nL'administration académique`,
       sentAt: new Date().toISOString(),
       type: 'welcome'
     });
+
+    return {
+      tempTeacherPassword,
+      teacherEmail: teacher.email.trim(),
+      teacherName: teacher.name
+    };
   },
 
   updateTeacher: async (universityId, teacherId, data) => {
@@ -608,6 +759,11 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     const assignRef = ref(db, `universites/${universityId}/devoirs`);
     const newAssignRef = push(assignRef);
     await set(newAssignRef, assignment);
+  },
+
+  updateAssignment: async (universityId, assignmentId, data) => {
+    const assignRef = ref(db, `universites/${universityId}/devoirs/${assignmentId}`);
+    await update(assignRef, data);
   },
 
   addResource: async (universityId, resource) => {
@@ -753,5 +909,88 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     if (data.adminEmail !== undefined) updates[`universites/${universityId}/adminEmail`] = data.adminEmail;
     
     await update(ref(db), updates);
+  },
+
+  addFiliere: async (universityId, name) => {
+    const filieresRef = ref(db, `universites/${universityId}/filieres`);
+    const snapshot = await get(filieresRef);
+    if (!snapshot.exists()) {
+      const defaults = ['Informatique', 'Mathématiques', 'Économie', 'Droit', 'Physique'];
+      for (const d of defaults) {
+        await set(ref(db, `universites/${universityId}/filieres/${d.replace(/[.#$[\]]/g, '_')}`), d);
+      }
+    }
+    const sanitized = name.replace(/[.#$[\]]/g, '_');
+    await set(ref(db, `universites/${universityId}/filieres/${sanitized}`), name);
+  },
+
+  deleteFiliere: async (universityId, name) => {
+    const filieresRef = ref(db, `universites/${universityId}/filieres`);
+    const snapshot = await get(filieresRef);
+    if (!snapshot.exists()) {
+      const defaults = ['Informatique', 'Mathématiques', 'Économie', 'Droit', 'Physique'];
+      for (const d of defaults) {
+        if (d !== name) {
+          await set(ref(db, `universites/${universityId}/filieres/${d.replace(/[.#$[\]]/g, '_')}`), d);
+        }
+      }
+    } else {
+      const sanitized = name.replace(/[.#$[\]]/g, '_');
+      await remove(ref(db, `universites/${universityId}/filieres/${sanitized}`));
+    }
+  },
+
+  addClass: async (universityId, cls) => {
+    const classesRef = ref(db, `universites/${universityId}/classes`);
+    const snapshot = await get(classesRef);
+    if (!snapshot.exists()) {
+      const defaultClasses = [
+        { name: 'Licence 1 Informatique', filiere: 'Informatique', annee: 1 },
+        { name: 'Licence 2 Informatique', filiere: 'Informatique', annee: 2 },
+        { name: 'Licence 3 Informatique', filiere: 'Informatique', annee: 3 },
+        { name: 'Licence 1 Mathématiques', filiere: 'Mathématiques', annee: 1 },
+      ];
+      for (const dc of defaultClasses) {
+        const newRef = push(ref(db, `universites/${universityId}/classes`));
+        await set(newRef, dc);
+      }
+    }
+    const newClassRef = push(ref(db, `universites/${universityId}/classes`));
+    await set(newClassRef, cls);
+  },
+
+  deleteClass: async (universityId, classId) => {
+    const classesRef = ref(db, `universites/${universityId}/classes`);
+    const snapshot = await get(classesRef);
+    if (!snapshot.exists()) {
+      const defaultClasses = [
+        { id: 'c1', name: 'Licence 1 Informatique', filiere: 'Informatique', annee: 1 },
+        { id: 'c2', name: 'Licence 2 Informatique', filiere: 'Informatique', annee: 2 },
+        { id: 'c3', name: 'Licence 3 Informatique', filiere: 'Informatique', annee: 3 },
+        { id: 'c4', name: 'Licence 1 Mathématiques', filiere: 'Mathématiques', annee: 1 },
+      ];
+      for (const dc of defaultClasses) {
+        if (dc.id !== classId) {
+          await set(ref(db, `universites/${universityId}/classes/${dc.id}`), {
+            name: dc.name,
+            filiere: dc.filiere,
+            annee: dc.annee
+          });
+        }
+      }
+    } else {
+      await remove(ref(db, `universites/${universityId}/classes/${classId}`));
+    }
+  },
+
+  assignTeacherToCourse: async (universityId, teacherId, teacherName, courseId) => {
+    await update(ref(db, `universites/${universityId}/cours/${courseId}`), {
+      teacherId,
+      teacher: teacherName
+    });
+  },
+
+  updateSuggestion: async (universityId, suggestionId, data) => {
+    await update(ref(db, `universites/${universityId}/suggestions/${suggestionId}`), data);
   }
 }));

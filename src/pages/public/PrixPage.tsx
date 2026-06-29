@@ -6,6 +6,22 @@ import RevealOnScroll from '../../components/ui/RevealOnScroll';
 
 const PLANS = [
   {
+    name: 'Gratuit',
+    icon: Zap,
+    monthlyPrice: 0,
+    annualPrice: 0,
+    description: 'Pour découvrir la plateforme avec vos premières classes.',
+    color: 'from-sky-450 to-blue-500',
+    badge: 'Essai illimité',
+    features: [
+      'Jusqu\'à 50 étudiants',
+      'Gestion basique des classes',
+      '1 enseignant connecté',
+      'Support par forum public',
+    ],
+    notIncluded: ['Suivi des présences', 'Paiements Mobile Money', 'Support email'],
+  },
+  {
     name: 'Starter',
     icon: Zap,
     monthlyPrice: 50000,
@@ -110,7 +126,7 @@ export default function PrixPage() {
 
       {/* Plans */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24 mb-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {PLANS.map((plan, idx) => {
             const Icon = plan.icon;
             const price = annual ? plan.annualPrice : plan.monthlyPrice;
@@ -157,18 +173,20 @@ export default function PrixPage() {
 
                   {/* Prix */}
                   <div className="mb-6">
-                    {price === 0 ? (
+                    {plan.name === 'Entreprise' ? (
                       <div className={`text-3xl font-extrabold font-heading ${isPopular ? 'text-white' : 'text-slate-900'}`}>
                         Sur devis
                       </div>
                     ) : (
                       <div className="flex items-baseline gap-1">
                         <span className={`text-3xl font-extrabold font-heading ${isPopular ? 'text-white' : 'text-slate-900'}`}>
-                          {price.toLocaleString('fr-FR')} FCFA
+                          {price === 0 ? 'Gratuit' : `${price.toLocaleString('fr-FR')} FCFA`}
                         </span>
-                        <span className={`text-sm ${isPopular ? 'text-indigo-200' : 'text-slate-400'}`}>
-                          /mois
-                        </span>
+                        {price > 0 && (
+                          <span className={`text-sm ${isPopular ? 'text-indigo-200' : 'text-slate-400'}`}>
+                            /mois
+                          </span>
+                        )}
                       </div>
                     )}
                     {annual && price > 0 && (
@@ -187,7 +205,7 @@ export default function PrixPage() {
                         : 'bg-slate-900 text-white hover:bg-indigo-600'
                     }`}
                   >
-                    {price === 0 ? 'Nous contacter' : 'Commencer l\'essai'}
+                    {plan.name === 'Entreprise' ? 'Nous contacter' : plan.name === 'Gratuit' ? 'Commencer gratuitement' : 'Commencer l\'essai'}
                     <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
                   </Link>
 

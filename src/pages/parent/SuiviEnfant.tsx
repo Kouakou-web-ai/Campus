@@ -135,6 +135,39 @@ export default function SuiviEnfant() {
     }
   };
 
+  // Get active warnings/alerts for linked children (absences > 3, average grade < 10, unpaid tuition)
+  const getChildAlerts = (c: any) => {
+    const alertsList: { type: 'warning' | 'danger' | 'info'; title: string; desc: string; icon: string }[] = [];
+    if ((c.absences || 0) > 3) {
+      alertsList.push({
+        type: 'warning',
+        title: `Absences élevées — ${c.name}`,
+        desc: `Attention : Plusieurs absences (${c.absences}) signalées ce semestre. Veuillez contacter le secrétariat.`,
+        icon: '⚠️'
+      });
+    }
+    if ((c.average || 0) > 0 && (c.average || 0) < 10) {
+      alertsList.push({
+        type: 'danger',
+        title: `Difficultés académiques — ${c.name}`,
+        desc: `La moyenne générale est de ${c.average.toFixed(1)}/20. Un suivi pédagogique est vivement conseillé.`,
+        icon: '📉'
+      });
+    }
+    if ((c.paidAmount || 0) < (c.totalAmount || 0)) {
+      const rest = (c.totalAmount || 0) - (c.paidAmount || 0);
+      alertsList.push({
+        type: 'info',
+        title: `Scolarité incomplète — ${c.name}`,
+        desc: `Des frais de scolarité restent impayés (${rest.toLocaleString('fr-FR')} FCFA restants).`,
+        icon: '💳'
+      });
+    }
+    return alertsList;
+  };
+
+  const allAlerts = myChildren.flatMap(c => getChildAlerts(c));
+
   return (
     <div className="page-transition space-y-6">
       <PageHeader
@@ -230,10 +263,6 @@ export default function SuiviEnfant() {
                       </span>
                     </div>
                   </div>
-                  <button className="flex items-center gap-2 text-sm text-indigo-600 font-semibold border border-indigo-200 bg-white px-4 py-2 rounded-xl hover:bg-indigo-50 transition-colors w-fit">
-                    <Phone size={14} />
-                    Contacter conseiller
-                  </button>
                 </div>
               </div>
 
@@ -266,38 +295,38 @@ export default function SuiviEnfant() {
               {/* Aggregated Alerts Section for all children */}
               <div className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Alertes de scolarité</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {myChildren.map(c => {
-                    const hasAbsenceWarning = (c.absences || 0) > 3;
-                    return (
+                {allAlerts.length === 0 ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-emerald-800 flex items-start gap-3">
+                    <span className="text-2xl">🎉</span>
+                    <div>
+                      <h4 className="font-bold text-sm">Situation en ordre</h4>
+                      <p className="text-xs mt-1">Aucune alerte signalée pour vos enfants. Assiduité, notes et scolarité sont à jour.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {allAlerts.map((alert, idx) => (
                       <div 
-                        key={c.id} 
+                        key={idx} 
                         className={`border rounded-2xl p-5 ${
-                          hasAbsenceWarning 
-                            ? 'bg-amber-50 border-amber-200 text-amber-800' 
-                            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                          alert.type === 'danger' 
+                            ? 'bg-red-50 border-red-200 text-red-800' 
+                            : alert.type === 'warning'
+                              ? 'bg-amber-50 border-amber-200 text-amber-800'
+                              : 'bg-blue-50 border-blue-200 text-blue-800'
                         }`}
                       >
                         <div className="flex items-start gap-3">
-                          <span className="text-2xl">{hasAbsenceWarning ? '⚠️' : '🎉'}</span>
+                          <span className="text-2xl">{alert.icon}</span>
                           <div>
-                            <h4 className="font-bold text-sm">
-                              {c.name} ({c.studentId})
-                            </h4>
-                            <p className="text-xs mt-1">
-                              {hasAbsenceWarning 
-                                ? `Attention : Plusieurs absences (${c.absences}) signalées ce semestre. Veuillez contacter le secrétariat.`
-                                : `Assiduité exemplaire : Votre enfant suit rigoureusement l'ensemble des cours programmés.`}
-                            </p>
-                            <p className="text-[10px] opacity-80 mt-2 border-t border-current/10 pt-1.5 font-medium">
-                              Scolarité versée : {c.paidAmount.toLocaleString('fr-FR')} F sur {c.totalAmount.toLocaleString('fr-FR')} F.
-                            </p>
+                            <h4 className="font-bold text-sm">{alert.title}</h4>
+                            <p className="text-xs mt-1">{alert.desc}</p>
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Historique détaillé des absences */}

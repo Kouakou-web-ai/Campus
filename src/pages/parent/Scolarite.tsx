@@ -1,29 +1,58 @@
-import { useState } from 'react';
-import { CreditCard, Download, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CreditCard, Download, AlertCircle, Link2 } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { useAuthStore } from '../../store/authStore';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { exportReceiptPDF } from '../../services/pdfService';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
+import { ref, onValue, off, set } from 'firebase/database';
+import { db } from '../../../firebase-config';
 
-export default function Paiements() {
+export default function Scolarite() {
   const { user } = useAuthStore();
   const { students, transactions, addTransaction, updateStudent, loading } = useRealtimeDataStore();
 
+  const [linkedIds, setLinkedIds] = useState<string[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [operator, setOperator] = useState<'wave' | 'orange' | 'mtn'>('wave');
   const [phone, setPhone] = useState(user?.telephone || '');
   const [processing, setProcessing] = useState(false);
 
-  const student = students.find(s => s.id === user?.id);
+  // Subscribe to parent's linked children in Firebase
+  useEffect(() => {
+    if (!user) return;
+    const enfantsRef = ref(db, `utilisateurs/${user.id}/enfants`);
+    const unsub = onValue(enfantsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setLinkedIds(Object.keys(data));
+      } else {
+        setLinkedIds([]);
+      }
+    });
+    return () => off(enfantsRef, 'value', unsub);
+  }, [user]);
+
+  const myChildren = students.filter(s => linkedIds.includes(s.id));
+
+  useEffect(() => {
+    if (myChildren.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(myChildren[0].id);
+    }
+  }, [myChildren, selectedStudentId]);
+
+  const student = myChildren.find(s => s.id === selectedStudentId);
+
   const totalAmount = student ? student.totalAmount || 0 : 0;
   const paidAmount = student ? student.paidAmount || 0 : 0;
   const remainingAmount = totalAmount - paidAmount;
   const paidPercent = totalAmount > 0 ? Math.min(100, Math.round((paidAmount / totalAmount) * 100)) : 0;
 
   // Filter student transactions
-  const studentTrans = transactions.filter(t => t.studentName === user?.name);
+  const studentTrans = transactions.filter(t => t.studentName === student?.name);
 
   // Generate dynamic milestones
   const PAYMENT_SCHEDULE = [
@@ -38,14 +67,14 @@ export default function Paiements() {
     : null;
 
   const handleSimulatePayment = async () => {
-    if (!user || !user.universityId || !student || !nextPayment) return;
+    if (!user || !student || !nextPayment) return;
     setProcessing(true);
     try {
       const amountToPay = nextPayment.amount;
 
-      // 1. Add real transaction record under university node (status validated immediately)
-      await addTransaction(user.universityId, {
-        studentName: user.name,
+      // 1. Add real transaction record under university node
+      await addTransaction(student.universityId, {
+        studentName: student.name,
         type: nextPayment.label,
         method: `${operator.toUpperCase()} Money`,
         date: new Date().toISOString().split('T')[0],
@@ -54,7 +83,7 @@ export default function Paiements() {
       });
 
       // 2. Increment paidAmount on student profile
-      await updateStudent(user.universityId, student.id, {
+      await updateStudent(student.universityId, student.id, {
         paidAmount: (student.paidAmount || 0) + amountToPay
       });
 
@@ -75,13 +104,48 @@ export default function Paiements() {
     );
   }
 
+  if (myChildren.length === 0) {
+    return (
+      <div className="page-transition space-y-6">
+        <PageHeader
+          title="Scolarité & Finances"
+          description="Gérez les paiements de vos enfants"
+          breadcrumbs={[{ label: 'Parent' }, { label: 'Scolarité' }]}
+        />
+        <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-md max-w-lg mx-auto">
+          <Link2 className="mx-auto text-indigo-500 mb-4" size={48} />
+          <h3 className="text-lg font-bold text-slate-800">Aucun enfant lié</h3>
+          <p className="text-slate-500 text-sm max-w-sm mx-auto mt-2 mb-6">
+            Vous devez d'abord lier un enfant depuis la page "Suivi enfant" pour voir sa scolarité.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-transition space-y-6">
       <PageHeader
-        title="Paiements & Scolarité"
-        description="Suivi de vos paiements et échéances de scolarité en temps réel"
-        breadcrumbs={[{ label: 'Étudiant' }, { label: 'Paiements' }]}
+        title="Scolarité & Finances"
+        description="Suivi financier et paiements de la scolarité"
+        breadcrumbs={[{ label: 'Parent' }, { label: 'Scolarité' }]}
       />
+
+      {/* Child selection dropdown - ONLY visible if parent has multiple children */}
+      {myChildren.length > 1 && (
+        <div className="card-premium p-4 flex items-center gap-3">
+          <label className="text-sm font-semibold text-slate-600 flex-shrink-0">Sélectionner un enfant :</label>
+          <select
+            value={selectedStudentId}
+            onChange={e => setSelectedStudentId(e.target.value)}
+            className="input-premium flex-1 max-w-xs px-3 py-2 text-sm"
+          >
+            {myChildren.map(s => (
+              <option key={s.id} value={s.id}>{s.name} ({s.studentId})</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Solde card */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden">
@@ -90,7 +154,7 @@ export default function Paiements() {
         />
         <div className="relative flex flex-col md:flex-row items-start md:items-center gap-6">
           <div className="flex-1 w-full">
-            <p className="text-slate-400 text-sm mb-1">Frais de scolarité annuels</p>
+            <p className="text-slate-400 text-sm mb-1">Frais de scolarité annuels - {student?.name}</p>
             <div className="text-4xl font-extrabold font-heading">{totalAmount.toLocaleString('fr-FR')} FCFA</div>
             <div className="flex items-center gap-6 mt-4 flex-wrap">
               <div>
@@ -144,7 +208,7 @@ export default function Paiements() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3.5 flex items-center gap-3">
           <AlertCircle size={16} className="text-amber-500 flex-shrink-0" />
           <p className="text-sm text-amber-800">
-            Votre prochain paiement de {nextPayment.amount.toLocaleString('fr-FR')} FCFA est dû le{' '}
+            <strong>Rappel :</strong> Votre prochain paiement de {nextPayment.amount.toLocaleString('fr-FR')} FCFA est dû le{' '}
             {new Date(nextPayment.dueDate).toLocaleDateString('fr-FR')}.
           </p>
         </div>
@@ -176,7 +240,7 @@ export default function Paiements() {
               {payment.status === 'paye' && (
                 <button 
                   onClick={() => exportReceiptPDF(
-                    user?.name || 'Étudiant',
+                    student?.name || 'Étudiant',
                     `PAY-${payment.dueDate}`,
                     payment.amount,
                     payment.dueDate,
@@ -229,7 +293,7 @@ export default function Paiements() {
                       {t.status === 'paye' && (
                         <button
                           onClick={() => exportReceiptPDF(
-                            user?.name || 'Étudiant',
+                            student?.name || 'Étudiant',
                             t.id,
                             t.amount,
                             t.date || new Date().toISOString(),

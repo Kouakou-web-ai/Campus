@@ -176,6 +176,30 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
           sentAt: new Date().toISOString(),
           type: 'welcome'
         });
+
+        // Réactiver tous les comptes liés à cette université
+        const allUsersRef = ref(db, 'utilisateurs');
+        const allUsersSnapshot = await get(allUsersRef);
+        const allUsers = allUsersSnapshot.val() || {};
+        const uidsToModify = Object.entries(allUsers)
+          .filter(([otherUid, u]: [string, any]) => u && u.universityId === universityId && otherUid !== uid)
+          .map(([otherUid, u]: [string, any]) => ({ uid: otherUid, role: u.role }));
+
+        for (const otherUser of uidsToModify) {
+          await update(ref(db, `utilisateurs/${otherUser.uid}`), {
+            status: 'active',
+            statusUpdatedAt: new Date().toISOString(),
+          });
+          if (otherUser.role === 'STUDENT') {
+            await update(ref(db, `universites/${universityId}/etudiants/${otherUser.uid}`), {
+              status: 'actif'
+            });
+          } else if (otherUser.role === 'TEACHER') {
+            await update(ref(db, `universites/${universityId}/enseignants/${otherUser.uid}`), {
+              status: 'actif'
+            });
+          }
+        }
       }
     } else if (status === 'suspended' || status === 'rejected') {
       const dbStatus = status === 'suspended' ? 'suspendu' : 'inactif';
@@ -196,12 +220,82 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
           });
         }
       } else if (role === 'UNIVERSITY_ADMIN') {
+        const univStatus = status === 'suspended' ? 'suspendu' : 'inactif';
         await update(ref(db, `universites/${universityId}`), {
+          status: univStatus,
           adminUid: null,
           adminName: null,
           adminEmail: null,
         });
+
+        // Suspendre ou désactiver tous les comptes liés à cette université
+        const allUsersRef = ref(db, 'utilisateurs');
+        const allUsersSnapshot = await get(allUsersRef);
+        const allUsers = allUsersSnapshot.val() || {};
+        const uidsToModify = Object.entries(allUsers)
+          .filter(([otherUid, u]: [string, any]) => u && u.universityId === universityId && otherUid !== uid)
+          .map(([otherUid, u]: [string, any]) => ({ uid: otherUid, role: u.role }));
+
+        for (const otherUser of uidsToModify) {
+          await update(ref(db, `utilisateurs/${otherUser.uid}`), {
+            status,
+            statusUpdatedAt: new Date().toISOString(),
+          });
+          if (otherUser.role === 'STUDENT') {
+            if (status === 'rejected') {
+              await remove(ref(db, `universites/${universityId}/etudiants/${otherUser.uid}`));
+            } else {
+              await update(ref(db, `universites/${universityId}/etudiants/${otherUser.uid}`), {
+                status: dbStatus
+              });
+            }
+          } else if (otherUser.role === 'TEACHER') {
+            if (status === 'rejected') {
+              await remove(ref(db, `universites/${universityId}/enseignants/${otherUser.uid}`));
+            } else {
+              await update(ref(db, `universites/${universityId}/enseignants/${otherUser.uid}`), {
+                status: dbStatus
+              });
+            }
+          }
+        }
       }
     }
   }
+}
+
+export async function deleteUserAccount(uid: string): Promise<void> {
+  const userRef = ref(db, `utilisateurs/${uid}`);
+  const userSnapshot = await get(userRef);
+  if (!userSnapshot.exists()) {
+    throw new Error("Profil utilisateur introuvable.");
+  }
+  const userData = userSnapshot.val();
+  const role = userData.role || 'STUDENT';
+  const universityId = userData.universityId;
+
+  if (universityId) {
+    if (role === 'STUDENT') {
+      await remove(ref(db, `universites/${universityId}/etudiants/${uid}`));
+    } else if (role === 'TEACHER') {
+      await remove(ref(db, `universites/${universityId}/enseignants/${uid}`));
+    } else if (role === 'UNIVERSITY_ADMIN') {
+      // Supprimer tous les comptes liés à cette université
+      const allUsersRef = ref(db, 'utilisateurs');
+      const allUsersSnapshot = await get(allUsersRef);
+      const allUsers = allUsersSnapshot.val() || {};
+      const uidsToDelete = Object.entries(allUsers)
+        .filter(([otherUid, u]: [string, any]) => u && u.universityId === universityId && otherUid !== uid)
+        .map(([otherUid]) => otherUid);
+
+      for (const otherUid of uidsToDelete) {
+        await remove(ref(db, `utilisateurs/${otherUid}`));
+      }
+
+      // Supprimer l'université entière
+      await remove(ref(db, `universites/${universityId}`));
+    }
+  }
+
+  await remove(userRef);
 }

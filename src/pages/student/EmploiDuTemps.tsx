@@ -44,9 +44,29 @@ export default function EmploiDuTemps() {
     return filiereMatches && yearMatches;
   });
 
+  // Parse dynamic attributes (dayOfWeek, startHour) if they are missing from Firebase nodes
+  const parsedEvents = filteredEvents.map(event => {
+    let dayOfWeek = event.dayOfWeek;
+    if (dayOfWeek === undefined && event.date) {
+      // getDay(): 0 is Sunday, 1 is Monday, ..., 6 is Saturday
+      const day = new Date(event.date).getDay();
+      // map to 0: Monday, 1: Tuesday, ..., 4: Friday
+      dayOfWeek = day === 0 ? 6 : day - 1;
+    }
+    let startHour = event.startHour;
+    if (startHour === undefined && event.startTime) {
+      startHour = parseInt(event.startTime.split(':')[0], 10);
+    }
+    return {
+      ...event,
+      dayOfWeek,
+      startHour
+    };
+  });
+
   // Calculate distinct subjects from schedule for legend
   const distinctSubjectsMap: Record<string, string> = {};
-  filteredEvents.forEach(e => {
+  parsedEvents.forEach(e => {
     distinctSubjectsMap[e.title] = e.color || '#6366f1';
   });
   const legendItems = Object.entries(distinctSubjectsMap);
@@ -86,7 +106,7 @@ export default function EmploiDuTemps() {
                     {hour}h
                   </div>
                   {DAYS.map((_, dayIdx) => {
-                    const events = filteredEvents.filter(
+                    const events = parsedEvents.filter(
                       e => e.dayOfWeek === dayIdx && e.startHour === hour
                     );
                     return (
@@ -94,7 +114,7 @@ export default function EmploiDuTemps() {
                         {events.map(event => (
                           <div
                             key={event.id}
-                            className="rounded-xl p-2 cursor-pointer hover:opacity-90 transition-opacity group text-white select-none animate-fade-up shadow-sm"
+                            className="rounded-xl p-2 cursor-pointer hover:opacity-90 transition-opacity group text-white select-none animate-fade-up shadow-sm flex flex-col justify-between"
                             style={{
                               background: event.color || '#6366f1',
                               minHeight: `${(event.durationHours || 2) * 56 - 8}px`,
@@ -105,11 +125,18 @@ export default function EmploiDuTemps() {
                               zIndex: 10
                             }}
                           >
-                            <p className="font-semibold text-xs leading-tight truncate">{event.title}</p>
-                            <p className="text-white/70 text-[10px] mt-1 truncate">{event.room}</p>
-                            <p className="text-white/60 text-[9px] mt-0.5">
-                              {event.startHour}h – {event.startHour + (event.durationHours || 2)}h
-                            </p>
+                            <div>
+                              <p className="font-semibold text-xs leading-tight truncate">{event.title}</p>
+                              {event.teacher && (
+                                <p className="text-white/80 text-[10px] mt-0.5 truncate">{event.teacher}</p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-white/70 text-[9px] truncate">{event.room}</p>
+                              <p className="text-white/60 text-[8px] mt-0.5">
+                                {event.startHour}h – {event.startHour + (event.durationHours || 2)}h
+                              </p>
+                            </div>
                           </div>
                         ))}
                       </div>

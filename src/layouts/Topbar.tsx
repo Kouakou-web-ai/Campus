@@ -23,6 +23,7 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
   const [searchVal, setSearchVal] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [time, setTime] = useState(new Date());
+  const [selectedNotif, setSelectedNotif] = useState<any | null>(null);
 
   const { isListening, isSupported, startListening, stopListening } = useSpeechToText({
     onResult: (text) => {
@@ -264,7 +265,12 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
                     className={`flex items-start gap-3 px-4 py-3 hover:bg-surface-raised transition-colors cursor-pointer group/notif ${
                       !notif.read ? 'bg-indigo-50/30' : ''
                     }`}
-                    onClick={() => markAsRead(notif.id)}
+                    onClick={() => {
+                      markAsRead(notif.id);
+                      if (notif.metadata) {
+                        setSelectedNotif(notif);
+                      }
+                    }}
                   >
                     <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
                       notif.read
@@ -320,6 +326,126 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
           <p className="text-sm font-semibold text-content leading-none">{user.name.split(' ')[0]}</p>
         </div>
       </div>
+      {/* Notification Detail Modal */}
+      {selectedNotif && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4 py-6">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-100 dark:border-slate-800 shadow-2xl relative animate-fade-up text-slate-850 dark:text-slate-150">
+            <button
+              onClick={() => setSelectedNotif(null)}
+              className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl"
+            >
+              <X size={18} />
+            </button>
+            
+            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${
+                selectedNotif.metadata.type === 'evaluation' ? 'bg-amber-500' : 'bg-indigo-500'
+              }`}>
+                {selectedNotif.metadata.type === 'evaluation' ? '⭐' : '💡'}
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{selectedNotif.title}</h3>
+                <p className="text-xs text-slate-400">
+                  Reçu le {new Date(selectedNotif.metadata.submittedAt || selectedNotif.createdAt).toLocaleString('fr-FR')}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Contrib Info */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Auteur</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-xs">
+                    {selectedNotif.metadata.userName.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{selectedNotif.metadata.userName}</p>
+                    <p className="text-[10px] text-indigo-650 bg-indigo-50 dark:bg-indigo-950/40 dark:text-indigo-400 px-2 py-0.5 rounded-full inline-block font-semibold mt-0.5">
+                      {selectedNotif.metadata.userRole === 'PARENT' ? 'Parent d\'élève' : 'Étudiant'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Evaluation Details */}
+              {selectedNotif.metadata.type === 'evaluation' && (
+                <div className="space-y-4">
+                  <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-150 p-4 rounded-2xl flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-350">Note Moyenne attribuée :</span>
+                    <span className="text-lg font-black text-indigo-700 dark:text-indigo-400 font-mono">{selectedNotif.metadata.average} / 5</span>
+                  </div>
+                  
+                  {selectedNotif.metadata.ratings && (
+                    <div className="space-y-2.5">
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Détail des critères</span>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {[
+                          { key: 'enseignement', label: "Enseignement" },
+                          { key: 'infrastructures', label: "Infrastructures" },
+                          { key: 'administration', label: "Administration" },
+                          { key: 'services', label: "Services" }
+                        ].map(c => {
+                          const rating = selectedNotif.metadata.ratings[c.key] || 0;
+                          return (
+                            <div key={c.key} className="flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20 p-2.5 border border-slate-100/60 dark:border-slate-800 rounded-xl">
+                              <span className="text-slate-550 dark:text-slate-400 font-medium truncate">{c.label}</span>
+                              <span className="font-bold text-amber-500 flex items-center gap-0.5 ml-1">
+                                {rating} ★
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Avis / Commentaire</span>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 italic bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 leading-relaxed">
+                      &ldquo;{selectedNotif.metadata.comment}&rdquo;
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Suggestion Details */}
+              {selectedNotif.metadata.type === 'suggestion' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Thématique</span>
+                      <span className="inline-block text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 px-3 py-1.5 rounded-xl">
+                        {selectedNotif.metadata.category}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Objet</span>
+                      <span className="block text-sm font-bold text-slate-800 dark:text-slate-200 mt-1">{selectedNotif.metadata.subject}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Détails de la suggestion</span>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 leading-relaxed whitespace-pre-line">
+                      {selectedNotif.metadata.content}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedNotif(null)}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

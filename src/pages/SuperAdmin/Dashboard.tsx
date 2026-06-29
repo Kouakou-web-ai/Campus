@@ -28,7 +28,7 @@ export function SuperAdminDashboard() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Universités Actives" value="124" icon={Building2} trend={12} trendLabel="vs mois dernier" />
-        <StatCard title="Revenu Récurrent (MRR)" value="142 500 000 FCFA" icon={Coins} trend={8.5} trendLabel="vs mois dernier" />
+        <StatCard title="Abonnements mensuels" value="142 500 000 FCFA" icon={Coins} trend={8.5} trendLabel="vs mois dernier" />
         <StatCard title="Total Utilisateurs" value="842.5K" icon={Users} trend={15} trendLabel="vs mois dernier" />
         <StatCard title="Uptime Système" value="99.99%" icon={Activity} />
       </div>

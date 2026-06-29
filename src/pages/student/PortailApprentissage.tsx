@@ -32,12 +32,16 @@ export default function PortailApprentissage() {
   // Filter student-related courses and PDFs
   const studentCourses = courses.filter(c => c.filiere === currentStudent?.filiere);
   const studentCourseIds = studentCourses.map(c => c.id);
-  const studentPdfResources = resources.filter(res => res.type === 'pdf' && studentCourseIds.includes(res.courseId));
+  const studentPdfResources = resources.filter(res => res.type === 'pdf' && (!res.courseId || res.courseId === 'general' || studentCourseIds.includes(res.courseId)));
 
   const handleOpenPdf = (pdf: any) => {
-    setSelectedPdf(pdf);
-    setPdfPage(1);
-    setPdfZoom(100);
+    if (pdf.url) {
+      window.open(pdf.url, '_blank', 'noopener,noreferrer');
+    } else {
+      setSelectedPdf(pdf);
+      setPdfPage(1);
+      setPdfZoom(100);
+    }
   };
 
   const handleDownloadSimulatedPdf = () => {
@@ -96,7 +100,7 @@ export default function PortailApprentissage() {
               <div className="w-px h-10 bg-white/20" />
               <div className="text-center">
                 <div className="text-2xl font-bold">{averageNote}</div>
-                <div className="text-xs text-indigo-200">Moyenne générale</div>
+                <div className="text-xs text-indigo-200">Moyenne (Semestre 1)</div>
               </div>
             </div>
           </div>
@@ -123,16 +127,6 @@ export default function PortailApprentissage() {
           }`}
         >
           Mes cours & Agenda
-        </button>
-        <button
-          onClick={() => setActiveTab('cahier')}
-          className={`pb-3 border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'cahier'
-              ? 'border-indigo-600 text-indigo-600 font-bold'
-              : 'border-transparent text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          Cahier de textes
         </button>
         <button
           onClick={() => setActiveTab('documents')}
@@ -270,10 +264,6 @@ export default function PortailApprentissage() {
             </div>
           </div>
         </>
-      )}
-
-      {activeTab === 'cahier' && (
-        <ConsultationCahierTextes />
       )}
 
       {activeTab === 'quizzes' && (

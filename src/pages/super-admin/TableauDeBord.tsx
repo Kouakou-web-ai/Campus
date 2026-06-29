@@ -186,7 +186,7 @@ export default function SuperAdminDashboard() {
                 <th>Administrateur</th>
                 <th>Statut</th>
                 <th className="text-right">Étudiants</th>
-                <th className="text-right">MRR</th>
+                <th className="text-right">Abonnement</th>
               </tr>
             </thead>
             <tbody>

@@ -5,6 +5,7 @@ import type { RegistrationRequest, UserStatus } from '../types/userAccount';
 import {
   subscribeToUsers,
   updateUserStatus as updateUserStatusApi,
+  deleteUserAccount,
 } from '../services/registrationService';
 import { mockUniversities } from '../constants/mockData';
 import { ToastError, ToastSuccess } from '../controllers/Toast-emitter';
@@ -17,6 +18,7 @@ interface RegistrationState {
   subscribe: () => void;
   teardown: () => void;
   setUserStatus: (uid: string, status: UserStatus) => Promise<void>;
+  deleteUser: (uid: string) => Promise<void>;
   getAdminRequests: () => RegistrationRequest[];
   getUniversityRequests: (universityId: string, role: UserRole) => RegistrationRequest[];
 }
@@ -77,6 +79,27 @@ export const useRegistrationStore = create<RegistrationState>((set, get) => ({
     } catch (err) {
       console.error(err);
       ToastError("Impossible de mettre à jour le statut du compte.");
+      throw err;
+    } finally {
+      set({ actionLoading: null });
+    }
+  },
+
+  deleteUser: async (uid) => {
+    set({ actionLoading: uid });
+    try {
+      await deleteUserAccount(uid);
+      ToastSuccess("Compte supprimé avec succès.");
+
+      const isDemo = useAuthStore.getState().user?.id.startsWith('usr-') || !auth.currentUser;
+      if (isDemo) {
+        set((state) => ({
+          requests: state.requests.filter((r) => r.uid !== uid),
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      ToastError("Impossible de supprimer le compte.");
       throw err;
     } finally {
       set({ actionLoading: null });

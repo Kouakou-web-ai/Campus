@@ -13,6 +13,7 @@ export default function DemandesAdministrateurs() {
     teardown,
     getAdminRequests,
     setUserStatus,
+    deleteUser,
   } = useRegistrationStore();
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function DemandesAdministrateurs() {
         showUniversity
         actionLoading={actionLoading}
         onAction={setUserStatus}
+        onDelete={deleteUser}
       />
     </div>
   );

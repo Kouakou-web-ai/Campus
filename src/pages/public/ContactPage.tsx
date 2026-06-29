@@ -83,9 +83,8 @@ export default function ContactPage() {
     }
   };
 
-
   return (
-    <div className="py-20">
+    <div className="py-28 w-full max-w-5xl mx-auto px-6 sm:px-8">
       {/* Header */}
       <div className="text-center mb-16 px-4">
         <span className="inline-block text-indigo-600 font-semibold text-sm mb-3">Contact</span>
@@ -97,52 +96,52 @@ export default function ContactPage() {
         </p>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Infos contact */}
-          <div className="space-y-4">
-            <div className="card-premium p-6 bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-0">
-              <h3 className="font-bold text-lg mb-1">Support dédié</h3>
-              <p className="text-indigo-200 text-sm mb-6">Nos experts répondent en 4h max sur les jours ouvrés.</p>
-              <div className="space-y-4">
-                {CONTACT_INFO.map(info => {
-                  const Icon = info.icon;
-                  return (
-                    <a key={info.label} href={info.href} className="flex items-start gap-3 group">
-                      <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                        <Icon size={16} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-indigo-300">{info.label}</p>
-                        <p className="text-sm text-white font-medium group-hover:text-indigo-200 transition-colors">
-                          {info.value}
-                        </p>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="card-premium p-5">
-              <h4 className="text-sm font-semibold text-slate-800 mb-3">Horaires du support</h4>
-              <div className="space-y-2 text-sm text-slate-500">
-                <div className="flex justify-between">
-                  <span>Lun–Ven</span>
-                  <span className="font-medium text-slate-700">9h–19h</span>
+      <div className="w-full max-w-4xl mx-auto space-y-12">
+        {/* Infos de contact en ligne */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {CONTACT_INFO.map(info => {
+            const Icon = info.icon;
+            return (
+              <a
+                key={info.label}
+                href={info.href}
+                className="card-premium p-6 flex flex-col items-center text-center group hover:border-indigo-200 transition-all duration-300"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-slate-800 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Icon size={20} className="text-indigo-600" />
                 </div>
-                <div className="flex justify-between">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{info.label}</span>
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">
+                  {info.value}
+                </span>
+              </a>
+            );
+          })}
+        </div>
+
+        {/* Formulaire et horaires */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Horaires et statut */}
+          <div className="lg:col-span-1 space-y-4">
+            <div className="card-premium p-6">
+              <h4 className="text-sm font-bold text-slate-800 mb-4">Horaires du support</h4>
+              <div className="space-y-3 text-sm text-slate-500">
+                <div className="flex justify-between border-b border-slate-50 pb-2">
+                  <span>Lun–Ven</span>
+                  <span className="font-semibold text-slate-700">9h–19h</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-50 pb-2">
                   <span>Samedi</span>
-                  <span className="font-medium text-slate-700">10h–14h</span>
+                  <span className="font-semibold text-slate-700">10h–14h</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Dimanche</span>
-                  <span className="font-medium text-slate-400">Fermé</span>
+                  <span className="font-semibold text-slate-400">Fermé</span>
                 </div>
               </div>
-              <div className="mt-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs text-emerald-600 font-medium">Support en ligne actuellement</span>
+              <div className="mt-6 flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 rounded-xl border border-emerald-100/50">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs text-emerald-700 font-bold">En ligne actuellement</span>
               </div>
             </div>
           </div>
@@ -158,7 +157,7 @@ export default function ContactPage() {
                 <p className="text-slate-500 text-sm max-w-sm">
                   Merci pour votre message. Notre équipe vous répondra dans les 24h.
                 </p>
-                <a href="mailto:truixk@gmail.com" className="mt-8 text-sm text-indigo-600 font-medium hover:underline">
+                <a href="mailto:truixk@gmail.com" className="mt-8 text-sm text-indigo-650 font-medium hover:underline">
                   Envoyer un autre message
                 </a>
               </div>

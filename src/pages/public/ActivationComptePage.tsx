@@ -124,33 +124,33 @@ export default function ActivationComptePage() {
       <div className="mb-8 text-center">
         <div className="flex items-center justify-center gap-3 mb-4">
           <img src="/images/logo-original.png" alt="Campus Logo" className="w-11 h-11 rounded-2xl shadow-lg object-cover" />
-          <span className="font-heading font-black text-2xl tracking-tight text-slate-900">CAMPUS</span>
+          <span className="font-heading font-black text-2xl tracking-tight text-content">CAMPUS</span>
         </div>
-        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Activation du compte</h2>
-        <p className="text-slate-400 text-sm mt-1">Choisissez votre mot de passe pour finaliser votre accès.</p>
+        <h2 className="text-2xl font-bold text-content tracking-tight">Activation du compte</h2>
+        <p className="text-content-secondary text-sm mt-1">Choisissez votre mot de passe pour finaliser votre accès.</p>
       </div>
 
-      <div className="space-y-6 bg-white p-8 sm:p-10 rounded-3xl border border-slate-100/80 shadow-xl shadow-slate-100/50">
+      <div className="space-y-6 bg-surface p-8 sm:p-10 rounded-3xl border border-border shadow-xl shadow-indigo-500/5">
         {!invite && (
           <form onSubmit={handleFindInvite} className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Adresse email</label>
+              <label className="block text-xs font-bold text-content-secondary uppercase tracking-wider">Adresse email</label>
               <div className="relative flex items-center">
-                <Mail className="absolute left-3.5 w-4.5 h-4.5 text-slate-400 pointer-events-none" />
+                <Mail className="absolute left-3.5 w-4.5 h-4.5 text-content-muted pointer-events-none" />
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="adresse@universite.ci"
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
+                  className="w-full pl-11 pr-4 py-3 bg-app border border-border rounded-xl text-sm text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
                 />
               </div>
             </div>
             <button
               type="submit"
               disabled={checkingInvite}
-              className="w-full py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+              className="w-full py-3 bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60"
             >
               {checkingInvite ? <span className="loading loading-spinner loading-sm" /> : <UserCheck size={16} />}
               Vérifier mon invitation
@@ -159,33 +159,33 @@ export default function ActivationComptePage() {
         )}
 
         {inviteChecked && !checkingInvite && !invite && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm text-amber-800 dark:text-amber-300">
             Aucun compte invité trouvé. Vérifiez l'email donné à votre établissement.
           </div>
         )}
 
         {canShowPasswordForm && (
           <form onSubmit={handleActivate} className="space-y-5">
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-800">
+            <div className="rounded-2xl border border-indigo-150 bg-indigo-50 dark:bg-indigo-950/20 p-4 text-sm text-indigo-800 dark:text-indigo-300">
               Invitation trouvée pour <strong>{invite.profile.email}</strong>.
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Mot de passe</label>
+              <label className="block text-xs font-bold text-content-secondary uppercase tracking-wider">Mot de passe</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 pointer-events-none" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-content-muted pointer-events-none" />
                 <input
                   type={showPwd ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Minimum 6 caractères"
                   required
-                  className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
+                  className="w-full pl-11 pr-10 py-3 bg-app border border-border rounded-xl text-sm text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPwd(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-content-muted hover:text-content transition-colors"
                   aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                 >
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -194,21 +194,21 @@ export default function ActivationComptePage() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Confirmer</label>
+              <label className="block text-xs font-bold text-content-secondary uppercase tracking-wider">Confirmer</label>
               <input
                 type={showPwd ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 placeholder="Retapez le mot de passe"
                 required
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
+                className="w-full px-4 py-3 bg-app border border-border rounded-xl text-sm text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-md shadow-indigo-100"
+              className="w-full py-3.5 bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-md shadow-indigo-100/10"
             >
               {loading ? <span className="loading loading-spinner loading-sm" /> : <UserCheck size={16} />}
               Activer mon compte
@@ -216,7 +216,7 @@ export default function ActivationComptePage() {
           </form>
         )}
 
-        <p className="text-center text-sm text-slate-400">
+        <p className="text-center text-sm text-content-secondary">
           Déjà activé ?{' '}
           <Link to="/connexion" className="text-indigo-600 font-bold hover:underline">
             Se connecter

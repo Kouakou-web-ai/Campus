@@ -25,6 +25,7 @@ export default function DemandesInscription() {
     teardown,
     getUniversityRequests,
     setUserStatus,
+    deleteUser,
   } = useRegistrationStore();
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function DemandesInscription() {
         requests={requests}
         actionLoading={actionLoading}
         onAction={setUserStatus}
+        onDelete={deleteUser}
       />
     </div>
   );

@@ -4,6 +4,10 @@ import { useAuthStore } from '../../store/authStore';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { FileText, Users, BookOpen, ClipboardList, Plus, Trash2, UploadCloud, FileUp } from 'lucide-react';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
+import FaireAppelModal from '../../components/ui/FaireAppelModal';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../../firebase-config';
+import { useNotificationStore } from '../../store/notificationStore';
 
 export function TeacherDashboard() {
   const { user } = useAuthStore();
@@ -19,11 +23,12 @@ export function TeacherDashboard() {
   } = useRealtimeDataStore();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'documents'>('dashboard');
+  const [appelModalCourseId, setAppelModalCourseId] = useState<string | null>(null);
 
   // Form states for uploading resources
   const [docTitle, setDocTitle] = useState('');
   const [docCourseId, setDocCourseId] = useState('');
-  const [docSize, setDocSize] = useState('1.5 Mo');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const myCourses = courses.filter((c) => c.teacherId === user?.id);
@@ -45,67 +50,75 @@ export function TeacherDashboard() {
   });
 
   // Filter resources (PDFs) uploaded by this teacher
-  const myResources = resources.filter(res => myCourseIds.includes(res.courseId));
+  const myResources = resources.filter(res => res.teacherId === user?.id || myCourseIds.includes(res.courseId));
 
   const getNextEvent = () => {
     if (myEvents.length === 0) return null;
-    const now = new Date();
-    const currentDayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1;
-    const currentHour = now.getHours();
+    const now = Date.now();
 
     const sortedEvents = [...myEvents].sort((a, b) => {
-      if (a.dayOfWeek !== b.dayOfWeek) {
-        return a.dayOfWeek - b.dayOfWeek;
-      }
-      return a.startHour - b.startHour;
+      const dateA = new Date(`${a.date}T${a.startTime}`).getTime();
+      const dateB = new Date(`${b.date}T${b.startTime}`).getTime();
+      return dateA - dateB;
     });
 
-    const nextToday = sortedEvents.find(
-      e => e.dayOfWeek === currentDayOfWeek && e.startHour > currentHour
-    );
-    if (nextToday) return nextToday;
+    // Cherche le premier événement dans le futur
+    const nextEvent = sortedEvents.find(e => new Date(`${e.date}T${e.startTime}`).getTime() > now);
+    if (nextEvent) return nextEvent;
 
-    const nextThisWeek = sortedEvents.find(e => e.dayOfWeek > currentDayOfWeek);
-    if (nextThisWeek) return nextThisWeek;
-
-    return sortedEvents[0];
+    // S'il n'y en a pas dans le futur, retourne le dernier passé
+    return sortedEvents[sortedEvents.length - 1];
   };
 
   const nextEvent = getNextEvent();
-  const DAYS_SHORT = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
   const scheduleStr = nextEvent 
-    ? `${DAYS_SHORT[nextEvent.dayOfWeek]} à ${nextEvent.startHour}h`
+    ? `${new Date(nextEvent.date).toLocaleDateString('fr-FR')} à ${nextEvent.startTime}`
     : 'À programmer';
 
   const handlePublishResource = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.universityId) return;
-    if (!docCourseId) {
-      ToastError("Veuillez sélectionner un cours.");
-      return;
-    }
     if (!docTitle.trim()) {
       ToastError("Veuillez entrer un titre de document.");
       return;
     }
 
+    if (!selectedFile) {
+      ToastError("Veuillez sélectionner un fichier PDF.");
+      return;
+    }
+
     setIsUploading(true);
     try {
-      const selectedCourse = myCourses.find(c => c.id === docCourseId);
+      const selectedCourse = docCourseId ? myCourses.find(c => c.id === docCourseId) : null;
+      
+      // Simulation locale car CORS Firebase non configuré
+      const sizeInMo = selectedFile ? (selectedFile.size / (1024 * 1024)).toFixed(1) + ' Mo' : '1.2 Mo';
+      const fakeUrl = `https://exemple.com/docs/${Date.now()}_document.pdf`;
       
       await addResource(user.universityId, {
         title: docTitle.trim().endsWith('.pdf') ? docTitle.trim() : `${docTitle.trim()}.pdf`,
         type: 'pdf',
-        courseId: docCourseId,
-        courseTitle: selectedCourse ? selectedCourse.title : 'Cours',
-        size: docSize,
+        courseId: docCourseId || 'general',
+        courseTitle: selectedCourse ? selectedCourse.title : 'Général (Aucun cours)',
+        size: sizeInMo,
+        url: fakeUrl,
         uploadedAt: new Date().toISOString().split('T')[0],
-        downloadCount: 0
+        downloadCount: 0,
+        teacherId: user.id
       });
+
+      // Notification logic (simulated for students)
+      useNotificationStore.getState().addNotification(
+        "Nouveau support de cours",
+        `Le professeur ${user?.name} a ajouté le document "${docTitle}" ${selectedCourse ? `pour le cours de ${selectedCourse.title}` : '(Général)'}.`,
+        "info"
+      );
 
       ToastSuccess("Document de cours publié avec succès !");
       setDocTitle('');
       setDocCourseId('');
+      setSelectedFile(null);
     } catch (err: any) {
       ToastError("Erreur lors de la publication du document.");
     } finally {
@@ -249,22 +262,56 @@ export function TeacherDashboard() {
                       <th>Filière</th>
                       <th>Créneau Horaire</th>
                       <th className="text-center">Effectif Max</th>
+                      <th className="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {myCourses.map((c) => (
-                      <tr key={c.id}>
-                        <td className="font-mono font-bold text-xs text-indigo-600">{c.code}</td>
-                        <td className="font-medium text-slate-800 text-sm">{c.title}</td>
-                        <td className="text-slate-600 text-sm">{c.filiere}</td>
-                        <td>
-                          <span className="bg-slate-100 text-slate-600 font-medium text-xs px-2.5 py-1 rounded-lg">
-                            {c.schedule || 'À programmer'}
-                          </span>
-                        </td>
-                        <td className="text-center text-sm text-slate-500">{c.studentsMax || 60}</td>
-                      </tr>
-                    ))}
+                    {myCourses.map((c) => {
+                      const courseStart = new Date(`${c.date}T${c.startTime}`).getTime();
+                      const courseEnd = courseStart + c.duration * 60 * 60 * 1000;
+                      const currentMs = Date.now();
+                      
+                      let statusBadge = null;
+                      let actionBtn = null;
+
+                      if (currentMs < courseStart) {
+                        statusBadge = <span className="bg-violet-100 text-violet-700 font-medium text-[10px] px-2 py-0.5 rounded uppercase">Planifié</span>;
+                        actionBtn = <span className="text-xs text-slate-400">Bientôt</span>;
+                      } else if (currentMs >= courseStart && currentMs <= courseEnd) {
+                        statusBadge = <span className="bg-emerald-100 text-emerald-700 font-bold text-[10px] px-2 py-0.5 rounded uppercase animate-pulse">En cours</span>;
+                        actionBtn = (
+                          <button 
+                            onClick={() => setAppelModalCourseId(c.id)}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm shadow-emerald-200 transition-all active:scale-95"
+                          >
+                            Faire l'appel
+                          </button>
+                        );
+                      } else {
+                        statusBadge = <span className="bg-slate-100 text-slate-500 font-medium text-[10px] px-2 py-0.5 rounded uppercase">Terminé</span>;
+                        actionBtn = <span className="text-xs text-slate-400 font-semibold">Appel clôturé</span>;
+                      }
+
+                      return (
+                        <tr key={c.id}>
+                          <td className="font-mono font-bold text-xs text-indigo-600 flex items-center gap-2">
+                            {c.code}
+                            {statusBadge}
+                          </td>
+                          <td className="font-medium text-slate-800 text-sm">{c.title}</td>
+                          <td className="text-slate-600 text-sm">{c.filiere}</td>
+                          <td>
+                            <span className="bg-slate-100 text-slate-600 font-medium text-xs px-2.5 py-1 rounded-lg">
+                              {c.date ? `${new Date(c.date).toLocaleDateString('fr-FR')} à ${c.startTime} (${c.duration}h)` : 'À programmer'}
+                            </span>
+                          </td>
+                          <td className="text-center text-sm text-slate-500">{c.studentsMax || 60}</td>
+                          <td className="text-right">
+                            {actionBtn}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -285,14 +332,13 @@ export function TeacherDashboard() {
               
               <form onSubmit={handlePublishResource} className="space-y-4 text-left">
                 <div className="form-control">
-                  <label className="label"><span className="label-text font-semibold text-slate-600 text-xs">Cours concerné</span></label>
+                  <label className="label"><span className="label-text font-semibold text-slate-600 text-xs">Cours concerné (Optionnel)</span></label>
                   <select
                     className="select select-bordered select-premium w-full text-sm"
                     value={docCourseId}
                     onChange={(e) => setDocCourseId(e.target.value)}
-                    required
                   >
-                    <option value="">-- Choisir un cours --</option>
+                    <option value="">Général (Aucun cours)</option>
                     {myCourses.map(c => (
                       <option key={c.id} value={c.id}>{c.code} - {c.title}</option>
                     ))}
@@ -312,24 +358,19 @@ export function TeacherDashboard() {
                 </div>
 
                 <div className="form-control">
-                  <label className="label"><span className="label-text font-semibold text-slate-600 text-xs">Taille fictive du fichier</span></label>
-                  <select
-                    className="select select-bordered select-premium w-full text-sm"
-                    value={docSize}
-                    onChange={(e) => setDocSize(e.target.value)}
-                  >
-                    <option value="1.2 Mo">1.2 Mo</option>
-                    <option value="2.5 Mo">2.5 Mo</option>
-                    <option value="4.8 Mo">4.8 Mo</option>
-                    <option value="820 Ko">820 Ko</option>
-                  </select>
-                </div>
-
-                {/* Simulated File upload dropzone */}
-                <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center hover:border-indigo-500 transition-colors bg-slate-50/50 cursor-pointer">
-                  <UploadCloud className="mx-auto text-indigo-400 mb-2" size={32} />
-                  <p className="text-xs font-semibold text-slate-600">Simuler le fichier PDF</p>
-                  <p className="text-[10px] text-slate-400 mt-1">Le document PDF sera généré et lisible par les étudiants.</p>
+                  <label className="label"><span className="label-text font-semibold text-slate-600 text-xs">Fichier PDF</span></label>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    className="file-input file-input-bordered file-input-premium w-full text-sm"
+                    required
+                  />
+                  {selectedFile && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      Sélectionné : {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} Mo)
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -401,6 +442,14 @@ export function TeacherDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {appelModalCourseId && user?.universityId && (
+        <FaireAppelModal
+          courseId={appelModalCourseId}
+          universityId={user.universityId}
+          onClose={() => setAppelModalCourseId(null)}
+        />
       )}
     </div>
   );

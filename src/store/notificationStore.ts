@@ -7,6 +7,7 @@ export interface AppNotification {
   type: 'info' | 'success' | 'warning' | 'error';
   createdAt: string;
   read: boolean;
+  metadata?: any;
 }
 
 export interface Toast {
@@ -20,7 +21,7 @@ interface NotificationState {
   toasts: Toast[];
   addToast: (message: string, type?: Toast['type']) => void;
   removeToast: (id: string) => void;
-  addNotification: (title: string, message: string, type?: AppNotification['type']) => void;
+  addNotification: (title: string, message: string, type?: AppNotification['type'], metadata?: any) => void;
   fetchNotifications: (userId: string) => Promise<void>;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
@@ -45,14 +46,15 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   removeToast: (id) => set((state) => ({
     toasts: state.toasts.filter((t) => t.id !== id)
   })),
-  addNotification: (title, message, type = 'info') => {
+  addNotification: (title, message, type = 'info', metadata) => {
     const newNotif: AppNotification = {
       id: `n-${Date.now()}-${Math.random()}`,
       title,
       message,
       type,
       createdAt: new Date().toISOString(),
-      read: false
+      read: false,
+      metadata
     };
     set((state) => ({
       notifications: [newNotif, ...state.notifications]

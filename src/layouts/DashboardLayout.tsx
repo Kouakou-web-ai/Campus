@@ -50,7 +50,6 @@ export default function DashboardLayout() {
         }
 
         await updateUserProfile({
-          currentPassword: user.tempPassword,
           newPassword: newPassword,
         });
 
@@ -172,7 +171,7 @@ export default function DashboardLayout() {
         />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-screen-2xl mx-auto p-4 md:p-6 lg:p-8">
+          <div className="max-w-screen-2xl mx-auto p-6 md:p-8 lg:p-10">
             <Outlet />
           </div>
         </main>

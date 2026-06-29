@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Inbox } from 'lucide-react';
+import { Inbox, Trash2 } from 'lucide-react';
 import type { UserRole } from '../../store/authStore';
 import type { RegistrationRequest, UserStatus } from '../../types/userAccount';
 import RegistrationRequestCard from './RegistrationRequestCard';
@@ -11,6 +11,7 @@ interface RegistrationRequestsTableProps {
   showUniversity?: boolean;
   actionLoading: string | null;
   onAction: (uid: string, status: UserStatus) => void;
+  onDelete?: (uid: string) => void;
 }
 
 export default function RegistrationRequestsTable({
@@ -18,6 +19,7 @@ export default function RegistrationRequestsTable({
   showUniversity = false,
   actionLoading,
   onAction,
+  onDelete,
 }: RegistrationRequestsTableProps) {
   const sorted = useMemo(
     () =>
@@ -59,6 +61,7 @@ export default function RegistrationRequestsTable({
               showUniversity={showUniversity}
               loading={actionLoading === request.uid}
               onAction={onAction}
+              onDelete={onDelete}
             />
           ))}
         </tbody>
@@ -72,15 +75,14 @@ function RegistrationRequestRow({
   showUniversity,
   loading,
   onAction,
+  onDelete,
 }: {
   request: RegistrationRequest;
   showUniversity: boolean;
   loading: boolean;
   onAction: RegistrationRequestsTableProps['onAction'];
+  onDelete: RegistrationRequestsTableProps['onDelete'];
 }) {
-  const canApprove = request.status === 'pending';
-  const canReject = request.status === 'pending';
-  const canSuspend = request.status === 'active' || request.status === 'pending';
   const date = new Date(request.createdDate).toLocaleDateString('fr-FR');
 
   return (
@@ -95,30 +97,51 @@ function RegistrationRequestRow({
       </td>
       <td>
         <div className="flex justify-end gap-1 flex-wrap">
-          <button
-            type="button"
-            disabled={!canApprove || loading}
-            onClick={() => onAction(request.uid, 'active')}
-            className="btn btn-success btn-xs"
-          >
-            Valider
-          </button>
-          <button
-            type="button"
-            disabled={!canReject || loading}
-            onClick={() => onAction(request.uid, 'rejected')}
-            className="btn btn-error btn-outline btn-xs"
-          >
-            Refuser
-          </button>
-          <button
-            type="button"
-            disabled={!canSuspend || loading}
-            onClick={() => onAction(request.uid, 'suspended')}
-            className="btn btn-warning btn-outline btn-xs"
-          >
-            Suspendre
-          </button>
+          {request.status !== 'active' && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onAction(request.uid, 'active')}
+              className="btn btn-success btn-xs"
+            >
+              Valider
+            </button>
+          )}
+          {request.status !== 'active' && request.status !== 'rejected' && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onAction(request.uid, 'rejected')}
+              className="btn btn-error btn-outline btn-xs"
+            >
+              Refuser
+            </button>
+          )}
+          {(request.status === 'active' || request.status === 'pending') && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onAction(request.uid, 'suspended')}
+              className="btn btn-warning btn-outline btn-xs"
+            >
+              Suspendre
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce compte ?")) {
+                  onDelete(request.uid);
+                }
+              }}
+              className="btn btn-error btn-xs flex items-center gap-1"
+            >
+              <Trash2 size={12} />
+              Supprimer
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -130,6 +153,7 @@ export function RegistrationRequestsGrid({
   showUniversity,
   actionLoading,
   onAction,
+  onDelete,
 }: RegistrationRequestsTableProps) {
   if (requests.length === 0) {
     return (
@@ -150,6 +174,7 @@ export function RegistrationRequestsGrid({
           showUniversity={showUniversity}
           loading={actionLoading === request.uid}
           onAction={onAction}
+          onDelete={onDelete}
         />
       ))}
     </div>

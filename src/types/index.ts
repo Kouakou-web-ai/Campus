@@ -50,6 +50,13 @@ export interface University {
   transactionsCount?: number;
 }
 
+export interface Class {
+  id: string;
+  name: string;
+  filiere: string;
+  annee: number;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -64,6 +71,12 @@ export interface Student {
   paidAmount: number;
   totalAmount: number;
   universityId: string;
+  nom?: string;
+  prenom?: string;
+  dateNaissance?: string;
+  lieuNaissance?: string;
+  sexe?: 'M' | 'F';
+  classeId?: string;
 }
 
 export interface Teacher {
@@ -78,6 +91,8 @@ export interface Teacher {
   hoursPerWeek: number;
   status: StatusType;
   universityId: string;
+  classeId?: string;
+  classeName?: string;
 }
 
 export interface Course {
@@ -92,9 +107,26 @@ export interface Course {
   studentsEnrolled: number;
   studentsMax: number;
   status: StatusType;
-  schedule: string;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:MM
+  duration: number; // in minutes
   progress: number;
   universityId: string;
+}
+
+export interface Attendance {
+  studentId: string;
+  studentName: string;
+  status: 'present' | 'absent' | 'retard';
+  markedAt: string;
+}
+
+export interface CourseDocument {
+  id: string;
+  title: string;
+  url: string;
+  uploadedAt: string;
+  size?: number;
 }
 
 export interface Transaction {
@@ -140,6 +172,7 @@ export interface Resource {
   size?: string;
   uploadedAt: string;
   downloadCount: number;
+  url?: string;
 }
 
 export interface ScheduleEvent {
@@ -148,8 +181,8 @@ export interface ScheduleEvent {
   courseCode: string;
   room: string;
   teacher?: string;
-  dayOfWeek: number; // 0=Mon, 4=Fri
-  startHour: number;
+  date: string; // YYYY-MM-DD
+  startTime: string; // HH:MM
   durationHours: number;
   color: string;
 }

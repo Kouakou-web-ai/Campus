@@ -1,4 +1,4 @@
-import { Check, Ban, PauseCircle } from 'lucide-react';
+import { Check, Ban, PauseCircle, Trash2 } from 'lucide-react';
 import type { RegistrationRequest, UserStatus } from '../../types/userAccount';
 import UserStatusBadge from './UserStatusBadge';
 
@@ -7,6 +7,7 @@ interface RegistrationRequestCardProps {
   showUniversity?: boolean;
   loading?: boolean;
   onAction: (uid: string, status: UserStatus) => void;
+  onDelete?: (uid: string) => void;
 }
 
 function formatDate(iso: string) {
@@ -27,10 +28,6 @@ export default function RegistrationRequestCard({
   loading = false,
   onAction,
 }: RegistrationRequestCardProps) {
-  const canApprove = request.status === 'pending';
-  const canReject = request.status === 'pending';
-  const canSuspend = request.status === 'active' || request.status === 'pending';
-
   return (
     <div className="card bg-surface border border-border-subtle shadow-sm">
       <div className="card-body gap-4">
@@ -58,33 +55,54 @@ export default function RegistrationRequestCard({
         </div>
 
         <div className="card-actions justify-end flex-wrap gap-2 pt-2 border-t border-border-subtle">
-          <button
-            type="button"
-            disabled={!canApprove || loading}
-            onClick={() => onAction(request.uid, 'active')}
-            className="btn btn-success btn-sm gap-1.5"
-          >
-            <Check size={14} />
-            Valider
-          </button>
-          <button
-            type="button"
-            disabled={!canReject || loading}
-            onClick={() => onAction(request.uid, 'rejected')}
-            className="btn btn-error btn-outline btn-sm gap-1.5"
-          >
-            <Ban size={14} />
-            Refuser
-          </button>
-          <button
-            type="button"
-            disabled={!canSuspend || loading}
-            onClick={() => onAction(request.uid, 'suspended')}
-            className="btn btn-warning btn-outline btn-sm gap-1.5"
-          >
-            <PauseCircle size={14} />
-            Suspendre
-          </button>
+          {request.status !== 'active' && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onAction(request.uid, 'active')}
+              className="btn btn-success btn-sm gap-1.5"
+            >
+              <Check size={14} />
+              Valider
+            </button>
+          )}
+          {request.status !== 'active' && request.status !== 'rejected' && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onAction(request.uid, 'rejected')}
+              className="btn btn-error btn-outline btn-sm gap-1.5"
+            >
+              <Ban size={14} />
+              Refuser
+            </button>
+          )}
+          {(request.status === 'active' || request.status === 'pending') && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onAction(request.uid, 'suspended')}
+              className="btn btn-warning btn-outline btn-sm gap-1.5"
+            >
+              <PauseCircle size={14} />
+              Suspendre
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement ce compte ?")) {
+                  onDelete(request.uid);
+                }
+              }}
+              className="btn btn-error btn-sm gap-1.5"
+            >
+              <Trash2 size={14} />
+              Supprimer
+            </button>
+          )}
         </div>
       </div>
     </div>

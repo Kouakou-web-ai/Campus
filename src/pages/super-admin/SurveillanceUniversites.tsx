@@ -48,7 +48,7 @@ function UnivCard({ u, onManage }: { u: University; onManage: (id: string) => vo
         </div>
         <div className="bg-emerald-50 rounded-xl p-3 text-center">
           <div className="text-sm font-bold text-emerald-700 truncate">{u.mrr.toLocaleString('fr-FR')} FCFA</div>
-          <div className="text-[10px] text-emerald-500">MRR</div>
+          <div className="text-[10px] text-emerald-500">Abonnement</div>
         </div>
       </div>
 

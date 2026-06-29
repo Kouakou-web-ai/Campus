@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Star, BookOpen, Users, Clock, Mail, Plus, Upload, X, Trash2, Search } from 'lucide-react';
+import { Star, BookOpen, Users, Clock, Mail, Plus, Upload, X, Trash2, Search, CheckCircle, UserPlus, Copy } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import StatusBadge from '../../components/ui/StatusBadge';
 import { Avatar } from '../../components/ui/AvatarGroup';
@@ -12,7 +12,7 @@ import TeacherProfileModal from '../../components/ui/TeacherProfileModal';
 
 export default function GestionEnseignants() {
   const { user } = useAuthStore();
-  const { teachers, courses, students, addTeacher, deleteTeacher, loading } = useRealtimeDataStore();
+  const { teachers, courses, students, addTeacher, deleteTeacher, loading, classes } = useRealtimeDataStore();
 
   const handleDelete = async (teacherId: string) => {
     if (!user?.universityId) return;
@@ -30,6 +30,7 @@ export default function GestionEnseignants() {
   const [modalOpen, setModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [selectedTeacherForProfile, setSelectedTeacherForProfile] = useState<any | null>(null);
+  const [generatedCreds, setGeneratedCreds] = useState<{tempTeacherPassword: string; teacherEmail: string; teacherName: string} | null>(null);
 
   useEffect(() => {
     if (location.state?.search) {
@@ -42,6 +43,7 @@ export default function GestionEnseignants() {
   const [email, setEmail] = useState('');
   const [specialite, setSpecialite] = useState('Informatique');
   const [hoursPerWeek, setHoursPerWeek] = useState(15);
+  const [selectedClassId, setSelectedClassId] = useState('');
 
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +53,13 @@ export default function GestionEnseignants() {
       return;
     }
     try {
-      await addTeacher(user.universityId, {
+      const matchedClass = classes.find(c => c.id === selectedClassId);
+      const classPayload = matchedClass ? {
+        classeId: selectedClassId,
+        classeName: matchedClass.name
+      } : {};
+
+      const creds = await addTeacher(user.universityId, {
         name,
         email,
         specialite,
@@ -59,11 +67,14 @@ export default function GestionEnseignants() {
         status: 'actif',
         rating: 5.0,
         coursCount: 0,
-        studentsCount: 0
+        studentsCount: 0,
+        ...classPayload
       });
       ToastSuccess("Enseignant ajouté avec succès !");
+      setGeneratedCreds(creds);
       setName('');
       setEmail('');
+      setSelectedClassId('');
       setModalOpen(false);
     } catch (err: any) {
       ToastError(err.message || "Erreur lors de l'ajout.");
@@ -176,6 +187,11 @@ export default function GestionEnseignants() {
                     <div>
                       <h3 className="font-semibold text-slate-900">{teacher.name}</h3>
                       <p className="text-sm text-slate-500 mt-0.5">{teacher.specialite}</p>
+                      {teacher.classeName && (
+                        <span className="inline-block bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full mt-1.5 border border-indigo-100">
+                          🏫 {teacher.classeName}
+                        </span>
+                      )}
                     </div>
                     <StatusBadge status={teacher.status} />
                   </div>
@@ -296,6 +312,19 @@ export default function GestionEnseignants() {
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Classe affectée (Optionnel)</label>
+                <select
+                  value={selectedClassId}
+                  onChange={e => setSelectedClassId(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">Aucune classe assignée</option>
+                  {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.filiere})</option>
+                  ))}
+                </select>
+              </div>
               <button
                 type="submit"
                 className="w-full py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors mt-4"
@@ -321,6 +350,80 @@ export default function GestionEnseignants() {
         onClose={() => setSelectedTeacherForProfile(null)}
         teacher={selectedTeacherForProfile}
       />
+
+      {/* Credentials Modal */}
+      {generatedCreds && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full border border-slate-100 shadow-2xl relative animate-fade-up">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mb-6 mx-auto">
+              <CheckCircle size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-center text-slate-800 mb-2">Compte créé avec succès</h3>
+            <p className="text-center text-slate-500 text-sm mb-6">
+              Les identifiants temporaires ont été générés. Ils expireront dans 7 jours. Veuillez les transmettre à l'enseignant.
+            </p>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
+                  <UserPlus size={16} className="text-indigo-600" /> Accès Enseignant
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Nom :</span><span className="font-medium text-slate-800">{generatedCreds.teacherName}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Email :</span><span className="font-medium text-slate-800">{generatedCreds.teacherEmail}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Mot de passe provisoire :</span><span className="font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{generatedCreds.tempTeacherPassword}</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  const text = `Accès Enseignant\nNom : ${generatedCreds.teacherName}\nEmail : ${generatedCreds.teacherEmail}\nMot de passe provisoire : ${generatedCreds.tempTeacherPassword}`;
+                  
+                  const fallbackCopyTextToClipboard = (text: string) => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.top = "0";
+                    textArea.style.left = "0";
+                    textArea.style.position = "fixed";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                      const successful = document.execCommand('copy');
+                      if (successful) ToastSuccess("Identifiants copiés dans le presse-papier");
+                      else ToastError("Échec de la copie");
+                    } catch (err) {
+                      ToastError("Échec de la copie");
+                    }
+                    document.body.removeChild(textArea);
+                  };
+
+                  if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text).then(() => {
+                      ToastSuccess("Identifiants copiés dans le presse-papier");
+                    }).catch(() => {
+                      fallbackCopyTextToClipboard(text);
+                    });
+                  } else {
+                    fallbackCopyTextToClipboard(text);
+                  }
+                }}
+                className="w-full py-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                <Copy size={16} /> Copier
+              </button>
+              <button
+                onClick={() => setGeneratedCreds(null)}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

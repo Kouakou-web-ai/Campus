@@ -3,6 +3,9 @@ import { X, BookOpen, Users, Clock, Mail, Star, Award } from 'lucide-react';
 import type { Teacher, Course, Student } from '../../types';
 import StatusBadge from './StatusBadge';
 import { Avatar } from './AvatarGroup';
+import { useAuthStore } from '../../store/authStore';
+import { useRealtimeDataStore } from '../../store/realtimeDataStore';
+import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 
 interface TeacherProfileModalProps {
   isOpen: boolean;
@@ -12,8 +15,30 @@ interface TeacherProfileModalProps {
 
 export default function TeacherProfileModal({ isOpen, onClose, teacher }: TeacherProfileModalProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'courses' | 'students'>('info');
+  const { user } = useAuthStore();
+  const { courses: allCourses, assignTeacherToCourse } = useRealtimeDataStore();
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [assigning, setAssigning] = useState(false);
 
   if (!isOpen || !teacher) return null;
+
+  const unassignedCourses = allCourses.filter(
+    (c) => c.universityId === user?.universityId && c.teacherId !== teacher.id
+  );
+
+  const handleAssignCourse = async () => {
+    if (!selectedCourseId || !user?.universityId) return;
+    setAssigning(true);
+    try {
+      await assignTeacherToCourse(user.universityId, teacher.id, teacher.name, selectedCourseId);
+      ToastSuccess("L'enseignant a été affecté au cours avec succès.");
+      setSelectedCourseId('');
+    } catch (err) {
+      ToastError("Impossible d'affecter l'enseignant.");
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
@@ -111,11 +136,47 @@ export default function TeacherProfileModal({ isOpen, onClose, teacher }: Teache
                   <span className="font-mono text-sm text-slate-600">{teacher.id}</span>
                 </div>
               </div>
+              {teacher.classeName && (
+                <div className="card-premium p-4 bg-slate-50 border-none">
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Classe affectée</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-sm font-semibold text-slate-700">🏫 {teacher.classeName}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === 'courses' && (
             <div className="space-y-3">
+              {user?.role === 'UNIVERSITY_ADMIN' && unassignedCourses.length > 0 && (
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row items-end gap-3 mb-4">
+                  <div className="flex-1 w-full">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      Affecter à un nouveau cours
+                    </label>
+                    <select
+                      value={selectedCourseId}
+                      onChange={(e) => setSelectedCourseId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">Sélectionner un cours…</option>
+                      {unassignedCourses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} - {c.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleAssignCourse}
+                    disabled={!selectedCourseId || assigning}
+                    className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-60"
+                  >
+                    Affecter
+                  </button>
+                </div>
+              )}
               {teacher.courses.length === 0 ? (
                 <p className="text-center text-sm text-slate-400 py-6">Aucun cours attribué à cet enseignant.</p>
               ) : (

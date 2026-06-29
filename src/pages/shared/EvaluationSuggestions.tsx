@@ -1,16 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import PageHeader from '../../components/ui/PageHeader';
-import { Star, Send, MessageSquare, ShieldAlert, Award, FileText, CheckCircle2 } from 'lucide-react';
+import { Star, Send, MessageSquare, ShieldAlert, Award, FileText, CheckCircle2, Check, Clock, Filter, Eye } from 'lucide-react';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 import { db } from '../../../firebase-config';
 import { ref, push, onValue } from 'firebase/database';
+import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 
 type CriterionKey = 'enseignement' | 'infrastructures' | 'administration' | 'services';
 
 export default function EvaluationSuggestions() {
   const { user } = useAuthStore();
+  const { evaluations, suggestions, updateSuggestion } = useRealtimeDataStore();
   const [activeTab, setActiveTab] = useState<'evaluation' | 'suggestion' | 'historique'>('evaluation');
+  const [adminTab, setAdminTab] = useState<'evaluations' | 'suggestions'>('evaluations');
+  const [statusFilter, setStatusFilter] = useState<'tous' | 'nouveau' | 'en_cours' | 'traite'>('tous');
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const getCriterionAverage = (key: CriterionKey) => {
+    if (evaluations.length === 0) return 5;
+    const sum = evaluations.reduce((acc, e) => acc + (e.ratings?.[key] || 5), 0);
+    return parseFloat((sum / evaluations.length).toFixed(1));
+  };
+
+  const getOverallAverage = () => {
+    if (evaluations.length === 0) return 5;
+    const sum = evaluations.reduce((acc, e) => acc + (e.average || 5), 0);
+    return parseFloat((sum / evaluations.length).toFixed(1));
+  };
 
   // Evaluation form state
   const [ratings, setRatings] = useState<Record<CriterionKey, number>>({
@@ -180,6 +197,256 @@ export default function EvaluationSuggestions() {
       setSubmittingSugg(false);
     }
   };
+
+  if (user?.role === 'UNIVERSITY_ADMIN') {
+    const adminAverage = getOverallAverage();
+    const adminScoreBadge = getScoreLabel(adminAverage);
+    
+    const filteredSuggestions = suggestions.filter(s => {
+      if (statusFilter === 'tous') return true;
+      return s.status === statusFilter;
+    });
+
+    const handleUpdateStatus = async (suggId: string, newStatus: string) => {
+      if (!user?.universityId) return;
+      setUpdatingId(suggId);
+      try {
+        await updateSuggestion(user.universityId, suggId, { status: newStatus });
+        ToastSuccess("Statut de la suggestion mis à jour avec succès.");
+      } catch (err) {
+        ToastError("Erreur lors de la mise à jour.");
+      } finally {
+        setUpdatingId(null);
+      }
+    };
+
+    return (
+      <div className="page-transition space-y-6">
+        <PageHeader
+          title="Évaluations & Suggestions Reçues"
+          description="Consultez les avis des parents et gérez les suggestions d'amélioration en temps réel."
+          breadcrumbs={[{ label: 'Admin' }, { label: 'Évaluations & Suggestions' }]}
+        />
+
+        {/* Admin Tabs */}
+        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 text-sm font-semibold overflow-x-auto">
+          <button
+            onClick={() => setAdminTab('evaluations')}
+            className={`pb-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-2 ${
+              adminTab === 'evaluations'
+                ? 'border-indigo-600 text-indigo-600 font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Star size={16} className={adminTab === 'evaluations' ? 'fill-indigo-600' : ''} />
+            Évaluations reçues ({evaluations.length})
+          </button>
+          <button
+            onClick={() => setAdminTab('suggestions')}
+            className={`pb-3 border-b-2 transition-all whitespace-nowrap flex items-center gap-2 ${
+              adminTab === 'suggestions'
+                ? 'border-indigo-600 text-indigo-600 font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <MessageSquare size={16} />
+            Suggestions des parents ({suggestions.length})
+          </button>
+        </div>
+
+        {adminTab === 'evaluations' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+            {/* Evaluations list */}
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="text-base font-bold text-slate-850">
+                Avis et commentaires ({evaluations.length})
+              </h3>
+              
+              {evaluations.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-md">
+                  <Star className="mx-auto text-slate-355 mb-3" size={48} />
+                  <h3 className="text-lg font-semibold text-slate-700">Aucune évaluation</h3>
+                  <p className="text-slate-400 text-sm max-w-sm mx-auto mt-1">
+                    Les parents de votre établissement n'ont pas encore soumis d'évaluation.
+                  </p>
+                </div>
+              ) : (
+                evaluations.map((item) => (
+                  <div key={item.id} className="card-premium p-5 space-y-4 hover:border-slate-200 transition-all bg-white">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="text-xs font-semibold text-slate-800">
+                        {item.userName} ({item.userRole === 'PARENT' ? 'Parent' : 'Étudiant'})
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        Le {new Date(item.submittedAt).toLocaleDateString('fr-FR')} à {new Date(item.submittedAt).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {Object.keys(criteriaLabels).map((key) => (
+                        <div key={key} className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl">
+                          <span className="text-slate-500 font-medium">{criteriaLabels[key as CriterionKey]}</span>
+                          <span className="font-bold text-amber-500 flex items-center gap-0.5">
+                            {item.ratings?.[key] || 5} <Star size={12} className="fill-amber-450 text-amber-450" />
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between bg-indigo-50/50 p-2.5 rounded-xl border border-indigo-50">
+                      <span className="text-xs font-semibold text-slate-655">Moyenne attribuée :</span>
+                      <span className="text-xs font-bold text-indigo-700 font-mono">{item.average}/5</span>
+                    </div>
+
+                    <p className="text-xs text-slate-700 bg-slate-50/40 p-3.5 rounded-xl border border-slate-100 leading-relaxed italic">
+                      &ldquo;{item.comment}&rdquo;
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Sidebar averages visualizer */}
+            <div className="space-y-6">
+              <div className="card-premium p-6 text-center space-y-4 bg-gradient-to-b from-indigo-50/20 to-white border-indigo-100/50 bg-white">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Note Moyenne Globale</h4>
+                <div className="inline-flex items-center justify-center w-28 h-28 rounded-full border-4 border-indigo-100 bg-white shadow-lg relative">
+                  <span className="text-3xl font-black text-indigo-650 font-mono">{adminAverage}</span>
+                  <span className="text-xs font-bold text-slate-400 absolute bottom-3">/ 5</span>
+                </div>
+                <div className="space-y-1">
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${adminScoreBadge.color}`}>
+                    {adminScoreBadge.label}
+                  </span>
+                  <p className="text-slate-450 text-[11px] px-4 pt-2">
+                    Calculée automatiquement à partir de l'ensemble des évaluations reçues.
+                  </p>
+                </div>
+              </div>
+
+              {/* Detailed criteria averages */}
+              <div className="card-premium p-5 space-y-4 bg-white">
+                <h4 className="text-xs font-bold text-slate-750 uppercase tracking-wider">Moyennes par critères</h4>
+                
+                <div className="space-y-3">
+                  {(Object.keys(criteriaLabels) as CriterionKey[]).map((criterion) => {
+                    const ratingAvg = getCriterionAverage(criterion);
+                    return (
+                      <div key={criterion} className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-semibold text-slate-650">
+                          <span>{criteriaLabels[criterion]}</span>
+                          <span className="font-mono text-indigo-600 font-bold">{ratingAvg}/5</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(ratingAvg / 5) * 100}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Suggestions admin tab */
+          <div className="space-y-6 animate-fade-in">
+            {/* Filter buttons */}
+            <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-150 w-fit">
+              {[
+                { key: 'tous', label: 'Tous' },
+                { key: 'nouveau', label: 'Nouveau' },
+                { key: 'en_cours', label: 'En cours' },
+                { key: 'traite', label: 'Traité' }
+              ].map(btn => (
+                <button
+                  key={btn.key}
+                  onClick={() => setStatusFilter(btn.key as any)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    statusFilter === btn.key
+                      ? 'bg-white text-indigo-600 shadow-sm border border-transparent'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+
+            {filteredSuggestions.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-md">
+                <MessageSquare className="mx-auto text-slate-300 mb-3" size={48} />
+                <h3 className="text-lg font-semibold text-slate-700">Aucune suggestion</h3>
+                <p className="text-slate-400 text-sm max-w-sm mx-auto mt-1">
+                  Aucune suggestion ne correspond à ce filtre.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredSuggestions.map((item) => (
+                  <div key={item.id} className="card-premium p-5 space-y-4 hover:border-slate-200 transition-all bg-white flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          Soumis le {new Date(item.submittedAt).toLocaleDateString('fr-FR')}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                          item.status === 'traite' 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                            : item.status === 'en_cours'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          {item.status === 'traite' ? 'Traité' : item.status === 'en_cours' ? 'En cours' : 'Nouveau'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                          {item.category}
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-800 mt-2">{item.subject}</h4>
+                        <p className="text-xs text-slate-500 font-medium mt-1">
+                          Auteur : {item.isAnonymous ? 'Anonyme' : `${item.userName} (${item.userRole === 'PARENT' ? 'Parent' : 'Étudiant'})`}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed font-sans">
+                        {item.content}
+                      </p>
+                    </div>
+
+                    {/* Admin Status Actions */}
+                    {item.status !== 'traite' && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100 mt-2">
+                        {item.status === 'nouveau' && (
+                          <button
+                            onClick={() => handleUpdateStatus(item.id, 'en_cours')}
+                            disabled={updatingId === item.id}
+                            className="btn btn-outline btn-sm text-xs rounded-xl flex-1 flex items-center justify-center gap-1 border-slate-250 hover:bg-slate-900"
+                          >
+                            <Clock size={12} />
+                            Prendre en charge
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleUpdateStatus(item.id, 'traite')}
+                          disabled={updatingId === item.id}
+                          className="btn btn-primary btn-sm text-xs rounded-xl flex-1 flex items-center justify-center gap-1 bg-indigo-600 border-none text-white hover:bg-indigo-700"
+                        >
+                          <Check size={12} />
+                          Marquer comme traité
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const average = parseFloat(getAverageScore());
   const scoreBadge = getScoreLabel(average);

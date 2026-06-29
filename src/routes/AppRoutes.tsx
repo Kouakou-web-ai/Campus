@@ -28,6 +28,7 @@ const SurveillanceUniversites  = React.lazy(() => import('../pages/super-admin/S
 const DemandesAdministrateurs  = React.lazy(() => import('../pages/super-admin/DemandesAdministrateurs'));
 
 // ─── University Admin ─────────────────────────────────────────────────────────
+const UniversityAdminDashboard = React.lazy(() => import('../pages/university-admin/TableauDeBord'));
 const GestionEtudiants    = React.lazy(() => import('../pages/university-admin/GestionEtudiants'));
 const DemandesInscription = React.lazy(() => import('../pages/university-admin/DemandesInscription'));
 const GestionEnseignants  = React.lazy(() => import('../pages/university-admin/GestionEnseignants'));
@@ -40,7 +41,6 @@ const GestionNotes           = React.lazy(() => import('../pages/teacher/Gestion
 const PublicationDevoirs     = React.lazy(() => import('../pages/teacher/PublicationDevoirs'));
 const GestionAbsences        = React.lazy(() => import('../pages/teacher/GestionAbsences'));
 const EmailsSimules          = React.lazy(() => import('../pages/shared/EmailsSimules'));
-const Messagerie             = React.lazy(() => import('../pages/shared/Messagerie'));
 const ParametresProfil       = React.lazy(() => import('../pages/shared/ParametresProfil'));
 const EvaluationSuggestions  = React.lazy(() => import('../pages/shared/EvaluationSuggestions'));
 
@@ -53,6 +53,7 @@ const EmploiDuTemps          = React.lazy(() => import('../pages/student/EmploiD
 // ─── Parent ───────────────────────────────────────────────────────────────────
 const SuiviEnfant     = React.lazy(() => import('../pages/parent/SuiviEnfant'));
 const SuiviAcademique = React.lazy(() => import('../pages/parent/SuiviAcademique'));
+const Scolarite       = React.lazy(() => import('../pages/parent/Scolarite'));
 
 // ─── Account status ───────────────────────────────────────────────────────────
 const AccountPendingPage   = React.lazy(() => import('../pages/account/AccountPendingPage'));
@@ -147,8 +148,7 @@ function AnimatedRoutes() {
 
             {/* University Admin */}
             <Route element={<RoleGuard allowedRoles={['UNIVERSITY_ADMIN']} />}>
-              <Route path="admin"              element={<GestionEtudiants />} />
-              <Route path="admin/demandes"     element={<DemandesInscription />} />
+              <Route path="admin"              element={<UniversityAdminDashboard />} />
               <Route path="admin/etudiants"   element={<GestionEtudiants />} />
               <Route path="admin/enseignants" element={<GestionEnseignants />} />
               <Route path="admin/cours"       element={<GestionCours />} />
@@ -176,19 +176,15 @@ function AnimatedRoutes() {
             <Route element={<RoleGuard allowedRoles={['PARENT']} />}>
               <Route path="parent"            element={<SuiviEnfant />} />
               <Route path="parent/suivi"      element={<SuiviEnfant />} />
+              <Route path="parent/scolarite"  element={<Scolarite />} />
               <Route path="parent/academique" element={<SuiviAcademique />} />
-            </Route>
-
-            {/* Messagerie partagée entre Enseignants et Étudiants */}
-            <Route element={<RoleGuard allowedRoles={['TEACHER', 'STUDENT']} />}>
-              <Route path="messagerie" element={<Messagerie />} />
             </Route>
 
             {/* Paramètres partagés pour tous les rôles */}
             <Route path="parametres" element={<ParametresProfil />} />
 
-            {/* Évaluation & Suggestions partagées pour Étudiant, Enseignant et Parent */}
-            <Route element={<RoleGuard allowedRoles={['STUDENT', 'TEACHER', 'PARENT']} />}>
+            {/* Évaluation & Suggestions partagé Parent & Admin */}
+            <Route element={<RoleGuard allowedRoles={['PARENT', 'UNIVERSITY_ADMIN']} />}>
               <Route path="evaluation-suggestions" element={<EvaluationSuggestions />} />
             </Route>
           </Route>

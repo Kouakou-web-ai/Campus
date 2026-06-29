@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { applyTheme } from './themeStore';
 import { auth, googleProvider } from '../../firebase-config';
-import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, deleteUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, deleteUser, updatePassword, reauthenticateWithCredential, EmailAuthProvider, signInWithPopup, sendPasswordResetEmail, onAuthStateChanged } from 'firebase/auth';
 import axios from 'axios';
 import { normalizeUserStatus } from '../constants/accountStatus';
 import type { UserStatus } from '../types/userAccount';
@@ -66,7 +66,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  loading: false,
+  loading: true,
 
   login: async (role, email = 'user@campus.fr') => {
     set({ loading: true });
@@ -93,22 +93,52 @@ export const useAuthStore = create<AuthState>((set) => ({
   loginWithFirebase: async (email, password) => {
     set({ loading: true });
     try {
-      const data = await signInWithEmailAndPassword(auth, email, password);
+      // Force sign out to clear any potentially corrupted local auth state
+      try {
+        await signOut(auth);
+      } catch (e) {
+        // ignore
+      }
+      
+      let data;
+      try {
+        console.log("Attempting signInWithEmailAndPassword...");
+        data = await signInWithEmailAndPassword(auth, email, password);
+        console.log("Sign-in successful", data.user.uid);
+      } catch (e: any) {
+        console.error("signInWithEmailAndPassword failed:", e);
+        throw e;
+      }
+      
       const fbUser = data.user;
 
-      if (!fbUser.emailVerified) {
-        await sendEmailVerification(fbUser);
-        await signOut(auth);
-        throw new Error("Compte non vérifié. Un email vous a été envoyé pour valider votre compte.");
+      let token;
+      try {
+        console.log("Attempting getIdToken...");
+        token = await fbUser.getIdToken();
+        console.log("getIdToken successful");
+      } catch (e: any) {
+        console.error("getIdToken failed:", e);
+        throw e;
       }
 
-      const token = await fbUser.getIdToken();
       const dbUrl = import.meta.env.VITE_databaseURL;
       const response = await axios.get(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`);
       const userData = response.data;
 
       if (!userData) {
         throw new Error("Détails de l'utilisateur introuvables.");
+      }
+
+      if (!fbUser.emailVerified && !userData.tempPassword) {
+        await sendEmailVerification(fbUser);
+        await signOut(auth);
+        throw new Error("Compte non vérifié. Un email vous a été envoyé pour valider votre compte.");
+      }
+
+      if (userData.status === 'pending') {
+        await signOut(auth);
+        throw new Error("Votre compte est en attente de validation par le super administrateur.");
       }
 
       const prenom = userData.prenom || '';
@@ -158,6 +188,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         userData = response.data;
       } catch (err) {
         // If not found or error, we'll create below
+      }
+
+      if (userData && userData.role === 'SUPER_ADMIN') {
+        await signOut(auth);
+        throw new Error("La connexion Google n'est pas autorisée pour le rôle Super Administrateur. Veuillez utiliser votre e-mail et mot de passe.");
       }
 
       const prenom = userData?.prenom || fbUser.displayName?.split(' ')[0] || '';
@@ -428,10 +463,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       const dbUrl = import.meta.env.VITE_databaseURL;
 
       // Update password if requested
-      if (data.currentPassword && data.newPassword) {
-        if (!fbUser.email) throw new Error("Email manquant.");
-        const credential = EmailAuthProvider.credential(fbUser.email, data.currentPassword);
-        await reauthenticateWithCredential(fbUser, credential);
+      if (data.newPassword) {
+        if (data.currentPassword) {
+          if (!fbUser.email) throw new Error("Email manquant.");
+          const credential = EmailAuthProvider.credential(fbUser.email, data.currentPassword);
+          await reauthenticateWithCredential(fbUser, credential);
+        }
         await updatePassword(fbUser, data.newPassword);
       }
 
@@ -548,3 +585,65 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }));
+
+// Écouteur global pour gérer la session et empêcher la connexion multi-comptes
+onAuthStateChanged(auth, async (fbUser) => {
+  const state = useAuthStore.getState();
+  if (fbUser) {
+    if (!state.user || state.user.id !== fbUser.uid) {
+      useAuthStore.setState({ loading: true });
+      try {
+        const token = await fbUser.getIdToken();
+        const dbUrl = import.meta.env.VITE_databaseURL;
+        const response = await axios.get(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`);
+        const userData = response.data;
+        if (userData) {
+          const prenom = userData.prenom || '';
+          const nom = userData.nom || fbUser.displayName || 'Utilisateur';
+          const fullName = prenom ? `${prenom} ${nom}`.trim() : nom;
+          
+          useAuthStore.setState({
+            user: {
+              id: fbUser.uid,
+              name: fullName,
+              prenom: prenom || undefined,
+              email: fbUser.email || '',
+              role: userData.role || 'STUDENT',
+              universityId: userData.universityId || 'univ-ufhb',
+              status: normalizeUserStatus(userData.status as string | undefined),
+              telephone: userData.telephone,
+              adresse: userData.adresse,
+              createdDate: userData.createdDate,
+              filiere: userData.filiere,
+              annee: userData.annee,
+              specialite: userData.specialite,
+              mustChangePassword: userData.mustChangePassword || false,
+              tempPassword: userData.tempPassword || undefined,
+            },
+            isAuthenticated: true,
+            loading: false
+          });
+        } else {
+          useAuthStore.setState({ loading: false });
+        }
+      } catch (err) {
+        console.error("Erreur lors de la synchronisation de session:", err);
+        useAuthStore.setState({ loading: false });
+      }
+    }
+  } else {
+    const isDemo = state.user?.id.startsWith('usr-') || state.user?.id === 't1' || state.user?.id === 's1';
+    if (state.isAuthenticated && !isDemo) {
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: false,
+        loading: false
+      });
+    } else {
+      if (state.loading) {
+        useAuthStore.setState({ loading: false });
+      }
+    }
+  }
+});
+

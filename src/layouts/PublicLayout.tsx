@@ -287,7 +287,7 @@ export default function PublicLayout() {
 
       {/* Footer */}
       <footer className="bg-slate-900 dark:bg-surface border-t border-slate-800 dark:border-border-subtle text-slate-400 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-6 sm:px-12 lg:px-20 xl:px-28">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2.5 mb-4">

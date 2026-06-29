@@ -49,10 +49,10 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
       title: 'Gestion',
       items: [
         { label: 'Tableau de bord', path: '/app/admin', icon: LayoutDashboard },
-        { label: 'Demandes d\'inscription', path: '/app/admin/demandes', icon: ClipboardList },
         { label: 'Étudiants', path: '/app/admin/etudiants', icon: Users },
         { label: 'Enseignants', path: '/app/admin/enseignants', icon: GraduationCap },
         { label: 'Cours', path: '/app/admin/cours', icon: BookOpen },
+        { label: 'Évaluations & Suggestions', path: '/app/evaluation-suggestions', icon: MessageSquare },
       ],
     },
     {
@@ -69,8 +69,6 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
         { label: 'Gestion des notes', path: '/app/enseignant/notes', icon: ClipboardList },
         { label: 'Feuille d\'appel', path: '/app/enseignant/absences', icon: UserCheck },
         { label: 'Devoirs', path: '/app/enseignant/devoirs', icon: FileText },
-        { label: 'Messagerie', path: '/app/messagerie', icon: MessageSquare },
-        { label: 'Évaluation & Suggestions', path: '/app/evaluation-suggestions', icon: MessageSquare },
       ],
     },
   ],
@@ -81,8 +79,6 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
         { label: 'Résultats', path: '/app/etudiant/notes', icon: Award },
         { label: 'Paiements', path: '/app/etudiant/paiements', icon: CreditCard },
         { label: 'Emploi du temps', path: '/app/etudiant/planning', icon: Calendar },
-        { label: 'Messagerie', path: '/app/messagerie', icon: MessageSquare },
-        { label: 'Évaluation & Suggestions', path: '/app/evaluation-suggestions', icon: MessageSquare },
       ],
     },
   ],
@@ -91,7 +87,7 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
       items: [
         { label: 'Suivi enfant', path: '/app/parent', icon: Eye },
         { label: 'Académique', path: '/app/parent/academique', icon: BarChart3 },
-        { label: 'Scolarité', path: '/app/parent/suivi', icon: CreditCard },
+        { label: 'Scolarité', path: '/app/parent/scolarite', icon: CreditCard },
         { label: 'Évaluation & Suggestions', path: '/app/evaluation-suggestions', icon: MessageSquare },
       ],
     },

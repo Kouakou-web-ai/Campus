@@ -161,7 +161,7 @@ export default function LandingPage() {
         <div className="absolute top-20 right-20 w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl animate-pulse duration-3000" />
         <div className="absolute bottom-20 left-10 w-72 h-72 bg-violet-400/10 rounded-full blur-3xl animate-pulse duration-2000" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full z-10">
+        <div className="relative max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 xl:px-20 w-full z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Column: Text content */}
             <div className="lg:col-span-7 text-center lg:text-left space-y-6 animate-fade-up">
@@ -172,13 +172,13 @@ export default function LandingPage() {
               </div>
 
               {/* Headline */}
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-tight tracking-tight">
-                Pilotez{' '}
-                <span className="gradient-text">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight tracking-tight">
+                Avec CAMPUS, pilotez
+                <br />
+                <span className="gradient-text inline-block whitespace-nowrap">
                   {typewriterText}
                   <span className="animate-pulse">|</span>
                 </span>
-                {' '}avec CAMPUS
               </h1>
 
               <p className="text-xl text-slate-500 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
@@ -201,7 +201,7 @@ export default function LandingPage() {
                   <div className="w-10 h-10 rounded-full bg-slate-100 group-hover:bg-indigo-50 flex items-center justify-center transition-colors">
                     <Play size={14} className="text-slate-700 group-hover:text-indigo-600 ml-0.5" />
                   </div>
-                  Demander un devis
+                  Planifier une démo
                 </Link>
               </div>
 
@@ -292,7 +292,7 @@ export default function LandingPage() {
                     {[
                       { label: 'Étudiants Actifs', value: '64 200', color: 'bg-indigo-500', desc: 'Votre Espace' },
                       { label: 'Cours programmés', value: '1 240', color: 'bg-emerald-500', desc: 'Semestre 1' },
-                      { label: 'Revenus (MRR)', value: '12.4M FCFA', color: 'bg-violet-500', desc: 'Scolarités perçues' },
+                      { label: 'Frais de scolarité', value: '12.4M FCFA', color: 'bg-violet-500', desc: 'Scolarités perçues' },
                       { label: 'Taux de réussite', value: '92.4%', color: 'bg-amber-500', desc: 'Moyenne générale' },
                     ].map((stat, idx) => (
                       <div key={stat.label} className="glass-stat p-5 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5" style={{ animationDelay: `${idx * 0.8}s` }}>
@@ -313,11 +313,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-
-
       {/* ============ PORTAILS INTERACTIFS (SÉLECTEUR DE RÔLES) ============ */}
-      <section className="py-24 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden">
+      <section className="py-12 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden">
         {/* Style block for autoplay progress bar */}
         <style dangerouslySetInnerHTML={{ __html: `
           @keyframes progress {
@@ -332,22 +329,22 @@ export default function LandingPage() {
           <div className="absolute -bottom-40 right-1/4 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] animate-pulse duration-[6000ms]" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-16">
-            <span className="inline-block text-indigo-600 dark:text-indigo-400 font-semibold text-sm mb-3">
+        <div className="max-w-6xl mx-auto px-6 sm:px-12 lg:px-20 xl:px-28 relative z-10">
+          <div className="text-center mb-8">
+            <span className="inline-block text-indigo-600 dark:text-indigo-400 font-semibold text-sm mb-2">
               Une plateforme, 4 espaces dédiés
             </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Des portails adaptés à chaque acteur de votre établissement
             </h2>
-            <p className="mt-4 text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
               Chaque utilisateur dispose d'une interface sur mesure pour collaborer efficacement en temps réel.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             {/* Left Column: Role selectors */}
-            <div className="lg:col-span-5 space-y-4">
+            <div className="lg:col-span-5 space-y-3">
               {ROLE_PORTALS.map((portal, idx) => {
                 const isActive = activeRoleTab === idx;
                 return (
@@ -357,7 +354,7 @@ export default function LandingPage() {
                       setActiveRoleTab(idx);
                       setIsAutoPlayPaused(true);
                     }}
-                    className={`w-full text-left p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden group flex gap-4 ${
+                    className={`w-full text-left p-4 rounded-xl border transition-all duration-300 relative overflow-hidden group flex gap-3 ${
                       isActive
                         ? 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/80 shadow-xl shadow-indigo-500/5'
                         : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-850/40 border-slate-100/50 dark:border-slate-800/10'
@@ -368,30 +365,30 @@ export default function LandingPage() {
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600 dark:bg-indigo-500" />
                     )}
 
-                    <div className={`p-3 rounded-xl h-fit ${
+                    <div className={`p-2 rounded-lg h-fit ${
                       isActive
                         ? 'bg-indigo-500 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:bg-slate-200 dark:group-hover:bg-slate-700'
                     }`}>
-                      <portal.icon size={20} />
+                      <portal.icon size={18} />
                     </div>
 
-                    <div className="flex-1 space-y-1">
+                    <div className="flex-1 space-y-0.5">
                       <div className="flex justify-between items-center">
-                        <h3 className={`font-bold text-base ${
+                        <h3 className={`font-bold text-sm ${
                           isActive ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'
                         }`}>
                           {portal.role}
                         </h3>
                         {isActive && !isAutoPlayPaused && (
-                          <div className="w-12 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div className="w-10 h-0.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                             <div className="h-full bg-indigo-600 dark:bg-indigo-500 origin-left animate-[progress_5s_linear_forwards]" />
                           </div>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{portal.headline}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">{portal.headline}</p>
                       {isActive && (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 pt-2 animate-fade-in leading-relaxed">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 pt-1.5 animate-fade-in leading-relaxed">
                           {portal.description}
                         </p>
                       )}
@@ -402,16 +399,16 @@ export default function LandingPage() {
             </div>
 
             {/* Right Column: Dashboard Mockup Visualization */}
-            <div className="lg:col-span-7 h-[420px] relative">
-              <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-6 shadow-2xl backdrop-blur-md overflow-hidden flex flex-col">
+            <div className="lg:col-span-7 h-[340px] relative">
+              <div className="absolute inset-0 bg-white/60 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-4 shadow-2xl backdrop-blur-md overflow-hidden flex flex-col">
                 {/* Mockup Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800/60 mb-6">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/60 mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-red-400" />
-                    <span className="w-3 h-3 rounded-full bg-amber-400" />
-                    <span className="w-3 h-3 rounded-full bg-green-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
                   </div>
-                  <div className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800/60 text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                  <div className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800/60 text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
                     Interface : {ROLE_PORTALS[activeRoleTab].role}
                   </div>
                 </div>
@@ -420,42 +417,42 @@ export default function LandingPage() {
                 <div className="flex-1 flex flex-col justify-between overflow-y-auto pr-1">
                   {activeRoleTab === 0 && (
                     // Mockup Administrateur (Centre Financier)
-                    <div className="space-y-6 animate-fade-in text-slate-800 dark:text-slate-200">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Budget total attendu</p>
-                          <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">124.5M F</p>
+                    <div className="space-y-4 animate-fade-in text-slate-800 dark:text-slate-200">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100/50 dark:border-slate-800/40">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Budget attendu</p>
+                          <p className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">124.5M F</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Recettes perçues</p>
-                          <p className="text-sm font-extrabold text-slate-800 dark:text-white mt-1">98.2M F</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100/50 dark:border-slate-800/40">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Recettes perçues</p>
+                          <p className="text-xs font-extrabold text-slate-800 dark:text-white mt-0.5">98.2M F</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Taux recouvrement</p>
-                          <p className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">79%</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100/50 dark:border-slate-800/40">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Recouvrement</p>
+                          <p className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">79%</p>
                         </div>
                       </div>
                       
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 space-y-3">
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100/50 dark:border-slate-800/40 space-y-2">
                         <div className="flex justify-between items-center">
                           <p className="text-xs font-bold">Transactions récentes</p>
-                          <span className="text-[10px] text-indigo-600 font-semibold cursor-pointer">Tout voir →</span>
+                          <span className="text-[9px] text-indigo-600 font-semibold cursor-pointer">Tout voir →</span>
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60">
                             <div>
                               <p className="font-semibold text-slate-800 dark:text-slate-200">Koffi Kouamé Axel</p>
-                              <p className="text-[9px] text-slate-400">Mobile Money · Frais de scolarité S1</p>
+                              <p className="text-[8px] text-slate-400">Mobile Money · Scolarité S1</p>
                             </div>
                             <div className="text-right">
                               <p className="font-bold">150 000 F</p>
                               <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 text-[8px] font-bold">Payé</span>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60">
+                          <div className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/60">
                             <div>
                               <p className="font-semibold text-slate-800 dark:text-slate-200">Awa Diop</p>
-                              <p className="text-[9px] text-slate-400">Virement · Acompte inscription</p>
+                              <p className="text-[8px] text-slate-400">Virement · Inscription</p>
                             </div>
                             <div className="text-right">
                               <p className="font-bold">250 000 F</p>
@@ -469,46 +466,46 @@ export default function LandingPage() {
 
                   {activeRoleTab === 1 && (
                     // Mockup Enseignant (Espace Enseignant)
-                    <div className="space-y-6 animate-fade-in text-slate-800 dark:text-slate-200">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100/50 dark:border-slate-800/40">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Copies à corriger</p>
-                          <p className="text-xl font-extrabold text-slate-800 dark:text-white mt-1">14</p>
+                    <div className="space-y-4 animate-fade-in text-slate-800 dark:text-slate-200">
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100/50 dark:border-slate-800/40">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Copies à corriger</p>
+                          <p className="text-base font-extrabold text-slate-800 dark:text-white mt-0.5">14</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100/50 dark:border-slate-800/40">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Étudiants encadrés</p>
-                          <p className="text-xl font-extrabold text-slate-800 dark:text-white mt-1">182</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100/50 dark:border-slate-800/40">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Étudiants encadrés</p>
+                          <p className="text-base font-extrabold text-slate-800 dark:text-white mt-0.5">182</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-100/50 dark:border-slate-800/40">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Cours enseignés</p>
-                          <p className="text-xl font-extrabold text-slate-800 dark:text-white mt-1">3</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100/50 dark:border-slate-800/40">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Cours enseignés</p>
+                          <p className="text-base font-extrabold text-slate-800 dark:text-white mt-0.5">3</p>
                         </div>
                       </div>
 
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 space-y-3">
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100/50 dark:border-slate-800/40 space-y-2">
                         <p className="text-xs font-bold">Programme de vos cours</p>
-                        <div className="overflow-x-auto text-[11px]">
+                        <div className="overflow-x-auto text-[10px]">
                           <table className="w-full text-left">
                             <thead>
                               <tr className="text-slate-400 border-b border-slate-200/50 dark:border-slate-800/50">
-                                <th className="pb-1.5 font-bold">Code</th>
-                                <th className="pb-1.5 font-bold">Intitulé</th>
-                                <th className="pb-1.5 font-bold">Filière</th>
-                                <th className="pb-1.5 font-bold">Horaire</th>
+                                <th className="pb-1 font-bold">Code</th>
+                                <th className="pb-1 font-bold">Intitulé</th>
+                                <th className="pb-1 font-bold">Filière</th>
+                                <th className="pb-1 font-bold">Horaire</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-150 dark:divide-slate-800/40">
                               <tr>
-                                <td className="py-2 font-mono text-indigo-600 font-bold">GL-201</td>
-                                <td className="py-2 font-medium">Génie Logiciel</td>
-                                <td className="py-2 text-slate-500">Licence 2</td>
-                                <td className="py-2 text-slate-500">Lun 08:00 - 10:00</td>
+                                <td className="py-1.5 font-mono text-indigo-600 font-bold">GL-201</td>
+                                <td className="py-1.5 font-medium">Génie Logiciel</td>
+                                <td className="py-1.5 text-slate-500">Licence 2</td>
+                                <td className="py-1.5 text-slate-500">Lun 08:00 - 10:00</td>
                               </tr>
                               <tr>
-                                <td className="py-2 font-mono text-indigo-600 font-bold">AL-102</td>
-                                <td className="py-2 font-medium">Algèbre Linéaire</td>
-                                <td className="py-2 text-slate-500">Licence 1</td>
-                                <td className="py-2 text-slate-500">Mer 10:15 - 12:15</td>
+                                <td className="py-1.5 font-mono text-indigo-600 font-bold">AL-102</td>
+                                <td className="py-1.5 font-medium">Algèbre Linéaire</td>
+                                <td className="py-1.5 text-slate-500">Licence 1</td>
+                                <td className="py-1.5 text-slate-500">Mer 10:15 - 12:15</td>
                               </tr>
                             </tbody>
                           </table>
@@ -519,47 +516,47 @@ export default function LandingPage() {
 
                   {activeRoleTab === 2 && (
                     // Mockup Étudiant (Espace Étudiant)
-                    <div className="space-y-6 animate-fade-in text-slate-800 dark:text-slate-200">
-                      <div className="grid grid-cols-4 gap-2.5">
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 text-center">
-                          <p className="text-[8px] text-slate-400 font-bold uppercase">Moyenne</p>
-                          <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">14.5/20</p>
+                    <div className="space-y-4 animate-fade-in text-slate-800 dark:text-slate-200">
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-100/50 dark:border-slate-800/40 text-center">
+                          <p className="text-[7px] text-slate-400 font-bold uppercase">Moyenne</p>
+                          <p className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">14.5/20</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 text-center">
-                          <p className="text-[8px] text-slate-400 font-bold uppercase">Prochain Examen</p>
-                          <p className="text-sm font-extrabold mt-0.5">Dans 3 j</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-100/50 dark:border-slate-800/40 text-center">
+                          <p className="text-[7px] text-slate-400 font-bold uppercase">Examen</p>
+                          <p className="text-xs font-extrabold mt-0.5">Dans 3 j</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 text-center">
-                          <p className="text-[8px] text-slate-400 font-bold uppercase">Cours Validés</p>
-                          <p className="text-sm font-extrabold text-emerald-600 mt-0.5">12/15</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-100/50 dark:border-slate-800/40 text-center">
+                          <p className="text-[7px] text-slate-400 font-bold uppercase">Validés</p>
+                          <p className="text-xs font-extrabold text-emerald-600 mt-0.5">12/15</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 text-center">
-                          <p className="text-[8px] text-slate-400 font-bold uppercase">Absences</p>
-                          <p className="text-sm font-extrabold text-slate-500 mt-0.5">0</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-100/50 dark:border-slate-800/40 text-center">
+                          <p className="text-[7px] text-slate-400 font-bold uppercase">Absences</p>
+                          <p className="text-xs font-extrabold text-slate-500 mt-0.5">0</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 space-y-3">
-                          <p className="text-xs font-bold">Dernières Notes</p>
-                          <div className="space-y-2 text-xs">
-                            <div className="flex justify-between items-center p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800/60">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100/50 dark:border-slate-800/40 space-y-2">
+                          <p className="text-[11px] font-bold">Dernières Notes</p>
+                          <div className="space-y-1.5 text-[10px]">
+                            <div className="flex justify-between items-center p-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800/60">
                               <span className="truncate">Mathématiques</span>
-                              <span className="badge badge-success badge-sm font-bold">16/20</span>
+                              <span className="badge badge-success badge-xs font-bold">16/20</span>
                             </div>
-                            <div className="flex justify-between items-center p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800/60">
+                            <div className="flex justify-between items-center p-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800/60">
                               <span className="truncate">Physique</span>
-                              <span className="badge badge-warning badge-sm font-bold text-amber-800 dark:text-amber-300">11/20</span>
+                              <span className="badge badge-warning badge-xs font-bold text-amber-800 dark:text-amber-300">11/20</span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 space-y-3">
-                          <p className="text-xs font-bold">Emploi du temps</p>
-                          <div className="space-y-2 text-[10px]">
-                            <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800/60">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100/50 dark:border-slate-800/40 space-y-2">
+                          <p className="text-[11px] font-bold">Emploi du temps</p>
+                          <div className="space-y-1.5 text-[9px]">
+                            <div className="bg-white dark:bg-slate-900 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800/60">
                               <p className="font-bold text-slate-800 dark:text-white">Algèbre Linéaire</p>
-                              <p className="text-slate-400 mt-0.5">Amphi A · 08:00 à 10:00</p>
+                              <p className="text-slate-400 mt-0.5">Amphi A · 08:00 - 10:00</p>
                             </div>
                           </div>
                         </div>
@@ -569,53 +566,53 @@ export default function LandingPage() {
 
                   {activeRoleTab === 3 && (
                     // Mockup Parent (Espace Parents)
-                    <div className="space-y-6 animate-fade-in text-slate-850 dark:text-slate-200">
+                    <div className="space-y-4 animate-fade-in text-slate-850 dark:text-slate-200">
                       <div className="flex justify-between items-center gap-3">
-                        <p className="text-xs font-bold text-slate-500">Suivi d'élève :</p>
-                        <span className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 text-xs font-bold">
+                        <p className="text-[11px] font-bold text-slate-500">Suivi d'élève :</p>
+                        <span className="px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 text-[10px] font-bold">
                           Jean Dupont
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 text-center">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Moyenne (Jean)</p>
-                          <p className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">14.5/20</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100/50 dark:border-slate-800/40 text-center">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Moyenne (Jean)</p>
+                          <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">14.5/20</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 text-center">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Absences (Mois)</p>
-                          <p className="text-base font-extrabold text-slate-800 dark:text-white mt-1">0</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100/50 dark:border-slate-800/40 text-center">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Absences</p>
+                          <p className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5">0</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 text-center">
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Scolarité</p>
-                          <p className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">À jour</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100/50 dark:border-slate-800/40 text-center">
+                          <p className="text-[9px] text-slate-400 font-bold uppercase">Scolarité</p>
+                          <p className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">À jour</p>
                         </div>
                       </div>
 
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 space-y-3">
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100/50 dark:border-slate-800/40 space-y-2">
                         <p className="text-xs font-bold">Dernières factures</p>
-                        <div className="overflow-x-auto text-[10px]">
+                        <div className="overflow-x-auto text-[9px]">
                           <table className="w-full text-left">
                             <thead>
                               <tr className="text-slate-400 border-b border-slate-200/50 dark:border-slate-800/50">
-                                <th className="pb-1.5 font-bold">Date</th>
-                                <th className="pb-1.5 font-bold">Description</th>
-                                <th className="pb-1.5 font-bold">Montant</th>
-                                <th className="pb-1.5 font-bold">Statut</th>
+                                <th className="pb-1 font-bold">Date</th>
+                                <th className="pb-1 font-bold">Description</th>
+                                <th className="pb-1 font-bold">Montant</th>
+                                <th className="pb-1 font-bold">Statut</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-150 dark:divide-slate-800/40">
                               <tr>
-                                <td className="py-2">01/09/2026</td>
-                                <td className="py-2 font-medium">Inscription - Semestre 1</td>
-                                <td className="py-2">2 500 F</td>
-                                <td className="py-2"><span className="badge badge-success badge-xs">Payé</span></td>
+                                <td className="py-1.5">01/09/2026</td>
+                                <td className="py-1.5 font-medium">Inscription - S1</td>
+                                <td className="py-1.5">2 500 F</td>
+                                <td className="py-1.5"><span className="badge badge-success badge-xs">Payé</span></td>
                               </tr>
                               <tr>
-                                <td className="py-2">01/10/2026</td>
-                                <td className="py-2 font-medium">Assurance Universitaire</td>
-                                <td className="py-2">150 F</td>
-                                <td className="py-2"><span className="badge badge-success badge-xs">Payé</span></td>
+                                <td className="py-1.5">01/10/2026</td>
+                                <td className="py-1.5 font-medium">Assurance Univ.</td>
+                                <td className="py-1.5">150 F</td>
+                                <td className="py-1.5"><span className="badge badge-success badge-xs">Payé</span></td>
                               </tr>
                             </tbody>
                           </table>
@@ -625,8 +622,8 @@ export default function LandingPage() {
                   )}
 
                   {/* Mockup Footer branding */}
-                  <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400">
-                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Données chiffrées en temps réel</span>
+                  <div className="mt-auto pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-[9px] text-slate-400">
+                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Données chiffrées en temps réel</span>
                     <span>CAMPUS v1.0.0</span>
                   </div>
                 </div>
@@ -645,7 +642,7 @@ export default function LandingPage() {
         <div className="absolute top-10 left-10 w-72 h-72 bg-indigo-400/10 rounded-full blur-3xl animate-pulse duration-3000 pointer-events-none" />
         <div className="absolute bottom-10 right-10 w-72 h-72 bg-violet-400/10 rounded-full blur-3xl animate-pulse duration-2000 pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-6xl mx-auto px-6 sm:px-12 lg:px-20 xl:px-28 relative z-10">
           <RevealOnScroll direction="up">
           <div className="text-center mb-16">
             <span className="inline-block text-indigo-600 dark:text-white font-semibold text-sm mb-3">Fonctionnalités</span>

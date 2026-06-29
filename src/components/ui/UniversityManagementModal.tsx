@@ -336,7 +336,7 @@ export default function UniversityManagementModal({ isOpen, onClose, universityI
           {activeTab === 'plan' && (
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-slate-800">Sélectionner une formule d'abonnement</h4>
-              <p className="text-xs text-slate-400">Le changement de plan met immédiatement à jour les revenus mensuels récurrents (MRR) de la plateforme.</p>
+              <p className="text-xs text-slate-400">Le changement de plan met immédiatement à jour la formule de facturation mensuelle de la plateforme.</p>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 {(Object.keys(PLAN_FEATURES) as Array<keyof typeof PLAN_FEATURES>).map(key => {

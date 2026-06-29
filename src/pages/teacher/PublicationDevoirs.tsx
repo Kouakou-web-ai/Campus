@@ -6,12 +6,15 @@ import EmptyState from '../../components/ui/EmptyState';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { useAuthStore } from '../../store/authStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
+import NoterDevoirModal from '../../components/ui/NoterDevoirModal';
+import { useNotificationStore } from '../../store/notificationStore';
 
 export default function PublicationDevoirs() {
   const { user } = useAuthStore();
   const { assignments, courses, students, addAssignment, loading } = useRealtimeDataStore();
   const [filter, setFilter] = useState('tous');
-  const [modalOpen, setModalOpen] = useState(false); // keep name same or adjust: modalOpen state is used below
+  const [modalOpen, setModalOpen] = useState(false);
+  const [gradingAssignmentId, setGradingAssignmentId] = useState<string | null>(null);
 
   const myCourses = courses.filter(c => c.teacherId === user?.id);
   const myCoursesIds = myCourses.map(c => c.id);
@@ -51,6 +54,15 @@ export default function PublicationDevoirs() {
         description,
         maxGrade: Number(maxGrade)
       });
+
+      // Notification logic (simulated for students)
+      if (status === 'publie') {
+        useNotificationStore.getState().addNotification(
+          "Nouveau devoir publié",
+          `Le professeur ${user?.name} a publié un devoir "${title}" pour le cours de ${course.title}. À rendre avant le ${new Date(dueDate).toLocaleDateString('fr-FR')}.`,
+          "warning"
+        );
+      }
 
       ToastSuccess("Devoir publié avec succès !");
       setTitle('');
@@ -169,25 +181,43 @@ export default function PublicationDevoirs() {
                 </div>
 
                 {assignment.status === 'publie' && (
-                  <div className="mt-4 pt-3 border-t border-slate-100">
-                    <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
-                      <span>Taux de remise</span>
-                      <span className={`font-semibold ${progress === 100 ? 'text-emerald-600' : progress > 50 ? 'text-amber-600' : 'text-slate-500'}`}>
-                        {progress}%
-                      </span>
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex-1 mr-4">
+                      <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                        <span>Taux de remise attendu</span>
+                        <span className={`font-semibold ${progress === 100 ? 'text-emerald-600' : progress > 50 ? 'text-amber-600' : 'text-slate-500'}`}>
+                          {progress}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${progress === 100 ? 'bg-emerald-400' : 'bg-indigo-400'}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${progress === 100 ? 'bg-emerald-400' : 'bg-indigo-400'}`}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
+                    <button
+                      onClick={() => setGradingAssignmentId(assignment.id)}
+                      className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Noter
+                    </button>
                   </div>
                 )}
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Grading Modal */}
+      {gradingAssignmentId && user?.universityId && (
+        <NoterDevoirModal
+          assignmentId={gradingAssignmentId}
+          universityId={user.universityId}
+          onClose={() => setGradingAssignmentId(null)}
+        />
       )}
 
       {/* Add Modal */}

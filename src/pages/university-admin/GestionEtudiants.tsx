@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Download, Upload, Mail, Users, CheckCircle, UserPlus, Award, X, Trash2 } from 'lucide-react';
+import { Plus, Download, Upload, Mail, Users, CheckCircle, UserPlus, Award, X, Trash2, Copy } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import StatCard from '../../components/ui/StatCard';
 import DataTable from '../../components/ui/DataTable';
@@ -15,7 +15,7 @@ import ImportModal from '../../components/ui/ImportModal';
 
 export default function GestionEtudiants() {
   const { user } = useAuthStore();
-  const { students, addStudent, deleteStudent, loading, currentUniversity } = useRealtimeDataStore();
+  const { students, addStudent, deleteStudent, updateStudent, loading, currentUniversity, classes } = useRealtimeDataStore();
 
   const handleDelete = async (studentId: string) => {
     if (!user?.universityId) return;
@@ -92,10 +92,16 @@ export default function GestionEtudiants() {
       key: 'id',
       label: '',
       render: (_, row) => (
-        <div className="flex items-center gap-1 justify-end">
-          <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Envoyer email">
-            <Mail size={14} />
+        <div className="flex items-center gap-1.5 justify-end">
+          <button
+            onClick={() => handleOpenEditModal(row)}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-all"
+          >
+            Modifier / Affecter
           </button>
+          <a href={`mailto:${row.email}`} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-block" title="Envoyer email">
+            <Mail size={14} />
+          </a>
           <button
             onClick={() => handleDelete(row.id)}
             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -120,17 +126,77 @@ export default function GestionEtudiants() {
   const [filterStatus, setFilterStatus] = useState('tous');
   const [modalOpen, setModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [generatedCreds, setGeneratedCreds] = useState<{studentId: string; tempStudentPassword: string; tempParentPassword: string; studentEmail: string; parentEmail: string; studentName: string; parentName: string} | null>(null);
 
   // Form states for new student
-  const [name, setName] = useState('');
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [dateNaissance, setDateNaissance] = useState('');
+  const [lieuNaissance, setLieuNaissance] = useState('');
+  const [sexe, setSexe] = useState<'M' | 'F'>('M');
+  const [classeId, setClasseId] = useState('');
   const [email, setEmail] = useState('');
-  const [filiere, setFiliere] = useState('Informatique');
-  const [annee, setAnnee] = useState(1);
   const [totalAmount, setTotalAmount] = useState(420000);
   const [paidAmount, setPaidAmount] = useState(0);
   const [matricule, setMatricule] = useState('');
   const [parentEmail, setParentEmail] = useState('');
   const [parentName, setParentName] = useState('');
+
+  // Auto-initialize class selections
+  useEffect(() => {
+    if (classes.length > 0 && !classeId) {
+      setClasseId(classes[0].id);
+    }
+  }, [classes, classeId]);
+
+  // Edit modal states
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editNom, setEditNom] = useState('');
+  const [editPrenom, setEditPrenom] = useState('');
+  const [editDateNaissance, setEditDateNaissance] = useState('');
+  const [editLieuNaissance, setEditLieuNaissance] = useState('');
+  const [editSexe, setEditSexe] = useState<'M' | 'F'>('M');
+  const [editClasseId, setEditClasseId] = useState('');
+
+  const handleOpenEditModal = (student: Student) => {
+    setEditingStudent(student);
+    setEditNom(student.nom || '');
+    setEditPrenom(student.prenom || '');
+    setEditDateNaissance(student.dateNaissance || '');
+    setEditLieuNaissance(student.lieuNaissance || '');
+    setEditSexe(student.sexe || 'M');
+    setEditClasseId(student.classeId || '');
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent || !user?.universityId) return;
+
+    const selectedClass = classes.find(c => c.id === editClasseId);
+    const studentFiliere = selectedClass ? selectedClass.filiere : editingStudent.filiere;
+    const studentAnnee = selectedClass ? selectedClass.annee : editingStudent.annee;
+
+    try {
+      await updateStudent(user.universityId, editingStudent.id, {
+        nom: editNom.trim(),
+        prenom: editPrenom.trim(),
+        name: `${editPrenom.trim()} ${editNom.trim()}`,
+        dateNaissance: editDateNaissance,
+        lieuNaissance: editLieuNaissance,
+        sexe: editSexe,
+        classeId: editClasseId,
+        filiere: studentFiliere,
+        annee: studentAnnee
+      });
+      ToastSuccess("Profil de l'étudiant mis à jour avec succès.");
+      setEditModalOpen(false);
+      setEditingStudent(null);
+    } catch (err) {
+      ToastError("Impossible de mettre à jour le profil de l'étudiant.");
+    }
+  };
 
   const filieres = [...new Set(students.map(s => s?.filiere).filter(Boolean))];
 
@@ -162,8 +228,8 @@ export default function GestionEtudiants() {
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.universityId) return;
-    if (!name || !email || !parentEmail || !parentName) {
-      ToastError("Veuillez remplir tous les champs obligatoires (nom, email étudiant, email parent, nom parent).");
+    if (!nom || !prenom || !email || !parentEmail || !parentName) {
+      ToastError("Veuillez remplir tous les champs obligatoires (nom, prénoms, email étudiant, email parent, nom parent).");
       return;
     }
 
@@ -174,13 +240,24 @@ export default function GestionEtudiants() {
       return;
     }
 
+    const fullName = `${prenom.trim()} ${nom.trim()}`;
+    const selectedClass = classes.find(c => c.id === classeId);
+    const studentFiliere = selectedClass ? selectedClass.filiere : 'Informatique';
+    const studentAnnee = selectedClass ? selectedClass.annee : 1;
+
     try {
-      await addStudent(user.universityId, {
-        name,
+      const creds = await addStudent(user.universityId, {
+        name: fullName,
+        nom: nom.trim(),
+        prenom: prenom.trim(),
+        dateNaissance,
+        lieuNaissance,
+        sexe,
+        classeId,
         email,
         studentId: matricule ? matricule.trim() : undefined,
-        filiere,
-        annee: Number(annee),
+        filiere: studentFiliere,
+        annee: studentAnnee,
         status: 'actif',
         average: 0,
         absences: 0,
@@ -189,8 +266,19 @@ export default function GestionEtudiants() {
         parentEmail: parentEmail.trim(),
         parentName: parentName.trim()
       });
-      ToastSuccess("Étudiant et compte Parent créés avec succès ! Les mots de passe temporaires ont été générés.");
-      setName('');
+      ToastSuccess("Étudiant et compte Parent créés avec succès !");
+      setGeneratedCreds({
+        ...creds,
+        studentEmail: email,
+        parentEmail: parentEmail.trim(),
+        studentName: fullName,
+        parentName: parentName.trim()
+      });
+      setNom('');
+      setPrenom('');
+      setDateNaissance('');
+      setLieuNaissance('');
+      setSexe('M');
       setEmail('');
       setMatricule('');
       setParentEmail('');
@@ -317,8 +405,8 @@ export default function GestionEtudiants() {
 
       {/* Add Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full border border-slate-100 shadow-2xl relative animate-fade-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4 py-6">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl relative animate-fade-up">
             <button
               onClick={() => setModalOpen(false)}
               className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl"
@@ -329,16 +417,80 @@ export default function GestionEtudiants() {
             <form onSubmit={handleAddStudent} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom complet</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom</label>
                   <input
                     type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="ex: Yao Kouassi Serge"
+                    value={nom}
+                    onChange={e => setNom(e.target.value)}
+                    placeholder="ex: Yao"
                     required
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Prénom(s)</label>
+                  <input
+                    type="text"
+                    value={prenom}
+                    onChange={e => setPrenom(e.target.value)}
+                    placeholder="ex: Kouassi Serge"
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Date de naissance</label>
+                  <input
+                    type="date"
+                    value={dateNaissance}
+                    onChange={e => setDateNaissance(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Lieu de naissance</label>
+                  <input
+                    type="text"
+                    value={lieuNaissance}
+                    onChange={e => setLieuNaissance(e.target.value)}
+                    placeholder="ex: Abidjan"
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Sexe</label>
+                  <select
+                    value={sexe}
+                    onChange={e => setSexe(e.target.value as 'M' | 'F')}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Classe</label>
+                  <select
+                    value={classeId}
+                    onChange={e => setClasseId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  >
+                    {classes.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adresse Email</label>
                   <input
@@ -350,9 +502,6 @@ export default function GestionEtudiants() {
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Matricule (Optionnel)</label>
                   <input
@@ -363,55 +512,25 @@ export default function GestionEtudiants() {
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Filière</label>
-                  <select
-                    value={filiere}
-                    onChange={e => setFiliere(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="Informatique">Informatique</option>
-                    <option value="Mathématiques">Mathématiques</option>
-                    <option value="Économie">Économie</option>
-                    <option value="Droit">Droit</option>
-                    <option value="Physique">Physique</option>
-                  </select>
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Année</label>
-                  <select
-                    value={annee}
-                    onChange={e => setAnnee(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value={1}>1ère année (Licence 1)</option>
-                    <option value={2}>2ème année (Licence 2)</option>
-                    <option value={3}>3ème année (Licence 3)</option>
-                    <option value={4}>4ème année (Master 1)</option>
-                  </select>
-                </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Scolarité totale (FCFA)</label>
                   <input
                     type="number"
                     value={totalAmount}
                     onChange={e => setTotalAmount(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Montant versé (FCFA)</label>
                   <input
                     type="number"
                     value={paidAmount}
                     onChange={e => setPaidAmount(Number(e.target.value))}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -461,6 +580,190 @@ export default function GestionEtudiants() {
           onClose={() => setImportModalOpen(false)}
           onImport={handleImportStudents}
         />
+      )}
+
+      {/* Credentials Modal */}
+      {generatedCreds && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4 py-6">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl relative animate-fade-up">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mb-6 mx-auto">
+              <CheckCircle size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-center text-slate-800 mb-2">Comptes créés avec succès</h3>
+            <p className="text-center text-slate-500 text-sm mb-6">
+              Les identifiants temporaires ont été générés. Ils expireront dans 7 jours. Veuillez les transmettre.
+            </p>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
+                  <UserPlus size={16} className="text-indigo-600" /> Accès Étudiant
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Nom :</span><span className="font-medium text-slate-800">{generatedCreds.studentName}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Matricule :</span><span className="font-mono font-medium text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">{generatedCreds.studentId}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Email :</span><span className="font-medium text-slate-800">{generatedCreds.studentEmail}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Mot de passe provisoire :</span><span className="font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{generatedCreds.tempStudentPassword}</span></div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
+                  <Users size={16} className="text-amber-600" /> Accès Parent
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Nom :</span><span className="font-medium text-slate-800">{generatedCreds.parentName}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Email :</span><span className="font-medium text-slate-800">{generatedCreds.parentEmail}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-slate-500">Mot de passe provisoire :</span><span className="font-mono font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">{generatedCreds.tempParentPassword}</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  const text = `Accès Étudiant\nNom : ${generatedCreds.studentName}\nMatricule : ${generatedCreds.studentId}\nEmail : ${generatedCreds.studentEmail}\nMot de passe provisoire : ${generatedCreds.tempStudentPassword}\n\nAccès Parent\nNom : ${generatedCreds.parentName}\nEmail : ${generatedCreds.parentEmail}\nMot de passe provisoire : ${generatedCreds.tempParentPassword}`;
+                  
+                  const fallbackCopyTextToClipboard = (text: string) => {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.top = "0";
+                    textArea.style.left = "0";
+                    textArea.style.position = "fixed";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                      const successful = document.execCommand('copy');
+                      if (successful) ToastSuccess("Identifiants copiés dans le presse-papier");
+                      else ToastError("Échec de la copie");
+                    } catch (err) {
+                      ToastError("Échec de la copie");
+                    }
+                    document.body.removeChild(textArea);
+                  };
+
+                  if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text).then(() => {
+                      ToastSuccess("Identifiants copiés dans le presse-papier");
+                    }).catch(() => {
+                      fallbackCopyTextToClipboard(text);
+                    });
+                  } else {
+                    fallbackCopyTextToClipboard(text);
+                  }
+                }}
+                className="w-full py-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                <Copy size={16} /> Copier les identifiants
+              </button>
+              <button
+                onClick={() => setGeneratedCreds(null)}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-sm font-bold transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Student Modal */}
+      {editModalOpen && editingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4 py-6">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto border border-slate-100 shadow-2xl relative animate-fade-up">
+            <button
+              onClick={() => {
+                setEditModalOpen(false);
+                setEditingStudent(null);
+              }}
+              className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl"
+            >
+              <X size={18} />
+            </button>
+            <h3 className="text-xl font-bold text-slate-800 mb-6">Modifier / Affecter Étudiant</h3>
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Nom</label>
+                  <input
+                    type="text"
+                    value={editNom}
+                    onChange={e => setEditNom(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Prénom(s)</label>
+                  <input
+                    type="text"
+                    value={editPrenom}
+                    onChange={e => setEditPrenom(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Date de naissance</label>
+                  <input
+                    type="date"
+                    value={editDateNaissance}
+                    onChange={e => setEditDateNaissance(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Lieu de naissance</label>
+                  <input
+                    type="text"
+                    value={editLieuNaissance}
+                    onChange={e => setEditLieuNaissance(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Sexe</label>
+                  <select
+                    value={editSexe}
+                    onChange={e => setEditSexe(e.target.value as 'M' | 'F')}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Affecter Classe</label>
+                  <select
+                    value={editClasseId}
+                    onChange={e => setEditClasseId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Sélectionner une classe…</option>
+                    {classes.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-colors mt-6"
+              >
+                Sauvegarder les modifications
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
