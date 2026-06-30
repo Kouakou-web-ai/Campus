@@ -295,7 +295,7 @@ export default function PublicLayout() {
                 <span className="font-heading font-bold text-xl text-white">CAMPUS</span>
               </div>
               <p className="text-sm text-slate-500 leading-relaxed">
-                La plateforme SaaS qui modernise la gestion universitaire.
+                La plateforme qui modernise la gestion universitaire.
               </p>
             </div>
             <div>
@@ -342,7 +342,7 @@ export default function PublicLayout() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-slate-600">© {new Date().getFullYear()} CAMPUS SaaS. Tous droits réservés.</p>
+            <p className="text-sm text-slate-600">© {new Date().getFullYear()} CAMPUS. Tous droits réservés.</p>
             <p className="text-sm text-slate-600">Conçu pour l'excellence universitaire 🎓</p>
           </div>
         </div>

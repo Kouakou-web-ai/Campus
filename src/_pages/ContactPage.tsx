@@ -20,7 +20,7 @@ export function ContactPage() {
             <div className="btn btn-circle btn-primary btn-outline"><Mail /></div>
             <div>
               <p className="font-semibold text-sm">Email</p>
-              <p className="text-slate-500 text-sm">contact@campus-saas.com</p>
+              <p className="text-slate-500 text-sm">truixk@gmail.com</p>
             </div>
           </div>
           <div className="flex items-center gap-4">

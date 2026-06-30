@@ -219,7 +219,7 @@ export default function EmailsSimules() {
 
                     {/* Fake Footer */}
                     <div className="border-t border-slate-100 mt-6 pt-4 text-center text-xs text-slate-400">
-                      Cet e-mail est une simulation système émise par le portail CAMPUS SaaS.
+                      Cet e-mail est une simulation système émise par le portail CAMPUS.
                     </div>
                   </div>
                 </div>

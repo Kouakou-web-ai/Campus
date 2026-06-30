@@ -96,10 +96,10 @@ export default function FAQPage() {
               <ArrowRight size={12} />
             </Link>
             <a 
-              href="mailto:support@campus.ci" 
+              href="mailto:truixk@gmail.com" 
               className="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline py-2"
             >
-              support@campus.ci
+              truixk@gmail.com
             </a>
           </div>
         </div>

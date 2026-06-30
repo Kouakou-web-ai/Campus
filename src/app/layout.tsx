@@ -3,8 +3,8 @@ import Providers from './providers';
 import '../index.css';
 
 export const metadata: Metadata = {
-  title: 'Campus - SaaS Universitaire',
-  description: 'Plateforme SaaS Universitaire Premium',
+  title: 'Campus - Plateforme Universitaire',
+  description: 'Plateforme Universitaire Premium',
 };
 
 const themeScript = `
