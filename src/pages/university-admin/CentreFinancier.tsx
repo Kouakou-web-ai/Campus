@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Bulletins from './Bulletins';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -14,7 +13,6 @@ import { useAuthStore } from '../../store/authStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 
 export default function CentreFinancier() {
-  const [activeTab, setActiveTab] = useState<'finance' | 'bulletins'>('finance');
   const { user } = useAuthStore();
   const { transactions, students, addTransaction, updateStudent, currentUniversity, loading } = useRealtimeDataStore();
   const [modalOpen, setModalOpen] = useState(false);
@@ -97,7 +95,7 @@ export default function CentreFinancier() {
       const mLabel = months[current.getMonth()];
       const mNum = current.getMonth();
       const year = current.getFullYear();
-
+ 
       // Find transactions in this month
       const monthlyTrans = transactions.filter(t => {
         if (!t.date) return false;
@@ -181,30 +179,6 @@ export default function CentreFinancier() {
         }
       />
 
-      {/* Tabs */}
-      <div className="tabs tabs-boxed bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl w-fit">
-        <button
-          className={`tab tab-sm rounded-xl font-semibold text-xs transition-all ${
-            activeTab === 'finance' ? 'tab-active bg-white dark:bg-slate-800 shadow-sm' : 'text-slate-500'
-          }`}
-          onClick={() => setActiveTab('finance')}
-        >
-          💰 Tableau de bord financier
-        </button>
-        <button
-          className={`tab tab-sm rounded-xl font-semibold text-xs transition-all ${
-            activeTab === 'bulletins' ? 'tab-active bg-white dark:bg-slate-800 shadow-sm' : 'text-slate-500'
-          }`}
-          onClick={() => setActiveTab('bulletins')}
-        >
-          📋 Bulletins & Signatures
-        </button>
-      </div>
-
-      {activeTab === 'bulletins' ? (
-        <Bulletins hideHeader={true} />
-      ) : (
-        <>
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {STATS.map((s, i) => (
@@ -300,8 +274,6 @@ export default function CentreFinancier() {
           )}
         </div>
       </div>
-        </>
-      )}
 
       {/* Add Modal */}
       {modalOpen && (

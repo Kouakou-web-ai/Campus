@@ -708,7 +708,7 @@ export default function Visioconference() {
                     : 'border-transparent text-slate-500 hover:text-slate-300'
                 }`}
               >
-                Tchat ({messages.length})
+                Chat ({messages.length})
               </button>
               <button
                 onClick={() => setActiveTab('participants')}
@@ -804,7 +804,7 @@ export default function Visioconference() {
       {/* Toolbar */}
       <footer className="h-20 border-t border-slate-900 bg-slate-900/50 backdrop-blur-md px-6 flex items-center justify-between">
         <div className="text-xs text-slate-400 font-medium">
-          ID de réunion : <span className="font-mono text-indigo-400 font-bold">{meetingId}</span>
+          ID de réunion : <span className="font-mono text-slate-100 font-bold">{meetingId}</span>
         </div>
 
         <div className="flex items-center gap-3">

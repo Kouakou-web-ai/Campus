@@ -77,10 +77,6 @@ export interface Student {
   lieuNaissance?: string;
   sexe?: 'M' | 'F';
   classeId?: string;
-  signatures?: {
-    secretariat?: string;
-    recteur?: string;
-  };
 }
 
 export interface Teacher {
@@ -160,7 +156,6 @@ export interface Grade {
   isManual?: boolean;
   appreciation?: string;
   submitted: boolean;
-  teacherSignature?: string;
   classNotes?: number[];
   examNotes?: number[];
 }

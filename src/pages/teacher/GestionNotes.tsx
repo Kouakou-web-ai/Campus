@@ -28,7 +28,6 @@ export default function GestionNotes() {
     note?: number;
     appreciation?: string;
     submitted: boolean;
-    teacherSignature?: string;
   }>>({});
   const [saved, setSaved] = useState(false);
 
@@ -63,8 +62,7 @@ export default function GestionNotes() {
         examNotes: [],
         note: undefined,
         appreciation: '',
-        submitted: false,
-        teacherSignature: ''
+        submitted: false
       };
     });
 
@@ -77,8 +75,7 @@ export default function GestionNotes() {
           examNotes: g.examNotes || (g.examNote !== undefined ? [g.examNote] : []),
           note: g.note,
           appreciation: g.appreciation || '',
-          submitted: g.submitted,
-          teacherSignature: g.teacherSignature || ''
+          submitted: g.submitted
         };
       }
     });
@@ -533,7 +530,7 @@ export default function GestionNotes() {
                     </thead>
                     <tbody>
                       {courseStudents.map(student => {
-                        const local = localGrades[student.id] || { classNotes: [], examNotes: [], note: undefined, appreciation: '', submitted: false, teacherSignature: '' };
+                        const local = localGrades[student.id] || { classNotes: [], examNotes: [], note: undefined, appreciation: '', submitted: false };
                         return (
                           <tr key={student.id}>
                             <td>
@@ -555,11 +552,11 @@ export default function GestionNotes() {
                                       max={20}
                                       step={0.25}
                                       value={note === undefined ? '' : note}
-                                      disabled={local.submitted && local.teacherSignature ? true : false}
+                                      disabled={local.submitted}
                                       onChange={(e) => handleUpdateSpecificClassNote(student.id, idx, e.target.value)}
                                       className="w-11 px-1 py-1 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded text-xs font-bold focus:outline-none focus:border-indigo-500"
                                     />
-                                    {!(local.submitted && local.teacherSignature) && (
+                                    {!local.submitted && (
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveClassNote(student.id, idx)}
@@ -571,7 +568,7 @@ export default function GestionNotes() {
                                     )}
                                   </div>
                                 ))}
-                                {!(local.submitted && local.teacherSignature) && (
+                                {!local.submitted && (
                                   <button
                                     type="button"
                                     onClick={() => handleAddClassNotePlaceholder(student.id)}
@@ -596,11 +593,11 @@ export default function GestionNotes() {
                                       max={20}
                                       step={0.25}
                                       value={note === undefined ? '' : note}
-                                      disabled={local.submitted && local.teacherSignature ? true : false}
+                                      disabled={local.submitted}
                                       onChange={(e) => handleUpdateSpecificExamNote(student.id, idx, e.target.value)}
                                       className="w-11 px-1 py-1 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded text-xs font-bold focus:outline-none focus:border-indigo-500"
                                     />
-                                    {!(local.submitted && local.teacherSignature) && (
+                                    {!local.submitted && (
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveExamNote(student.id, idx)}
@@ -612,7 +609,7 @@ export default function GestionNotes() {
                                     )}
                                   </div>
                                 ))}
-                                {!(local.submitted && local.teacherSignature) && (
+                                {!local.submitted && (
                                   <button
                                     type="button"
                                     onClick={() => handleAddExamNotePlaceholder(student.id)}

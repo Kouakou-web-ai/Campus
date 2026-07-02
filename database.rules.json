@@ -1,0 +1,45 @@
+{
+  "rules": {
+    ".read": "auth != null",
+
+    "utilisateurs": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN')",
+        ".write": "auth != null && auth.uid === $uid",
+
+        "signature": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+
+    "universites": {
+      "$universityId": {
+        "etudiants": {
+          "$studentId": {
+            "signatures": {
+              "secretariat": {
+                ".read": "auth != null",
+                ".write": "auth != null && root.child('utilisateurs').child(auth.uid).child('role').val() === 'FINANCE_MANAGER' && root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId"
+              },
+              "recteur": {
+                ".read": "auth != null",
+                ".write": "auth != null && root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' && root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId"
+              }
+            }
+          }
+        },
+
+        "notes": {
+          "$gradeId": {
+            "teacherSignature": {
+              ".read": "auth != null",
+              ".write": "auth != null && root.child('utilisateurs').child(auth.uid).child('role').val() === 'TEACHER'"
+            }
+          }
+        }
+      }
+    }
+  }
+}
