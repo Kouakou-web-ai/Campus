@@ -30,8 +30,8 @@ export function PageHeader({ title, description, breadcrumbs, action, actions }:
             ))}
           </div>
         )}
-        <h1 className="text-2xl font-bold text-content">{title}</h1>
-        {description && <p className="text-content-secondary mt-1">{description}</p>}
+        <h1 className="text-lg sm:text-xl font-semibold text-content tracking-tight leading-tight">{title}</h1>
+        {description && <p className="text-xs text-content-secondary mt-0.5">{description}</p>}
       </div>
       {headerActions && <div>{headerActions}</div>}
     </div>

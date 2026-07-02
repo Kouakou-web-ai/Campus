@@ -5,9 +5,10 @@ import type { UserRole } from '../store/authStore';
 
 interface RoleGuardProps {
   allowedRoles: UserRole[];
+  children?: React.ReactNode;
 }
 
-export default function RoleGuard({ allowedRoles }: RoleGuardProps) {
+export default function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const { user } = useAuthStore();
 
   if (!user) {
@@ -21,6 +22,12 @@ export default function RoleGuard({ allowedRoles }: RoleGuardProps) {
         return <Navigate to="/app/super-admin" replace />;
       case 'UNIVERSITY_ADMIN':
         return <Navigate to="/app/admin" replace />;
+      case 'FINANCE_MANAGER':
+        return <Navigate to="/app/admin/finance" replace />;
+      case 'STUDENT_MANAGER':
+        return <Navigate to="/app/admin/etudiants" replace />;
+      case 'TEACHER_MANAGER':
+        return <Navigate to="/app/admin/enseignants" replace />;
       case 'TEACHER':
         return <Navigate to="/app/enseignant" replace />;
       case 'STUDENT':
@@ -32,5 +39,5 @@ export default function RoleGuard({ allowedRoles }: RoleGuardProps) {
     }
   }
 
-  return <Outlet />;
+  return children ? <>{children}</> : <Outlet />;
 }

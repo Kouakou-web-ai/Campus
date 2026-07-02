@@ -16,6 +16,9 @@ const LandingPage      = React.lazy(() => import('../pages/public/LandingPage'))
 const PrixPage         = React.lazy(() => import('../pages/public/PrixPage'));
 const FAQPage          = React.lazy(() => import('../pages/public/FAQPage'));
 const ContactPage      = React.lazy(() => import('../pages/public/ContactPage'));
+const ConditionsPage   = React.lazy(() => import('../pages/public/ConditionsPage'));
+const MentionsPage     = React.lazy(() => import('../pages/public/MentionsPage'));
+const ConfidentialitePage = React.lazy(() => import('../pages/public/ConfidentialitePage'));
 const ConnexionPage    = React.lazy(() => import('../pages/public/ConnexionPage'));
 const InscriptionPage  = React.lazy(() => import('../pages/public/InscriptionPage'));
 const ActivationComptePage = React.lazy(() => import('../pages/public/ActivationComptePage'));
@@ -34,6 +37,9 @@ const DemandesInscription = React.lazy(() => import('../pages/university-admin/D
 const GestionEnseignants  = React.lazy(() => import('../pages/university-admin/GestionEnseignants'));
 const GestionCours        = React.lazy(() => import('../pages/university-admin/GestionCours'));
 const CentreFinancier     = React.lazy(() => import('../pages/university-admin/CentreFinancier'));
+const Gestionnaires       = React.lazy(() => import('../pages/university-admin/Gestionnaires'));
+const Classes             = React.lazy(() => import('../pages/university-admin/Classes'));
+const Bulletins           = React.lazy(() => import('../pages/university-admin/Bulletins'));
 
 // ─── Teacher ──────────────────────────────────────────────────────────────────
 const TeacherDashboard       = React.lazy(() => import('../pages/teacher/Dashboard').then(m => ({ default: m.TeacherDashboard })));
@@ -42,6 +48,7 @@ const PublicationDevoirs     = React.lazy(() => import('../pages/teacher/Publica
 const GestionAbsences        = React.lazy(() => import('../pages/teacher/GestionAbsences'));
 const EmailsSimules          = React.lazy(() => import('../pages/shared/EmailsSimules'));
 const ParametresProfil       = React.lazy(() => import('../pages/shared/ParametresProfil'));
+const Visioconference        = React.lazy(() => import('../pages/shared/Visioconference'));
 const EvaluationSuggestions  = React.lazy(() => import('../pages/shared/EvaluationSuggestions'));
 
 // ─── Student ──────────────────────────────────────────────────────────────────
@@ -83,6 +90,9 @@ function AnimatedRoutes() {
             <Route path="/tarifs"        element={<PrixPage />} />
             <Route path="/faq"           element={<FAQPage />} />
             <Route path="/contact"       element={<ContactPage />} />
+            <Route path="/conditions"    element={<ConditionsPage />} />
+            <Route path="/mentions-legales" element={<MentionsPage />} />
+            <Route path="/confidentialite" element={<ConfidentialitePage />} />
             <Route path="/signup"        element={<InscriptionPage />} />
           </Route>
 
@@ -146,12 +156,23 @@ function AnimatedRoutes() {
               {/* <Route path="super-admin/emails"       element={<EmailsSimules />} /> */}
             </Route>
 
-            {/* University Admin */}
+            {/* University Admin & Managers */}
             <Route element={<RoleGuard allowedRoles={['UNIVERSITY_ADMIN']} />}>
               <Route path="admin"              element={<UniversityAdminDashboard />} />
-              <Route path="admin/etudiants"   element={<GestionEtudiants />} />
-              <Route path="admin/enseignants" element={<GestionEnseignants />} />
               <Route path="admin/cours"       element={<GestionCours />} />
+              <Route path="admin/gestionnaires" element={<Gestionnaires />} />
+              <Route path="admin/classes"      element={<Classes />} />
+            </Route>
+            <Route element={<RoleGuard allowedRoles={['UNIVERSITY_ADMIN', 'TEACHER']} />}>
+              <Route path="admin/bulletins"    element={<Bulletins />} />
+            </Route>
+            <Route element={<RoleGuard allowedRoles={['UNIVERSITY_ADMIN', 'STUDENT_MANAGER']} />}>
+              <Route path="admin/etudiants"   element={<GestionEtudiants />} />
+            </Route>
+            <Route element={<RoleGuard allowedRoles={['UNIVERSITY_ADMIN', 'TEACHER_MANAGER']} />}>
+              <Route path="admin/enseignants" element={<GestionEnseignants />} />
+            </Route>
+            <Route element={<RoleGuard allowedRoles={['UNIVERSITY_ADMIN', 'FINANCE_MANAGER']} />}>
               <Route path="admin/finance"     element={<CentreFinancier />} />
             </Route>
 
@@ -182,6 +203,7 @@ function AnimatedRoutes() {
 
             {/* Paramètres partagés pour tous les rôles */}
             <Route path="parametres" element={<ParametresProfil />} />
+            <Route path="visioconference/:meetingId" element={<Visioconference />} />
 
             {/* Évaluation & Suggestions partagé Parent & Admin */}
             <Route element={<RoleGuard allowedRoles={['PARENT', 'UNIVERSITY_ADMIN']} />}>

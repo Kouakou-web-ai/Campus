@@ -5,7 +5,14 @@ export function exportBulletinPDF(
   studentId: string,
   filiere: string,
   semester: number,
-  grades: { subject: string; value: number; coefficient: number; teacher?: string }[]
+  grades: { 
+    subject: string; 
+    classNote?: number; 
+    examNote?: number; 
+    value: number; 
+    coefficient: number; 
+    teacher?: string; 
+  }[]
 ) {
   const doc = new jsPDF();
   
@@ -37,16 +44,18 @@ export function exportBulletinPDF(
   
   // Divider line
   doc.setDrawColor(226, 232, 240);
-  doc.line(20, 88, 190, 88);
+  doc.line(15, 88, 195, 88);
   
   // Table header
   doc.setFont('Helvetica', 'bold');
-  doc.text('Matière', 20, 98);
-  doc.text('Coefficient', 100, 98);
-  doc.text('Note', 140, 98);
-  doc.text('Appréciation', 165, 98);
+  doc.text('Matière', 15, 98);
+  doc.text('Coeff.', 75, 98);
+  doc.text('Note Classe', 95, 98);
+  doc.text('Note Examen', 125, 98);
+  doc.text('Moyenne', 150, 98);
+  doc.text('Appréciation', 172, 98);
   
-  doc.line(20, 103, 190, 103);
+  doc.line(15, 103, 195, 103);
   
   // Table rows
   doc.setFont('Helvetica', 'normal');
@@ -55,9 +64,15 @@ export function exportBulletinPDF(
   let totalCoefficients = 0;
   
   grades.forEach((g) => {
-    doc.text(g.subject, 20, y);
-    doc.text(String(g.coefficient), 100, y);
-    doc.text(`${g.value.toFixed(1)}/20`, 140, y);
+    const subjName = g.subject.length > 28 ? g.subject.substring(0, 26) + '..' : g.subject;
+    doc.text(subjName, 15, y);
+    doc.text(String(g.coefficient), 75, y);
+    
+    const clText = g.classNote !== undefined && g.classNote !== null ? `${g.classNote.toFixed(1)}/20` : '—';
+    const exText = g.examNote !== undefined && g.examNote !== null ? `${g.examNote.toFixed(1)}/20` : '—';
+    doc.text(clText, 95, y);
+    doc.text(exText, 125, y);
+    doc.text(`${g.value.toFixed(2)}/20`, 150, y);
     
     // appreciation
     let appraisal = 'Passable';
@@ -65,33 +80,33 @@ export function exportBulletinPDF(
     else if (g.value >= 14) appraisal = 'Bien';
     else if (g.value >= 12) appraisal = 'Assez Bien';
     else if (g.value < 10) appraisal = 'Insuffisant';
-    doc.text(appraisal, 165, y);
+    doc.text(appraisal, 172, y);
     
     totalPoints += g.value * g.coefficient;
     totalCoefficients += g.coefficient;
     y += 10;
   });
   
-  doc.line(20, y - 5, 190, y - 5);
+  doc.line(15, y - 5, 195, y - 5);
   
   // Calculate average
   const average = totalCoefficients > 0 ? (totalPoints / totalCoefficients) : 0;
   
   // Summary
   doc.setFont('Helvetica', 'bold');
-  doc.text('Moyenne Générale :', 100, y + 5);
-  doc.text(`${average.toFixed(2)}/20`, 140, y + 5);
+  doc.text('Moyenne Générale :', 110, y + 5);
+  doc.text(`${average.toFixed(2)}/20`, 150, y + 5);
   
-  let resultText = 'Admis';
-  if (average < 10) resultText = 'Ajourné';
-  doc.text('Résultat :', 100, y + 15);
-  doc.text(resultText, 140, y + 15);
+  let resultText = 'Admis(e)';
+  if (average < 10) resultText = 'Ajourné(e)';
+  doc.text('Résultat :', 110, y + 15);
+  doc.text(resultText, 150, y + 15);
   
   // Footer
   doc.setFont('Helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184);
-  doc.text(`Généré automatiquement par le portail CAMPUS le ${new Date().toLocaleDateString('fr-FR')}`, 20, 280);
+  doc.text(`Généré automatiquement par le portail CAMPUS le ${new Date().toLocaleDateString('fr-FR')}`, 15, 280);
   
   doc.save(`bulletin_${studentName.replace(/\s+/g, '_')}_S${semester}.pdf`);
 }

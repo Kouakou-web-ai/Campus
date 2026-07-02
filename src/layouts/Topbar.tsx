@@ -43,6 +43,20 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      } else if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchOpen]);
+
   const formattedDate = time.toLocaleDateString(language === 'en' ? 'en-US' : 'fr-FR', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
@@ -194,23 +208,6 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
           </button>
         )}
       </div>
-
-      {/* Keyboard Shortcut Hook */}
-      {(() => {
-        useEffect(() => {
-          const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-              e.preventDefault();
-              setSearchOpen(true);
-            } else if (e.key === 'Escape' && searchOpen) {
-              setSearchOpen(false);
-            }
-          };
-          window.addEventListener('keydown', handleKeyDown);
-          return () => window.removeEventListener('keydown', handleKeyDown);
-        }, [searchOpen]);
-        return null;
-      })()}
 
       {/* Real-time Date and Time */}
       <div className="hidden md:flex items-center gap-2 text-xs text-content-secondary bg-app border border-border-subtle rounded-xl px-3 py-2 font-medium">

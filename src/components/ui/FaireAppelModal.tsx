@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
+import { useAuthStore } from '../../store/authStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 
 interface FaireAppelModalProps {
@@ -10,13 +11,17 @@ interface FaireAppelModalProps {
 }
 
 export default function FaireAppelModal({ courseId, universityId, onClose }: FaireAppelModalProps) {
-  const { students, courses, markAttendance, addTransaction, updateStudent } = useRealtimeDataStore();
+  const { user } = useAuthStore();
+  const { students, courses, teachers, markAttendance, addTransaction, updateStudent } = useRealtimeDataStore();
   const course = courses.find(c => c.id === courseId);
+  const currentTeacher = teachers.find(t => t.id === user?.id);
+  const teacherClasseId = currentTeacher?.classeId;
+
   const courseStudents = students.filter(s => {
     if (course?.classeId) {
       return s.classeId === course.classeId;
     }
-    return s.filiere === course?.filiere;
+    return teacherClasseId ? s.classeId === teacherClasseId : s.filiere === course?.filiere;
   });
 
   const [attendances, setAttendances] = useState<Record<string, 'present' | 'absent' | 'retard'>>({});

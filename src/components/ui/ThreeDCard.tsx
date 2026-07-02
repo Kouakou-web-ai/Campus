@@ -105,7 +105,7 @@ export default function ThreeDCard({
       />
       
       {/* Contenu principal (avec petit effet de décalage 3D pour la profondeur) */}
-      <div style={{ transform: 'translateZ(20px)' }} className="transition-transform duration-300">
+      <div style={{ transform: 'translateZ(20px)' }} className="transition-transform duration-300 h-full">
         {children}
       </div>
     </div>

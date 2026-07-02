@@ -13,18 +13,71 @@ export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuthStore();
-  const { subscribeToUniversity, subscribeToSuperAdmin } = useRealtimeDataStore();
+  const { 
+    subscribeToUniversity, 
+    subscribeToSuperAdmin, 
+    systemAnnouncement,
+    courses,
+    updateCourse
+  } = useRealtimeDataStore();
 
   useEffect(() => {
     if (!user) return;
     if (user.role === 'SUPER_ADMIN') {
       const unsub = subscribeToSuperAdmin();
       return () => unsub();
+    } else if (user.role === 'UNIVERSITY_ADMIN') {
+      const unsubSuper = subscribeToSuperAdmin();
+      const unsubUniv = user.universityId ? subscribeToUniversity(user.universityId) : () => {};
+      return () => {
+        unsubSuper();
+        unsubUniv();
+      };
     } else if (user.universityId) {
       const unsub = subscribeToUniversity(user.universityId);
       return () => unsub();
     }
-  }, [user, subscribeToUniversity, subscribeToSuperAdmin]);
+  }, [user?.universityId, user?.role, subscribeToUniversity, subscribeToSuperAdmin]);
+
+  // Real-time automatic course status transition based on calendar clock
+  useEffect(() => {
+    const universityId = user?.universityId;
+    if (!universityId || !courses || courses.length === 0) return;
+
+    const checkCourseStatuses = async () => {
+      const now = new Date();
+      for (const course of courses) {
+        if (!course || !course.date || !course.startTime || !course.duration) continue;
+
+        try {
+          const startDateTime = new Date(`${course.date}T${course.startTime}:00`);
+          if (isNaN(startDateTime.getTime())) continue;
+
+          const durationHours = course.duration || 2;
+          const endDateTime = new Date(startDateTime.getTime() + durationHours * 60 * 60 * 1000);
+
+          let calculatedStatus: 'planifie' | 'en_cours' | 'termine' = 'planifie';
+          if (now < startDateTime) {
+            calculatedStatus = 'planifie';
+          } else if (now >= startDateTime && now <= endDateTime) {
+            calculatedStatus = 'en_cours';
+          } else {
+            calculatedStatus = 'termine';
+          }
+
+          if (course.status !== calculatedStatus) {
+            await updateCourse(universityId, course.id, { status: calculatedStatus });
+          }
+        } catch (err) {
+          console.error("Failed to transition course status in real-time:", err);
+        }
+      }
+    };
+
+    checkCourseStatuses();
+    const interval = setInterval(checkCourseStatuses, 10000);
+    return () => clearInterval(interval);
+  }, [courses, user?.universityId, updateCourse]);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -159,6 +212,20 @@ export default function DashboardLayout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {systemAnnouncement?.active && (
+          <div className={`py-2 px-4 text-center text-xs font-bold flex items-center justify-center gap-2 border-b transition-all ${
+            systemAnnouncement.type === 'error'
+              ? 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30'
+              : systemAnnouncement.type === 'warning'
+              ? 'bg-amber-50 text-amber-800 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30'
+              : systemAnnouncement.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30'
+              : 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900/30'
+          }`}>
+            <span>📢 {systemAnnouncement.message}</span>
+          </div>
+        )}
+
         <Topbar
           onToggleSidebar={() => {
             if (window.innerWidth >= 1024) {

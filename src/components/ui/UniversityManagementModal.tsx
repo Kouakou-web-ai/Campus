@@ -12,20 +12,32 @@ interface UniversityManagementModalProps {
 }
 
 const PLAN_FEATURES = {
+  gratuit: {
+    name: 'Gratuit',
+    price: '0 FCFA / mois',
+    quota: '100 étudiants max',
+    features: ['Gestion de base', 'Support par e-mail']
+  },
   starter: {
     name: 'Starter',
     price: '50 000 FCFA / mois',
-    quota: '500 étudiants',
+    quota: '500 étudiants max',
     features: ['Accès aux fonctionnalités de base', 'Support par email']
   },
   pro: {
     name: 'Pro',
     price: '100 000 FCFA / mois',
-    quota: '5 000 étudiants',
+    quota: '5 000 étudiants max',
     features: ['Toutes les fonctionnalités', 'Support prioritaire 24/7', 'Messagerie intégrée']
   },
+  premium: {
+    name: 'Premium',
+    price: 'Sur devis',
+    quota: 'Étudiants illimités',
+    features: ['Infrastructure dédiée', 'Support ultra-prioritaire dédié', 'Fonctionnalités sur-mesure']
+  },
   enterprise: {
-    name: 'Entreprise',
+    name: 'Premium (Entreprise)',
     price: 'Sur devis',
     quota: 'Étudiants illimités',
     features: ['Infrastructure dédiée', 'Support ultra-prioritaire dédié', 'Fonctionnalités sur-mesure']
@@ -43,7 +55,7 @@ export default function UniversityManagementModal({ isOpen, onClose, universityI
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
-  const [plan, setPlan] = useState<'starter' | 'pro' | 'enterprise'>('pro');
+  const [plan, setPlan] = useState<'gratuit' | 'starter' | 'pro' | 'premium' | 'enterprise'>('pro');
   const [status, setStatus] = useState<any>('actif');
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -83,7 +95,7 @@ export default function UniversityManagementModal({ isOpen, onClose, universityI
     }
   };
 
-  const handleUpdatePlan = async (newPlan: 'starter' | 'pro' | 'enterprise') => {
+  const handleUpdatePlan = async (newPlan: 'gratuit' | 'starter' | 'pro' | 'premium' | 'enterprise') => {
     setIsSaving(true);
     try {
       await updateUniversity(u.id, { plan: newPlan });

@@ -1,5 +1,6 @@
 import { ref, onValue, type Unsubscribe, get, update, set, remove, push } from 'firebase/database';
 import { db } from '../../firebase-config';
+import { sendRealEmail } from './emailSender';
 import type { UserRole } from '../store/authStore';
 import type { UserProfile, UserStatus } from '../types/userAccount';
 import { normalizeUserStatus } from '../constants/accountStatus';
@@ -176,6 +177,28 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
           sentAt: new Date().toISOString(),
           type: 'welcome'
         });
+
+        // Envoi de l'e-mail réel via Nodemailer
+        const loginUrl = `${window.location.origin}/connexion`;
+        await sendRealEmail(
+          String(userData.email ?? ''),
+          "Félicitations - Votre portail d'établissement CAMPUS est actif !",
+          `<div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+             <h2 style="color: #4f46e5;">Félicitations, votre établissement est actif !</h2>
+             <p>Bonjour ${fullName},</p>
+             <p>Nous avons le plaisir de vous informer que votre demande d'administration pour l'établissement a été validée par le Super Administrateur CAMPUS.</p>
+             <p>Vous pouvez désormais accéder à votre tableau de bord d'administration et commencer la gestion universitaire.</p>
+             <p style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px; color: #78350f; font-size: 13px; border-radius: 4px;">
+               <strong>Important :</strong> Pour des raisons de sécurité, lors de votre première tentative de connexion, un email de vérification vous sera envoyé. <strong>Veuillez vérifier votre dossier Courriers Indésirables / Spams</strong> pour valider votre compte.
+             </p>
+             <p style="margin: 24px 0; text-align: center;">
+               <a href="${loginUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">Se connecter à CAMPUS</a>
+             </p>
+             <p style="color: #64748b; font-size: 12px;">Si le bouton ne fonctionne pas, copiez-collez ce lien : <br/> <a href="${loginUrl}">${loginUrl}</a></p>
+             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+             <p style="color: #64748b; font-size: 11px;">L'équipe CAMPUS</p>
+           </div>`
+        );
 
         // Réactiver tous les comptes liés à cette université
         const allUsersRef = ref(db, 'utilisateurs');

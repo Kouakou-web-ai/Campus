@@ -34,7 +34,7 @@ export interface University {
   name: string;
   city: string;
   country: string;
-  plan: 'starter' | 'pro' | 'enterprise';
+  plan: 'gratuit' | 'starter' | 'pro' | 'premium' | 'enterprise';
   status: StatusType;
   studentsCount: number;
   teachersCount: number;
@@ -77,6 +77,10 @@ export interface Student {
   lieuNaissance?: string;
   sexe?: 'M' | 'F';
   classeId?: string;
+  signatures?: {
+    secretariat?: string;
+    recteur?: string;
+  };
 }
 
 export interface Teacher {
@@ -107,13 +111,15 @@ export interface Course {
   studentsEnrolled: number;
   studentsMax: number;
   status: StatusType;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:MM
-  duration: number; // in minutes
+  date?: string; // YYYY-MM-DD
+  startTime?: string; // HH:MM
+  duration?: number; // in minutes
   progress: number;
   universityId: string;
   classeId?: string;
   classeName?: string;
+  schedule?: string;
+  room?: string;
 }
 
 export interface Attendance {
@@ -148,8 +154,15 @@ export interface Grade {
   avatar?: string;
   courseId: string;
   note?: number;
+  classNote?: number;
+  examNote?: number;
+  manualNote?: number;
+  isManual?: boolean;
   appreciation?: string;
   submitted: boolean;
+  teacherSignature?: string;
+  classNotes?: number[];
+  examNotes?: number[];
 }
 
 export interface Assignment {
@@ -175,6 +188,7 @@ export interface Resource {
   uploadedAt: string;
   downloadCount: number;
   url?: string;
+  teacherId?: string;
 }
 
 export interface ScheduleEvent {
@@ -183,10 +197,12 @@ export interface ScheduleEvent {
   courseCode: string;
   room: string;
   teacher?: string;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:MM
+  date?: string; // YYYY-MM-DD
+  startTime?: string; // HH:MM
   durationHours: number;
   color: string;
+  dayOfWeek?: number;
+  startHour?: number;
 }
 
 export interface Notification {
@@ -219,3 +235,23 @@ export interface TableColumn<T> {
   render?: (value: unknown, row: T) => React.ReactNode;
   width?: string;
 }
+
+export interface DelegationInfo {
+  active: boolean;
+  expiresAt: string;
+  originalRole: 'FINANCE_MANAGER' | 'STUDENT_MANAGER' | 'TEACHER_MANAGER';
+  delegatedBy: string;
+}
+
+export interface Gestionnaire {
+  id: string;
+  name: string;
+  email: string;
+  role: 'FINANCE_MANAGER' | 'STUDENT_MANAGER' | 'TEACHER_MANAGER';
+  status: 'actif' | 'suspendu';
+  universityId: string;
+  createdAt: string;
+  delegation?: DelegationInfo;
+}
+
+

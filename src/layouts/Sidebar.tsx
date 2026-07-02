@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, Settings, ChevronDown, GraduationCap, Trash2 } from 'lucide-react';
+import { LogOut, Settings, ChevronDown, GraduationCap, Trash2, Plus, X } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { navigationByRole, roleLabels } from '../constants/navigation';
 import { Avatar } from '../components/ui/AvatarGroup';
@@ -20,6 +20,50 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   const location = useLocation();
   const { t } = useTranslation();
 
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newUnivName, setNewUnivName] = useState('');
+  const [newUnivCity, setNewUnivCity] = useState('');
+  const [newUnivCountry, setNewUnivCountry] = useState('');
+  const [creatingUniv, setCreatingUniv] = useState(false);
+  const { addUniversity, currentUniversity } = useRealtimeDataStore();
+  const switchUniversity = useAuthStore(state => state.switchUniversity);
+
+  const handleCreateUniversity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!newUnivName.trim() || !newUnivCity.trim() || !newUnivCountry.trim()) {
+      ToastError("Veuillez remplir tous les champs.");
+      return;
+    }
+    setCreatingUniv(true);
+    try {
+      await addUniversity({
+        name: newUnivName.trim(),
+        city: newUnivCity.trim(),
+        country: newUnivCountry.trim(),
+        plan: 'pro',
+        status: 'actif',
+        studentsCount: 0,
+        teachersCount: 0,
+        mrr: 0,
+        createdAt: new Date().toISOString().split('T')[0],
+        adminUid: user.id,
+        adminName: user.name,
+        adminEmail: user.email
+      });
+      ToastSuccess("Nouvelle université créée avec succès !");
+      setShowCreateModal(false);
+      setNewUnivName('');
+      setNewUnivCity('');
+      setNewUnivCountry('');
+    } catch (err: any) {
+      console.error(err);
+      ToastError("Erreur lors de la création de l'université.");
+    } finally {
+      setCreatingUniv(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (window.confirm(t('nav.delete_confirm'))) {
       try {
@@ -34,6 +78,25 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   const { requests, subscribe: subscribeReg, teardown: teardownReg } = useRegistrationStore();
   const { universities, transactions, grades, students, teachers } = useRealtimeDataStore();
   const { subscribeToAllUserChats, totalUnreadCount } = useChatStore();
+
+  const adminUniversities = user && user.role === 'UNIVERSITY_ADMIN'
+    ? universities.filter(u => u.adminUid === user.id || u.adminEmail === user.email || u.id === user.universityId)
+    : [];
+
+  if (user && user.role === 'UNIVERSITY_ADMIN' && user.universityId && !adminUniversities.some(u => u.id === user.universityId)) {
+    adminUniversities.push({
+      id: user.universityId,
+      name: currentUniversity?.name || 'CAMPUS Établissement',
+      city: currentUniversity?.city || '',
+      country: currentUniversity?.country || '',
+      plan: 'pro',
+      status: 'actif',
+      studentsCount: 0,
+      teachersCount: 0,
+      mrr: 0,
+      createdAt: ''
+    });
+  }
 
   useEffect(() => {
     if (user && (user.role === 'SUPER_ADMIN' || user.role === 'UNIVERSITY_ADMIN')) {
@@ -102,12 +165,44 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
         )}
       </div>
 
+      {/* Selector and + Button */}
+      {user.role === 'UNIVERSITY_ADMIN' && !collapsed && (
+        <div className="px-4 py-2.5 border-b border-border-subtle flex items-center justify-between gap-2 bg-surface-raised/30">
+          <div className="flex-1 min-w-0">
+            <label className="block text-[9px] font-bold text-content-muted uppercase tracking-wider mb-1">Établissement Actif</label>
+            <select
+              value={user.universityId || ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  switchUniversity(e.target.value);
+                  ToastSuccess("Établissement actif modifié !");
+                }
+              }}
+              className="select select-bordered select-xs w-full text-xs font-semibold bg-surface border-border-subtle focus:outline-none focus:border-indigo-500 h-8 rounded-lg"
+            >
+              {adminUniversities.map((u) => (
+                <option key={u.id} value={u.id}>
+                  🏫 {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-square btn-xs btn-outline border-border-subtle text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white rounded-lg flex items-center justify-center p-1 cursor-pointer self-end h-8 w-8"
+            title="Créer un autre établissement"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {navSections.map((section, si) => (
           <div key={si}>
             {section.title && !collapsed && (
-              <p className="text-xs font-semibold text-content-muted uppercase tracking-wider px-2 mb-2">
+              <p className="text-[10px] font-bold text-content-muted uppercase tracking-widest px-2 mb-2">
                 {t(sectionToKeyMap[section.title] || section.title)}
               </p>
             )}
@@ -132,11 +227,6 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                     if (count > 0) badgeValue = `(${count})`;
                   } else if (item.path === '/app/admin/finance') {
                     const count = transactions.filter(t => t.status === 'en_attente').length;
-                    if (count > 0) badgeValue = `(${count})`;
-                  }
-                } else if (user.role === 'TEACHER') {
-                  if (item.path === '/app/enseignant/notes') {
-                    const count = grades.filter(g => !g.submitted).length;
                     if (count > 0) badgeValue = `(${count})`;
                   }
                 } else if (user.role === 'STUDENT') {
@@ -253,6 +343,84 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           </button>
         )}
       </div>
+
+      {/* Modale de création d'université */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full border border-slate-100 dark:border-slate-800 shadow-2xl relative animate-fade-up">
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className="absolute right-4 top-4 p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <X size={16} />
+            </button>
+            
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+              <Plus className="text-indigo-500" size={20} />
+              Créer un nouvel Établissement
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Ajoutez un autre établissement à votre gestion multi-tenant.
+            </p>
+
+            <form onSubmit={handleCreateUniversity} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nom de l'établissement</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Université Félix Houphouët-Boigny"
+                  value={newUnivName}
+                  onChange={(e) => setNewUnivName(e.target.value)}
+                  required
+                  className="input input-bordered input-sm w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-sm h-10 rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ville</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Abidjan"
+                    value={newUnivCity}
+                    onChange={(e) => setNewUnivCity(e.target.value)}
+                    required
+                    className="input input-bordered input-sm w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-sm h-10 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pays</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Côte d'Ivoire"
+                    value={newUnivCountry}
+                    onChange={(e) => setNewUnivCountry(e.target.value)}
+                    required
+                    className="input input-bordered input-sm w-full bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-sm h-10 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="btn btn-sm btn-ghost rounded-xl"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingUniv}
+                  className="btn btn-sm btn-primary rounded-xl px-4"
+                >
+                  {creatingUniv ? <span className="loading loading-spinner loading-xs" /> : 'Créer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

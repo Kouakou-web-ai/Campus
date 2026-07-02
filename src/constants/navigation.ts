@@ -19,6 +19,7 @@ import {
   Home,
   Mail,
   MessageSquare,
+  ShieldCheck,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -49,9 +50,12 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
       title: 'Gestion',
       items: [
         { label: 'Tableau de bord', path: '/app/admin', icon: LayoutDashboard },
+        { label: 'Gestionnaires', path: '/app/admin/gestionnaires', icon: ShieldCheck },
+        { label: 'Classes', path: '/app/admin/classes', icon: Library },
         { label: 'Étudiants', path: '/app/admin/etudiants', icon: Users },
         { label: 'Enseignants', path: '/app/admin/enseignants', icon: GraduationCap },
         { label: 'Cours', path: '/app/admin/cours', icon: BookOpen },
+        { label: 'Bulletins', path: '/app/admin/bulletins', icon: Award },
       ],
     },
     {
@@ -68,6 +72,7 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
         { label: 'Gestion des notes', path: '/app/enseignant/notes', icon: ClipboardList },
         { label: 'Feuille d\'appel', path: '/app/enseignant/absences', icon: UserCheck },
         { label: 'Devoirs', path: '/app/enseignant/devoirs', icon: FileText },
+        { label: 'Bulletins', path: '/app/admin/bulletins', icon: Award },
       ],
     },
   ],
@@ -91,6 +96,30 @@ export const navigationByRole: Record<UserRole, NavSection[]> = {
       ],
     },
   ],
+  FINANCE_MANAGER: [
+    {
+      title: 'Finance',
+      items: [
+        { label: 'Centre financier', path: '/app/admin/finance', icon: DollarSign },
+      ],
+    },
+  ],
+  STUDENT_MANAGER: [
+    {
+      title: 'Gestion',
+      items: [
+        { label: 'Étudiants', path: '/app/admin/etudiants', icon: Users },
+      ],
+    },
+  ],
+  TEACHER_MANAGER: [
+    {
+      title: 'Gestion',
+      items: [
+        { label: 'Enseignants', path: '/app/admin/enseignants', icon: GraduationCap },
+      ],
+    },
+  ],
 };
 
 export const roleLabels: Record<UserRole, string> = {
@@ -99,6 +128,9 @@ export const roleLabels: Record<UserRole, string> = {
   TEACHER: 'Enseignant',
   STUDENT: 'Étudiant',
   PARENT: 'Parent',
+  FINANCE_MANAGER: 'Gestionnaire Finance',
+  STUDENT_MANAGER: 'Gestionnaire Étudiants',
+  TEACHER_MANAGER: 'Gestionnaire Enseignants',
 };
 
 export const roleDashboardPath: Record<UserRole, string> = {
@@ -107,5 +139,9 @@ export const roleDashboardPath: Record<UserRole, string> = {
   TEACHER: '/app/enseignant',
   STUDENT: '/app/etudiant',
   PARENT: '/app/parent',
+  FINANCE_MANAGER: '/app/admin/finance',
+  STUDENT_MANAGER: '/app/admin/etudiants',
+  TEACHER_MANAGER: '/app/admin/enseignants',
 };
+
 

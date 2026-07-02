@@ -329,12 +329,17 @@ export default function PublicLayout() {
               <h5 className="text-sm font-semibold text-white mb-4">Légal</h5>
               <ul className="space-y-2.5 text-sm">
                 <li>
-                  <Link to="#" className="hover:text-white transition-colors">
+                  <Link to="/mentions-legales" className="hover:text-white transition-colors">
                     Mentions légales
                   </Link>
                 </li>
                 <li>
-                  <Link to="#" className="hover:text-white transition-colors">
+                  <Link to="/conditions" className="hover:text-white transition-colors">
+                    Conditions d'utilisation
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/confidentialite" className="hover:text-white transition-colors">
                     Confidentialité
                   </Link>
                 </li>

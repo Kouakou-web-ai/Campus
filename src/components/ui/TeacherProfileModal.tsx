@@ -6,6 +6,7 @@ import { Avatar } from './AvatarGroup';
 import { useAuthStore } from '../../store/authStore';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
+import { useNow, getCourseProgress, getCourseStatus } from '../../hooks/useNow';
 
 interface TeacherProfileModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export default function TeacherProfileModal({ isOpen, onClose, teacher }: Teache
   const { courses: allCourses, assignTeacherToCourse } = useRealtimeDataStore();
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [assigning, setAssigning] = useState(false);
+  const now = useNow(30_000);
 
   if (!isOpen || !teacher) return null;
 
@@ -170,29 +172,62 @@ export default function TeacherProfileModal({ isOpen, onClose, teacher }: Teache
               {teacher.courses.length === 0 ? (
                 <p className="text-center text-sm text-slate-400 py-6">Aucun cours attribué à cet enseignant.</p>
               ) : (
-                teacher.courses.map((course) => (
+                teacher.courses.map((course) => {
+                  // Calcul progression temps réel
+                  const scheduledCourse = course as Course & { startHour?: number; durationHours?: number };
+                  const parsedStartHour = course.startTime ? parseInt(String(course.startTime).split(':')[0], 10) : undefined;
+                  const startHour = scheduledCourse.startHour ?? (
+                    typeof parsedStartHour === 'number' && Number.isFinite(parsedStartHour) ? parsedStartHour : 8
+                  );
+                  const duration = scheduledCourse.durationHours ?? (course.duration ? course.duration / 60 : 2);
+                  const status = getCourseStatus(now, course.date, startHour, duration);
+                  const liveProgress = status === 'termine'
+                    ? 100
+                    : status === 'en_cours'
+                    ? getCourseProgress(now, course.date, startHour, duration)
+                    : (course.progress || 0);
+
+                  const progressColor = status === 'termine'
+                    ? 'bg-emerald-500'
+                    : status === 'en_cours'
+                    ? 'bg-indigo-500'
+                    : 'bg-slate-300';
+
+                  return (
                   <div key={course.id} className="card-premium p-4 bg-slate-50 border-none">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h4 className="font-semibold text-slate-800 text-sm">{course.title}</h4>
                         <p className="text-xs text-slate-400 mt-0.5">{course.code} · {course.filiere}</p>
                       </div>
-                      <span className="text-xs bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded-lg">
-                        Semestre {course.semester}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-xs bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded-lg">
+                          Semestre {course.semester}
+                        </span>
+                        {status === 'termine' && (
+                          <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">✅ Terminé</span>
+                        )}
+                        {status === 'en_cours' && (
+                          <span className="text-[10px] bg-orange-50 text-orange-700 font-bold px-2 py-0.5 rounded-full border border-orange-200 animate-pulse">● En cours</span>
+                        )}
+                      </div>
                     </div>
                     {/* Progress */}
                     <div className="mt-3">
                       <div className="flex justify-between text-[10px] text-slate-400 mb-1">
                         <span>Progression du cours</span>
-                        <span className="font-semibold text-slate-600">{course.progress || 0}%</span>
+                        <span className="font-semibold text-slate-600">{liveProgress}%</span>
                       </div>
                       <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${course.progress || 0}%` }} />
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 ${progressColor}`}
+                          style={{ width: `${liveProgress}%` }}
+                        />
                       </div>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

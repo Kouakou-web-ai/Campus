@@ -46,7 +46,7 @@ export default function RegistrationRequestCard({
           {showUniversity && (
             <div>
               <p className="text-xs font-semibold text-content-muted uppercase tracking-wide">Université</p>
-              <p className="text-content-secondary mt-0.5">{request.universityName}</p>
+              <p className="text-xs text-content-secondary mt-0.5">{request.universityName}</p>
             </div>
           )}
           <div>

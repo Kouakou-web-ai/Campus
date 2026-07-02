@@ -90,7 +90,7 @@ function RegistrationRequestRow({
       <td className="font-medium text-content">{request.prenom}</td>
       <td className="text-content">{request.nom}</td>
       <td className="text-content-secondary">{request.email}</td>
-      {showUniversity && <td className="text-content-secondary">{request.universityName}</td>}
+      {showUniversity && <td className="text-xs text-content-secondary">{request.universityName}</td>}
       <td className="text-content-secondary">{date}</td>
       <td>
         <UserStatusBadge status={request.status} />

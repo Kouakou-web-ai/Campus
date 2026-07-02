@@ -1,10 +1,50 @@
 import { create } from 'zustand';
 import { useNotificationStore } from './notificationStore';
+import { useAuthStore } from './authStore';
 import { db, auth, firebaseConfig } from '../../firebase-config';
 import { ref, onValue, set, push, update, remove, get } from 'firebase/database';
-import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData, StatusType, Class } from '../types';
+import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData, StatusType, Class, Gestionnaire } from '../types';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { sendRealEmail } from '../services/emailSender';
+
+const FALLBACK_UNIVERSITY_NAME = 'votre établissement';
+
+const isUsableText = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  const text = value.trim();
+  return text.length > 0 && text.toLowerCase() !== 'undefined' && text.toLowerCase() !== 'null';
+};
+
+const getDisplayText = (value: unknown, fallback: string) => (
+  isUsableText(value) ? value.trim() : fallback
+);
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}[char] || char));
+
+async function resolveUniversityName(
+  universityId: string,
+  state: Pick<RealtimeDataState, 'currentUniversity' | 'universities'>
+): Promise<string> {
+  const currentName = state.currentUniversity?.id === universityId ? state.currentUniversity.name : undefined;
+  const storedName = state.universities.find((u) => u.id === universityId)?.name;
+  const localName = getDisplayText(currentName, getDisplayText(storedName, ''));
+  if (localName) return localName;
+
+  try {
+    const nameSnapshot = await get(ref(db, `universites/${universityId}/branding/name`));
+    return getDisplayText(nameSnapshot.val(), FALLBACK_UNIVERSITY_NAME);
+  } catch (error) {
+    console.error("Erreur lors de la récupération du nom de l'université:", error);
+    return FALLBACK_UNIVERSITY_NAME;
+  }
+}
 
 interface RealtimeDataState {
   students: Student[];
@@ -17,6 +57,7 @@ interface RealtimeDataState {
   scheduleEvents: ScheduleEvent[];
   universities: University[];
   revenueData: RevenueData[];
+  gestionnaires: Gestionnaire[];
   currentUniversity: University | null;
   announcements: any[];
   emailsSimules: any[];
@@ -29,6 +70,11 @@ interface RealtimeDataState {
   salles: string[];
   evaluations: any[];
   suggestions: any[];
+  systemAnnouncement: { message: string; type: 'info' | 'warning' | 'error' | 'success'; active: boolean; updatedAt?: string } | null;
+  liveMeetings: any[];
+  
+  startLiveMeeting: (universityId: string, meetingId: string, meetingData: any) => Promise<void>;
+  endLiveMeeting: (universityId: string, meetingId: string) => Promise<void>;
   
   subscribeToUniversity: (universityId: string) => () => void;
   subscribeToSuperAdmin: () => () => void;
@@ -83,6 +129,9 @@ interface RealtimeDataState {
       markedAt: string;
     }
   ) => Promise<void>;
+  addGestionnaire: (universityId: string, data: { name: string; email: string; role: 'FINANCE_MANAGER' | 'STUDENT_MANAGER' | 'TEACHER_MANAGER' }) => Promise<{ tempPassword: string }>;
+  updateGestionnaire: (universityId: string, uid: string, data: Partial<Gestionnaire>) => Promise<void>;
+  deleteGestionnaire: (universityId: string, uid: string) => Promise<void>;
 }
 
 export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStore) => ({
@@ -108,6 +157,9 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   salles: [],
   evaluations: [],
   suggestions: [],
+  gestionnaires: [],
+  systemAnnouncement: null,
+  liveMeetings: [],
 
   subscribeToUniversity: (universityId: string) => {
     setStore({ loading: true });
@@ -280,7 +332,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         isInitialEvals = false;
         return;
       }
-      const userRole = useAuthStore.getState().user?.role;
+      const userRole = useAuthStore.getState().user?.role as string;
       if (data && (userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN')) {
         const newest = list[0];
         if (newest) {
@@ -317,7 +369,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         isInitialSuggs = false;
         return;
       }
-      const userRole = useAuthStore.getState().user?.role;
+      const userRole = useAuthStore.getState().user?.role as string;
       if (data && (userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN')) {
         const newest = list[0];
         if (newest) {
@@ -370,6 +422,21 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       } else {
         setStore({ salles: [] });
       }
+    }));
+
+    // 24. Gestionnaires
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/gestionnaires`), (snap) => {
+      setStore({ gestionnaires: parseList(snap.val()) });
+    }));
+
+    // 25. Annonces Globales
+    unsubscribers.push(onValue(ref(db, 'annonces_globales'), (snap) => {
+      setStore({ systemAnnouncement: snap.val() || null });
+    }));
+
+    // 26. Cours en ligne / Visioconférence
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/cours_en_ligne`), (snap) => {
+      setStore({ liveMeetings: parseList(snap.val()) });
     }));
 
     return () => {
@@ -508,7 +575,16 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       setStore({ loading: false });
     });
 
-    return unsubscribeUnivs;
+    // Subscribe to global announcements
+    const announcementRef = ref(db, 'annonces_globales');
+    const unsubscribeAnnouncement = onValue(announcementRef, (snap) => {
+      setStore({ systemAnnouncement: snap.val() || null });
+    });
+
+    return () => {
+      unsubscribeUnivs();
+      unsubscribeAnnouncement();
+    };
   },
 
   addStudent: async (universityId, studentData) => {
@@ -524,6 +600,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     // 2. Générer des mots de passe temporaires
     const tempStudentPassword = 'ETU-' + Math.random().toString(36).substring(2, 10).toUpperCase();
     const tempParentPassword = 'PAR-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    const universityName = await resolveUniversityName(universityId, getStore());
 
     // 3. Enregistrer l'étudiant dans Firebase Auth (via une app secondaire)
     let studentUid = '';
@@ -641,7 +718,8 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       to: studentInfo.email.trim(),
       recipientName: studentInfo.name,
       subject: "Bienvenue sur CAMPUS - Vos accès Étudiant",
-      body: `Bonjour ${studentInfo.name},\n\nVotre inscription à l'université a été validée. Votre compte étudiant a été créé.\n\nVoici vos identifiants temporaires de connexion :\n- Email : ${studentInfo.email.trim()}\n- Matricule : ${studentId}\n- Mot de passe temporaire : ${tempStudentPassword}\n\nLors de votre première connexion, vous devrez obligatoirement changer ce mot de passe temporaire.\n\nCordialement,\nL'administration académique`,
+      body: `Bonjour ${studentInfo.name},\n\nVotre compte étudiant à ${universityName} sur la plateforme CAMPUS a été créé avec succès par l'administration.\n\nVoici vos identifiants temporaires de connexion :\n- Email : ${studentInfo.email.trim()}\n- Matricule : ${studentId}\n- Mot de passe temporaire : ${tempStudentPassword}\n\nLors de votre première connexion, vous devrez obligatoirement changer ce mot de passe temporaire.\n\nCordialement,\nL'administration académique`,
+      universityName,
       sentAt: new Date().toISOString(),
       type: 'welcome'
     });
@@ -652,10 +730,75 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       to: parentEmail.trim(),
       recipientName: parentName,
       subject: "Bienvenue sur CAMPUS - Vos accès Parent",
-      body: `Bonjour ${parentName},\n\nVotre compte de suivi parent pour l'étudiant(e) ${studentInfo.name} (Matricule : ${studentId}) a été créé automatiquement.\n\nVoici vos identifiants temporaires de connexion :\n- Email : ${parentEmail.trim()}\n- Matricule de l'enfant : ${studentId}\n- Mot de passe temporaire : ${tempParentPassword}\n\nLors de votre première connexion, vous devrez obligatoirement changer ce mot de passe temporaire.\n\nCordialement,\nL'administration académique`,
+      body: `Bonjour ${parentName},\n\nVotre compte parent à ${universityName} pour le suivi de l'étudiant(e) ${studentInfo.name} (Matricule : ${studentId}) a été créé automatiquement sur la plateforme CAMPUS.\n\nVoici vos identifiants temporaires de connexion :\n- Email : ${parentEmail.trim()}\n- Matricule de l'enfant : ${studentId}\n- Mot de passe temporaire : ${tempParentPassword}\n\nLors de votre première connexion, vous devrez obligatoirement changer ce mot de passe temporaire.\n\nCordialement,\nL'administration académique`,
+      universityName,
       sentAt: new Date().toISOString(),
       type: 'welcome'
     });
+
+    // Envoi des e-mails réels via Nodemailer
+    const loginUrl = `${window.location.origin}/connexion`;
+    const safeStudentName = escapeHtml(getDisplayText(studentInfo.name, 'Étudiant'));
+    const safeStudentEmail = escapeHtml(studentInfo.email.trim());
+    const safeParentName = escapeHtml(getDisplayText(parentName, 'Parent'));
+    const safeParentEmail = escapeHtml(parentEmail.trim());
+    const safeStudentId = escapeHtml(studentId);
+    const safeUniversityName = escapeHtml(universityName);
+    const safeLoginUrl = escapeHtml(loginUrl);
+    const safeStudentPassword = escapeHtml(tempStudentPassword);
+    const safeParentPassword = escapeHtml(tempParentPassword);
+    
+    // E-mail réel Étudiant
+    await sendRealEmail(
+      studentInfo.email.trim(),
+      "Bienvenue sur CAMPUS - Vos accès Étudiant",
+      `<div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+         <h2 style="color: #4f46e5;">Bienvenue sur CAMPUS !</h2>
+         <p>Bonjour <strong>${safeStudentName}</strong>,</p>
+         <p>Votre compte étudiant à <strong>${safeUniversityName}</strong> sur la plateforme CAMPUS a été créé avec succès par l'administration.</p>
+         <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 16px 0; border: 1px solid #cbd5e1;">
+           <h3 style="margin-top: 0; color: #334155; font-size: 14px;">Vos identifiants temporaires de connexion :</h3>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Email :</strong> ${safeStudentEmail}</p>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Matricule :</strong> ${safeStudentId}</p>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Mot de passe provisoire :</strong> <span style="font-family: monospace; font-size: 14px; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #0f172a;">${safeStudentPassword}</span></p>
+         </div>
+         <p style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px; color: #78350f; font-size: 12px; border-radius: 4px;">
+           <strong>Important :</strong> Lors de votre première connexion, vous devrez obligatoirement modifier ce mot de passe temporaire pour sécuriser votre compte.
+         </p>
+         <p style="margin: 24px 0; text-align: center;">
+           <a href="${safeLoginUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">Se connecter à CAMPUS</a>
+         </p>
+         <p style="color: #64748b; font-size: 12px;">Si le bouton ne fonctionne pas, copiez-collez ce lien : <br/> <a href="${safeLoginUrl}">${safeLoginUrl}</a></p>
+         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+         <p style="color: #64748b; font-size: 11px;">L'administration académique</p>
+       </div>`
+    );
+
+    // E-mail réel Parent
+    await sendRealEmail(
+      parentEmail.trim(),
+      "Bienvenue sur CAMPUS - Vos accès Parent",
+      `<div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+         <h2 style="color: #4f46e5;">Suivi Parent - Bienvenue sur CAMPUS !</h2>
+         <p>Bonjour <strong>${safeParentName}</strong>,</p>
+         <p>Votre compte parent à <strong>${safeUniversityName}</strong> pour le suivi de la scolarité de <strong>${safeStudentName}</strong> a été créé automatiquement sur la plateforme CAMPUS.</p>
+         <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 16px 0; border: 1px solid #cbd5e1;">
+           <h3 style="margin-top: 0; color: #334155; font-size: 14px;">Vos identifiants temporaires de connexion :</h3>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Email :</strong> ${safeParentEmail}</p>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Matricule de l'enfant :</strong> ${safeStudentId}</p>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Mot de passe provisoire :</strong> <span style="font-family: monospace; font-size: 14px; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #0f172a;">${safeParentPassword}</span></p>
+         </div>
+         <p style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px; color: #78350f; font-size: 12px; border-radius: 4px;">
+           <strong>Important :</strong> Lors de votre première connexion, vous devrez obligatoirement modifier ce mot de passe temporaire pour sécuriser votre compte.
+         </p>
+         <p style="margin: 24px 0; text-align: center;">
+           <a href="${safeLoginUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">Se connecter à CAMPUS</a>
+         </p>
+         <p style="color: #64748b; font-size: 12px;">Si le bouton ne fonctionne pas, copiez-collez ce lien : <br/> <a href="${safeLoginUrl}">${safeLoginUrl}</a></p>
+         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+         <p style="color: #64748b; font-size: 11px;">L'administration académique</p>
+       </div>`
+    );
 
     return {
       studentId,
@@ -732,6 +875,32 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       type: 'welcome'
     });
 
+    // Email réel Enseignant via Nodemailer
+    const loginUrl = `${window.location.origin}/connexion`;
+    await sendRealEmail(
+      teacher.email.trim(),
+      "Bienvenue sur CAMPUS - Vos accès Enseignant",
+      `<div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+         <h2 style="color: #4f46e5;">Bienvenue sur CAMPUS !</h2>
+         <p>Bonjour <strong>${teacher.name}</strong>,</p>
+         <p>Votre établissement vous a inscrit en tant qu'enseignant sur la plateforme CAMPUS.</p>
+         <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 16px 0; border: 1px solid #cbd5e1;">
+           <h3 style="margin-top: 0; color: #334155; font-size: 14px;">Vos identifiants temporaires de connexion :</h3>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Email :</strong> ${teacher.email.trim()}</p>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Mot de passe provisoire :</strong> <span style="font-family: monospace; font-size: 14px; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #0f172a;">${tempTeacherPassword}</span></p>
+         </div>
+         <p style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px; color: #78350f; font-size: 12px; border-radius: 4px;">
+           <strong>Important :</strong> Lors de votre première connexion, vous devrez obligatoirement modifier ce mot de passe temporaire pour sécuriser votre compte.
+         </p>
+         <p style="margin: 24px 0; text-align: center;">
+           <a href="${loginUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">Se connecter à CAMPUS</a>
+         </p>
+         <p style="color: #64748b; font-size: 12px;">Si le bouton ne fonctionne pas, copiez-collez ce lien : <br/> <a href="${loginUrl}">${loginUrl}</a></p>
+         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+         <p style="color: #64748b; font-size: 11px;">L'administration académique</p>
+       </div>`
+    );
+
     return {
       tempTeacherPassword,
       teacherEmail: teacher.email.trim(),
@@ -752,6 +921,46 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
   updateCourse: async (universityId, courseId, data) => {
     const courseRef = ref(db, `universites/${universityId}/cours/${courseId}`);
+    try {
+      const oldSnapshot = await get(courseRef);
+      if (oldSnapshot.exists()) {
+        const oldData = oldSnapshot.val();
+        const oldCode = oldData.code;
+
+        // If code, title, teacher, date, or time changed, update schedule events
+        if (oldCode) {
+          const schedRef = ref(db, `universites/${universityId}/emploi_du_temps`);
+          const schedSnapshot = await get(schedRef);
+          if (schedSnapshot.exists()) {
+            const schedData = schedSnapshot.val();
+            const matchingEvent = Object.entries(schedData).find(
+              ([_, evt]: [string, any]) => evt && evt.courseCode === oldCode
+            );
+            if (matchingEvent) {
+              const [evtId] = matchingEvent;
+              const eventUpdate: any = {};
+              if (data.code !== undefined) eventUpdate.courseCode = data.code;
+              if (data.title !== undefined) eventUpdate.courseTitle = data.title;
+              if (data.teacher !== undefined) eventUpdate.teacherName = data.teacher;
+              if (data.startTime !== undefined) eventUpdate.startTime = data.startTime;
+              if (data.duration !== undefined) eventUpdate.duration = data.duration;
+              if (data.date !== undefined) {
+                eventUpdate.date = data.date;
+                const d = new Date(data.date);
+                const day = d.getDay();
+                eventUpdate.dayOfWeek = day === 0 ? 6 : day - 1; // 0 is Monday
+              }
+
+              if (Object.keys(eventUpdate).length > 0) {
+                await update(ref(db, `universites/${universityId}/emploi_du_temps/${evtId}`), eventUpdate);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error updating related schedule events", e);
+    }
     await update(courseRef, data);
   },
 
@@ -770,6 +979,20 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   updateGrade: async (universityId, gradeId, data) => {
     const gradeRef = ref(db, `universites/${universityId}/notes/${gradeId}`);
     await update(gradeRef, data);
+  },
+
+  startLiveMeeting: async (universityId, meetingId, meetingData) => {
+    const meetingRef = ref(db, `universites/${universityId}/cours_en_ligne/${meetingId}`);
+    await set(meetingRef, {
+      ...meetingData,
+      active: true,
+      createdAt: new Date().toISOString()
+    });
+  },
+
+  endLiveMeeting: async (universityId, meetingId) => {
+    const meetingRef = ref(db, `universites/${universityId}/cours_en_ligne/${meetingId}`);
+    await remove(meetingRef);
   },
 
   addAssignment: async (universityId, assignment) => {
@@ -878,8 +1101,19 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
           }
         }
       }
+
+      // Clean up grades associated with the course
+      const gradesRef = ref(db, `universites/${universityId}/notes`);
+      const gradesSnapshot = await get(gradesRef);
+      if (gradesSnapshot.exists()) {
+        const gradesData = gradesSnapshot.val();
+        const deletePromises = Object.entries(gradesData)
+          .filter(([_, gr]: [string, any]) => gr && gr.courseId === courseId)
+          .map(([grid]) => remove(ref(db, `universites/${universityId}/notes/${grid}`)));
+        await Promise.all(deletePromises);
+      }
     } catch (e) {
-      console.error("Error cleaning up course schedule events", e);
+      console.error("Error cleaning up course schedule events/grades", e);
     }
     await remove(courseRef);
   },
@@ -976,5 +1210,145 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       status,
       updatedAt: attendance.markedAt
     });
+  },
+
+  addGestionnaire: async (universityId, data) => {
+    const tempPassword = 'GES-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    
+    let uid = '';
+    const tempAppName = `temp-staff-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = getAuth(tempApp);
+    try {
+      const creds = await createUserWithEmailAndPassword(tempAuth, data.email.trim(), tempPassword);
+      uid = creds.user.uid;
+    } catch (err: any) {
+      await deleteApp(tempApp);
+      if (err.code === 'auth/email-already-in-use') {
+        throw new Error("L'adresse email est déjà utilisée.");
+      }
+      throw err;
+    }
+    await deleteApp(tempApp);
+
+    // Enregistrer le gestionnaire dans l'université
+    const refGest = ref(db, `universites/${universityId}/gestionnaires/${uid}`);
+    await set(refGest, {
+      id: uid,
+      name: data.name,
+      email: data.email.trim(),
+      role: data.role,
+      status: 'actif',
+      createdAt: new Date().toISOString(),
+      universityId
+    });
+
+    // Créer le profil dans /utilisateurs
+    const refUser = ref(db, `utilisateurs/${uid}`);
+    const prenom = data.name.split(' ')[0] || '';
+    const nom = data.name.split(' ').slice(1).join(' ') || data.name;
+    await set(refUser, {
+      uid,
+      email: data.email.trim(),
+      role: data.role,
+      status: 'active',
+      universityId,
+      prenom,
+      nom,
+      telephone: '',
+      adresse: '',
+      createdDate: new Date().toISOString(),
+      mustChangePassword: true,
+      tempPassword
+    });
+
+    // Envoyer l'email de bienvenue simulé
+    const emailsRef = ref(db, `universites/${universityId}/emails_simules`);
+    const newEmailRef = push(emailsRef);
+    const roleLabel = data.role === 'FINANCE_MANAGER' ? 'Gestionnaire Financier'
+      : data.role === 'STUDENT_MANAGER' ? 'Gestionnaire Étudiants'
+      : 'Gestionnaire Enseignants';
+    await set(newEmailRef, {
+      to: data.email.trim(),
+      recipientName: data.name,
+      subject: "Bienvenue sur CAMPUS - Vos accès Gestionnaire",
+      body: `Bonjour ${data.name},\n\nL'administrateur de votre établissement vous a désigné comme gestionnaire sur la plateforme CAMPUS.\n\nRôle : ${roleLabel}\nEmail : ${data.email.trim()}\nMot de passe temporaire : ${tempPassword}\n\nLors de votre première connexion, vous devrez obligatoirement changer ce mot de passe temporaire.\n\nCordialement,\nL'administration académique`,
+      sentAt: new Date().toISOString(),
+      type: 'welcome'
+    });
+
+    // Email réel via Nodemailer
+    const loginUrl = `${window.location.origin}/connexion`;
+    await sendRealEmail(
+      data.email.trim(),
+      "Bienvenue sur CAMPUS - Vos accès Gestionnaire",
+      `<div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+         <h2 style="color: #4f46e5;">Bienvenue sur CAMPUS !</h2>
+         <p>Bonjour <strong>${data.name}</strong>,</p>
+         <p>L'administrateur de votre établissement vous a désigné(e) comme <strong>${roleLabel}</strong> sur la plateforme CAMPUS.</p>
+         <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 16px 0; border: 1px solid #cbd5e1;">
+           <h3 style="margin-top: 0; color: #334155; font-size: 14px;">Vos identifiants temporaires de connexion :</h3>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Email :</strong> ${data.email.trim()}</p>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Rôle :</strong> ${roleLabel}</p>
+           <p style="margin: 6px 0; font-size: 13px;"><strong>Mot de passe provisoire :</strong> <span style="font-family: monospace; font-size: 14px; background-color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #0f172a;">${tempPassword}</span></p>
+         </div>
+         <p style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px; color: #78350f; font-size: 12px; border-radius: 4px;">
+           <strong>Important :</strong> Lors de votre première connexion, vous devrez obligatoirement modifier ce mot de passe temporaire pour sécuriser votre compte.
+         </p>
+         <p style="margin: 24px 0; text-align: center;">
+           <a href="${loginUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">Se connecter à CAMPUS</a>
+         </p>
+         <p style="color: #64748b; font-size: 12px;">Si le bouton ne fonctionne pas, copiez-collez ce lien : <br/> <a href="${loginUrl}">${loginUrl}</a></p>
+         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+         <p style="color: #64748b; font-size: 11px;">L'administration académique</p>
+       </div>`
+    );
+
+    return { tempPassword };
+  },
+
+  updateGestionnaire: async (universityId, uid, data) => {
+    await update(ref(db, `universites/${universityId}/gestionnaires/${uid}`), data);
+    await update(ref(db, `utilisateurs/${uid}`), data);
+
+    // Envoyer email si délégation d'accès admin activée
+    const delegationData = (data as any).delegation;
+    if (delegationData?.active === true) {
+      try {
+        // Récupérer les infos du gestionnaire
+        const gestRef = ref(db, `universites/${universityId}/gestionnaires/${uid}`);
+        const gestSnap = await get(gestRef);
+        if (gestSnap.exists()) {
+          const gest = gestSnap.val();
+          const expiryDate = new Date(delegationData.expiresAt).toLocaleString('fr-FR');
+          const loginUrl = `${window.location.origin}/connexion`;
+          await sendRealEmail(
+            gest.email,
+            "Accès Administrateur délégués - CAMPUS",
+            `<div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+               <h2 style="color: #4f46e5;">Accès Administrateur temporaires</h2>
+               <p>Bonjour <strong>${gest.name}</strong>,</p>
+               <p>L'administrateur de votre établissement vous a accordé un <strong>accès administrateur temporaire</strong> sur la plateforme CAMPUS.</p>
+               <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 6px; margin: 16px 0;">
+                 <p style="margin: 0; font-size: 13px; color: #78350f;"><strong>⏰ Expiration :</strong> ${expiryDate}</p>
+                 <p style="margin: 6px 0 0; font-size: 12px; color: #92400e;">Passé ce délai, vos droits administrateur seront automatiquement révoqués.</p>
+               </div>
+               <p style="margin: 24px 0; text-align: center;">
+                 <a href="${loginUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">Accéder à CAMPUS</a>
+               </p>
+               <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+               <p style="color: #64748b; font-size: 11px;">L'administration académique</p>
+             </div>`
+          );
+        }
+      } catch (emailErr) {
+        console.error('[updateGestionnaire] Erreur email délégation:', emailErr);
+      }
+    }
+  },
+
+  deleteGestionnaire: async (universityId, uid) => {
+    await remove(ref(db, `universites/${universityId}/gestionnaires/${uid}`));
+    await remove(ref(db, `utilisateurs/${uid}`));
   }
 }));
