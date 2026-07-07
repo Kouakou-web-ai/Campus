@@ -1,18 +1,18 @@
 import type { StatusType } from '../../types';
 
 const STATUS_CONFIG: Record<StatusType, { label: string; className: string }> = {
-  actif: { label: 'Actif', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  inactif: { label: 'Inactif', className: 'bg-slate-100 text-slate-500 border-slate-200' },
-  en_attente: { label: 'En attente', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  suspendu: { label: 'Suspendu', className: 'bg-orange-50 text-orange-700 border-orange-200' },
-  termine: { label: 'Terminé', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  brouillon: { label: 'Brouillon', className: 'bg-slate-100 text-slate-600 border-slate-200' },
-  publie: { label: 'Publié', className: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  paye: { label: 'Payé', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  en_retard: { label: 'En retard', className: 'bg-red-50 text-red-700 border-red-200' },
-  annule: { label: 'Annulé', className: 'bg-red-50 text-red-600 border-red-200' },
-  planifie: { label: 'Planifié', className: 'bg-violet-50 text-violet-700 border-violet-200' },
-  en_cours: { label: 'En cours', className: 'bg-sky-50 text-sky-700 border-sky-200' },
+  actif: { label: 'Actif', className: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
+  inactif: { label: 'Inactif', className: 'bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' },
+  en_attente: { label: 'En attente', className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },
+  suspendu: { label: 'Suspendu', className: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20' },
+  termine: { label: 'Terminé', className: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20' },
+  brouillon: { label: 'Brouillon', className: 'bg-slate-50 text-slate-650 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' },
+  publie: { label: 'Publié', className: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20' },
+  paye: { label: 'Payé', className: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
+  en_retard: { label: 'En retard', className: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
+  annule: { label: 'Annulé', className: 'bg-red-50 text-red-650 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
+  planifie: { label: 'Planifié', className: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/20' },
+  en_cours: { label: 'En cours', className: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20' },
 };
 
 interface StatusBadgeProps {

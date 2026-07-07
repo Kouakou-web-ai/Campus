@@ -59,10 +59,10 @@ export function StatCard({
           {(trendDisplayValue || description || trendLabel) && (
             <div className="flex items-center mt-2 flex-wrap gap-1">
               {trendDisplayValue && (
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                  isPositive ? 'bg-emerald-50 text-emerald-600' 
-                  : isNegative ? 'bg-red-50 text-red-600' 
-                  : 'bg-surface-raised text-content-secondary'
+                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                  isPositive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' 
+                  : isNegative ? 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400' 
+                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-350'
                 }`}>
                   {trendDisplayValue}
                 </span>

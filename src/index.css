@@ -506,6 +506,10 @@ h6 { font-size: 1rem; font-weight: 600; }
   transition: all var(--transition-normal);
 }
 
+.btn:active {
+  transform: scale(0.96);
+}
+
 .card {
   border-radius: var(--radius-xl);
 }

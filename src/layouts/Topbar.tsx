@@ -200,7 +200,7 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
         ) : (
           <button
             onClick={() => setSearchOpen(true)}
-            className="flex items-center gap-2 text-sm text-content-muted bg-app border border-border rounded-xl px-3 py-2 hover:border-border transition-colors w-full sm:max-w-xs"
+            className="flex items-center gap-2 text-sm text-content-muted bg-app border border-border rounded-xl px-3 py-2 hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors w-full sm:max-w-xs"
           >
             <Search size={14} />
             <span>{t('topbar.search_trigger')}</span>

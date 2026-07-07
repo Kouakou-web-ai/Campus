@@ -161,11 +161,11 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                     <Link
                       to={item.path}
                       title={collapsed ? t(labelToKeyMap[item.label] || item.label) : undefined}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
                         active
                           ? 'bg-indigo-50 text-indigo-600 dark:text-indigo-400 shadow-sm'
                           : 'text-content-secondary hover:bg-surface-raised hover:text-content'
-                      } ${collapsed ? 'justify-center' : ''}`}
+                      } ${collapsed ? 'justify-center' : 'hover:translate-x-1'}`}
                     >
                       <div className="relative flex items-center justify-center flex-shrink-0">
                         <Icon
