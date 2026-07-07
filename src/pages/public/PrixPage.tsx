@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Check, Zap, Star, Building2, ArrowRight } from 'lucide-react';
 import ThreeDCard from '../../components/ui/ThreeDCard';
 import RevealOnScroll from '../../components/ui/RevealOnScroll';
+import { motion } from 'framer-motion';
 
 const PLANS = [
   {
@@ -126,15 +127,24 @@ export default function PrixPage() {
             return (
               <RevealOnScroll key={plan.name} delay={idx * 120} direction="up">
               <ThreeDCard maxTilt={14} scale={1.03} className="h-full">
-              <div
-                className={`relative rounded-3xl overflow-visible transition-all duration-300 h-full ${
+              <motion.div
+                whileHover="hover"
+                initial="initial"
+                className={`relative rounded-3xl overflow-visible transition-all duration-300 h-full hover:scale-105 ${
                   isPopular
-                    ? 'gradient-border-animated shadow-2xl shadow-indigo-200'
+                    ? 'gradient-border-animated shadow-2xl shadow-indigo-200 hover:shadow-[0_0_40px_-10px_rgba(99,102,241,0.5)]'
                     : 'bg-white border border-slate-200 shadow-sm hover:shadow-xl'
                 }`}
               >
                 {isPopular && (
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                  <>
+                    <motion.div
+                      animate={{ scale: [1, 1.05, 1], opacity: [0.4, 0.7, 0.4] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                      className="absolute inset-0 bg-indigo-500 rounded-3xl blur-xl -z-10"
+                    />
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                  </>
                 )}
 
                 {/* Inner colored content for Pro card */}
@@ -203,17 +213,30 @@ export default function PrixPage() {
                   </Link>
 
                   {/* Features */}
-                  <ul className="space-y-2">
+                  <motion.ul 
+                    variants={{
+                      initial: {},
+                      hover: { transition: { staggerChildren: 0.1 } }
+                    }}
+                    className="space-y-2"
+                  >
                     {plan.features.map((f) => (
-                      <li key={f} className={`flex items-start gap-2 text-xs ${isPopular ? 'text-indigo-100' : 'text-slate-600'}`}>
+                      <motion.li 
+                        variants={{
+                          initial: { opacity: 0.8, x: 0 },
+                          hover: { opacity: 1, x: 5 }
+                        }}
+                        key={f} 
+                        className={`flex items-start gap-2 text-xs ${isPopular ? 'text-indigo-100' : 'text-slate-600'}`}
+                      >
                         <Check size={14} className={`mt-0.5 flex-shrink-0 ${isPopular ? 'text-white' : 'text-emerald-500'}`} />
                         {f}
-                      </li>
+                      </motion.li>
                     ))}
-                  </ul>
+                  </motion.ul>
                 </div>
                 </div>{/* end inner wrapper */}
-              </div>
+              </motion.div>
               </ThreeDCard>
               </RevealOnScroll>
             );

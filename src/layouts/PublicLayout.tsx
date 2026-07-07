@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { GraduationCap, Menu, X, Search, Mic } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import { useSpeechToText } from '../hooks/useSpeechToText';
 
@@ -24,8 +24,17 @@ export default function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleVoiceMatch = (text: string) => {
     const cleanText = text.toLowerCase().trim();
@@ -53,7 +62,11 @@ export default function PublicLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-surface transition-colors duration-200">
       {/* Navbar */}
-      <header className="sticky top-0 z-50 bg-surface/80 backdrop-blur-md border-b border-border-subtle">
+      <header className={`sticky top-0 z-50 transition-all duration-300 border-b ${
+        scrolled
+          ? 'bg-surface/95 backdrop-blur-xl shadow-lg border-border-subtle/30 py-0'
+          : 'bg-surface/80 backdrop-blur-md border-border-subtle py-2'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}

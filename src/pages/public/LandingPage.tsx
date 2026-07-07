@@ -8,6 +8,8 @@ import ThreeDCard from '../../components/ui/ThreeDCard';
 import ParticlesBackground from '../../components/ui/ParticlesBackground';
 import RevealOnScroll from '../../components/ui/RevealOnScroll';
 import { useTypewriter } from '../../hooks/useTypewriter';
+import { motion } from 'framer-motion';
+import AnimatedCounter from '../../components/ui/AnimatedCounter';
 
 const FEATURES = [
   {
@@ -158,13 +160,26 @@ export default function LandingPage() {
         />
 
         {/* Decorative elements */}
-        <div className="absolute top-20 right-20 w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl animate-pulse duration-3000" />
-        <div className="absolute bottom-20 left-10 w-72 h-72 bg-violet-400/10 rounded-full blur-3xl animate-pulse duration-2000" />
+        <motion.div 
+          animate={{ y: [0, -30, 0], x: [0, 20, 0] }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          className="absolute top-20 right-20 w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl pointer-events-none" 
+        />
+        <motion.div 
+          animate={{ y: [0, 40, 0], x: [0, -20, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute bottom-20 left-10 w-72 h-72 bg-violet-400/10 rounded-full blur-3xl pointer-events-none" 
+        />
 
         <div className="relative max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 xl:px-20 w-full z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* Left Column: Text content */}
-            <div className="lg:col-span-7 text-center lg:text-left space-y-6 animate-fade-up">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.8 }} 
+              className="lg:col-span-7 text-center lg:text-left space-y-6"
+            >
               {/* Badge */}
               <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100/50 text-indigo-700 text-sm font-semibold px-4 py-1.5 rounded-full transform hover:scale-105 transition-all duration-300">
                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
@@ -201,7 +216,7 @@ export default function LandingPage() {
                   Contactez-nous
                 </Link>
               </div>
-            </div>
+            </motion.div>
 
             {/* Right Column: Hero Image with 3D Effect & Floating Badges */}
             <div className="lg:col-span-5 flex justify-center items-center animate-scale-in delay-200">
@@ -277,10 +292,10 @@ export default function LandingPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
                     {[
-                      { label: 'Étudiants Actifs', value: '64 200', color: 'bg-indigo-500', desc: 'Votre Espace' },
-                      { label: 'Cours programmés', value: '1 240', color: 'bg-emerald-500', desc: 'Semestre 1' },
-                      { label: 'Frais de scolarité', value: '12.4M FCFA', color: 'bg-violet-500', desc: 'Scolarités perçues' },
-                      { label: 'Taux de réussite', value: '92.4%', color: 'bg-amber-500', desc: 'Moyenne générale' },
+                      { label: 'Étudiants Actifs', num: 64200, suffix: '', color: 'bg-indigo-500', desc: 'Votre Espace' },
+                      { label: 'Cours programmés', num: 1240, suffix: '', color: 'bg-emerald-500', desc: 'Semestre 1' },
+                      { label: 'Frais de scolarité', num: 12.4, suffix: 'M FCFA', color: 'bg-violet-500', desc: 'Scolarités perçues' },
+                      { label: 'Taux de réussite', num: 92.4, suffix: '%', color: 'bg-amber-500', desc: 'Moyenne générale' },
                     ].map((stat, idx) => (
                       <div key={stat.label} className="glass-stat p-5 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5" style={{ animationDelay: `${idx * 0.8}s` }}>
                         <div className="flex justify-between items-start mb-3">
@@ -289,7 +304,9 @@ export default function LandingPage() {
                           </div>
                           <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{stat.desc}</span>
                         </div>
-                        <div className="text-xl font-bold text-slate-800 tracking-tight">{stat.value}</div>
+                        <div className="text-xl font-bold text-slate-800 tracking-tight">
+                          <AnimatedCounter value={stat.num} suffix={stat.suffix} />
+                        </div>
                         <div className="text-xs text-slate-400 mt-1">{stat.label}</div>
                       </div>
                     ))}
