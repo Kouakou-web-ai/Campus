@@ -39,7 +39,11 @@ export default function PortailApprentissage() {
     return c.filiere === currentStudent?.filiere;
   });
   const studentCourseIds = studentCourses.map(c => c.id);
+  const studentTeacherIds = new Set(studentCourses.map(c => c.teacherId).filter(Boolean));
   const studentPdfResources = resources.filter(res => res.type === 'pdf' && (!res.courseId || res.courseId === 'general' || studentCourseIds.includes(res.courseId)));
+
+  // Only show live meetings from teachers of THIS student's courses
+  const relevantLiveMeetings = (liveMeetings || []).filter(m => studentTeacherIds.has(m.teacherId));
 
   const handleOpenPdf = (pdf: any) => {
     if (pdf.url) {
@@ -79,9 +83,9 @@ export default function PortailApprentissage() {
   return (
     <div className="page-transition space-y-6">
       {/* Live course alert banner */}
-      {liveMeetings && liveMeetings.length > 0 && (
+      {relevantLiveMeetings.length > 0 && (
         <div className="space-y-3">
-          {liveMeetings.map((meeting) => (
+          {relevantLiveMeetings.map((meeting) => (
             <div
               key={meeting.id}
               className="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md"

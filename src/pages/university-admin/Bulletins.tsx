@@ -380,7 +380,7 @@ export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean
                 <option value="">Sélectionnez un étudiant...</option>
                 {filteredStudents.map((stud) => (
                   <option key={stud.id} value={stud.id}>
-                    👤 {stud.name} ({stud.studentId})
+                    👤 {stud.name}
                   </option>
                 ))}
               </select>
@@ -595,7 +595,7 @@ export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean
                             <th className="text-center py-2 font-bold uppercase tracking-wider w-20">Note Classe</th>
                             <th className="text-center py-2 font-bold uppercase tracking-wider w-20">Note Examen</th>
                             <th className="text-center py-2 font-bold uppercase tracking-wider w-16">Moyenne</th>
-                            <th className="text-left py-2 font-bold uppercase tracking-wider">Appréciation</th>
+                            <th className="text-left py-2 pl-2 font-bold uppercase tracking-wider">Appréciation</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-900">

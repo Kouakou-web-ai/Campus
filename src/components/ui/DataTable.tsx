@@ -93,7 +93,7 @@ export default function DataTable<T>({
         </thead>
         <tbody>
           {sortedData.map((row, rIdx) => (
-            <tr key={rIdx} className="hover:bg-slate-50/50 transition-colors">
+            <tr key={rIdx} className="hover:bg-slate-50/50 transition-colors" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 52px' }}>
               {columns.map((col, cIdx) => {
                 const val = (row as any)[col.key];
                 return (

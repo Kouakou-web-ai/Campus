@@ -284,6 +284,7 @@ export default function GestionEtudiants() {
     }
   };
 
+
   const handleImportStudents = async (items: any[]) => {
     if (!user?.universityId) return;
 

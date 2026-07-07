@@ -7,7 +7,8 @@ import { useRealtimeDataStore } from '../store/realtimeDataStore';
 import { db } from '../../firebase-config';
 import { ref, update } from 'firebase/database';
 import { ToastSuccess, ToastError } from '../controllers/Toast-emitter';
-import { Shield, Lock, CheckCircle2 } from 'lucide-react';
+import { Shield, Lock, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { sendRealEmail } from '../services/emailSender';
 
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -18,7 +19,8 @@ export default function DashboardLayout() {
     subscribeToSuperAdmin, 
     systemAnnouncement,
     courses,
-    updateCourse
+    updateCourse,
+    currentUniversity
   } = useRealtimeDataStore();
 
   useEffect(() => {
@@ -65,7 +67,11 @@ export default function DashboardLayout() {
             calculatedStatus = 'termine';
           }
 
-          if (course.status !== calculatedStatus) {
+          const isWriter = user?.role === 'SUPER_ADMIN' || 
+                           user?.role === 'UNIVERSITY_ADMIN' || 
+                           (user?.role === 'TEACHER' && course.teacherId === user.id);
+
+          if (course.status !== calculatedStatus && isWriter) {
             await updateCourse(universityId, course.id, { status: calculatedStatus });
           }
         } catch (err) {
@@ -78,6 +84,70 @@ export default function DashboardLayout() {
     const interval = setInterval(checkCourseStatuses, 10000);
     return () => clearInterval(interval);
   }, [courses, user?.universityId, updateCourse]);
+
+  // Subscription expiration and warning alerts logic
+  const [isSubscriptionExpired, setIsSubscriptionExpired] = useState(false);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!user || user.role === 'SUPER_ADMIN' || !user.universityId || !currentUniversity) {
+        setCheckingSubscription(false);
+        return;
+      }
+
+      try {
+        const creationDateStr = currentUniversity.createdAt || new Date().toISOString().split('T')[0];
+        const creationDate = new Date(creationDateStr);
+        const today = new Date();
+        const diffTime = today.getTime() - creationDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // 30 days trial period limit
+        if (diffDays > 30) {
+          setIsSubscriptionExpired(true);
+        } else {
+          setIsSubscriptionExpired(false);
+          
+          // Send warning email at exactly J-7 (between 23 and 29 days of existence)
+          if (diffDays >= 23 && diffDays <= 30) {
+            const warningSentKey = `warning_email_sent_${user.universityId}`;
+            const isSent = localStorage.getItem(warningSentKey);
+            if (!isSent && currentUniversity.adminEmail) {
+              const daysLeft = 30 - diffDays;
+              const loginUrl = `${window.location.origin}/tarifs`;
+              
+              await sendRealEmail(
+                currentUniversity.adminEmail,
+                "⚠️ Avertissement : Expiration de votre essai CAMPUS sous peu",
+                `<div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                   <h2 style="color: #ea580c;">Renouvellement d'abonnement requis</h2>
+                   <p>Bonjour <strong>${currentUniversity.adminName || 'Administrateur'}</strong>,</p>
+                   <p>L'essai gratuit de 30 jours pour votre université <strong>${currentUniversity.name}</strong> expire dans <strong>${daysLeft} jours</strong>.</p>
+                   <p>Passé ce délai, l'accès à la plateforme pour vos étudiants, enseignants et gestionnaires sera automatiquement suspendu.</p>
+                   <p style="background-color: #fff7ed; border-left: 4px solid #ea580c; padding: 12px; border-radius: 6px; margin: 16px 0; color: #9a3412; font-size: 13px;">
+                     Veuillez mettre à jour votre forfait ou choisir un abonnement payant pour éviter toute interruption de service.
+                   </p>
+                   <p style="margin: 24px 0; text-align: center;">
+                     <a href="${loginUrl}" style="background-color: #ea580c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 9999px; font-weight: bold; display: inline-block;">Voir les abonnements</a>
+                   </p>
+                   <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+                   <p style="color: #64748b; font-size: 11px;">L'équipe CAMPUS</p>
+                 </div>`
+              );
+              localStorage.setItem(warningSentKey, 'true');
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Subscription verification failed:", err);
+      } finally {
+        setCheckingSubscription(false);
+      }
+    };
+
+    checkSubscription();
+  }, [user, currentUniversity]);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -186,6 +256,36 @@ export default function DashboardLayout() {
     );
   }
 
+  // Account Expired Modal Overlay
+  if (isSubscriptionExpired && !checkingSubscription) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 px-4">
+        <div className="bg-slate-900 rounded-3xl p-8 max-w-md w-full border border-slate-800 shadow-2xl text-center animate-fade-up">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-6 mx-auto">
+            <ShieldAlert size={32} />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Abonnement expiré</h3>
+          <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+            La période d'essai gratuit ou de validité d'abonnement pour l'établissement <strong>{currentUniversity?.name || 'CAMPUS'}</strong> a expiré (limite de 30 jours).
+            Veuillez contacter le Super Administrateur de CAMPUS ou renouveler votre offre pour réactiver l'accès.
+          </p>
+          {user?.role === 'UNIVERSITY_ADMIN' ? (
+            <a
+              href="/tarifs"
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold block transition-colors text-center"
+            >
+              Mettre à niveau l'abonnement
+            </a>
+          ) : (
+            <p className="text-xs text-amber-500 font-bold">
+              Veuillez notifier l'administration de votre établissement.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-app transition-colors duration-200">
       {/* Mobile overlay */}
@@ -246,3 +346,4 @@ export default function DashboardLayout() {
     </div>
   );
 }
+

@@ -31,7 +31,7 @@ export default function Visioconference() {
   const { meetingId } = useParams<{ meetingId: string }>();
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const { liveMeetings, endLiveMeeting } = useRealtimeDataStore();
+  const { liveMeetings, endLiveMeeting, loading } = useRealtimeDataStore();
 
   const currentMeeting = liveMeetings.find(m => m.id === meetingId);
 
@@ -70,6 +70,29 @@ export default function Visioconference() {
   const myName = user?.name || 'Visiteur';
   const myRole = user?.role || 'STUDENT';
   const univId = user?.universityId || 'demo';
+
+  // Redirect when meeting is ended
+  useEffect(() => {
+    if (!loading && !currentMeeting) {
+      ToastError("La visioconférence a été arrêtée par l'enseignant.");
+      navigate(user?.role === 'TEACHER' ? '/app/enseignant' : '/app/etudiant');
+    }
+  }, [loading, currentMeeting, navigate, user]);
+
+  // Teacher Meeting Lifecycle Cleanup
+  useEffect(() => {
+    if (!meetingId || myRole !== 'TEACHER') return;
+
+    const meetingRecordRef = ref(db, `universites/${univId}/cours_en_ligne/${meetingId}`);
+    
+    // Register onDisconnect to remove the meeting if the teacher closes the tab/browser
+    onDisconnect(meetingRecordRef).remove();
+
+    return () => {
+      // When the teacher leaves the page (component unmounts), remove the meeting
+      remove(meetingRecordRef).catch(err => console.error("Error removing meeting:", err));
+    };
+  }, [meetingId, univId, myRole]);
 
   // 1. Get User Media (Camera & Mic)
   useEffect(() => {

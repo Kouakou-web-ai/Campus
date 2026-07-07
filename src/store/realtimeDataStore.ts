@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useNotificationStore } from './notificationStore';
 import { useAuthStore } from './authStore';
 import { db, auth, firebaseConfig } from '../../firebase-config';
-import { ref, onValue, set, push, update, remove, get } from 'firebase/database';
+import { ref, onValue, set, push, update, remove, get, query, orderByChild, equalTo, limitToFirst } from 'firebase/database';
 import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData, StatusType, Class, Gestionnaire } from '../types';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
@@ -207,236 +207,349 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       });
     };
 
-    // 1. Branding
+    // 1-7. Metadata (lightweight & always loaded)
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/branding`), (snap) => {
       branding = snap.val() || {};
       updateCurrentUniversity();
     }));
-
-    // 2. Plan
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/plan`), (snap) => {
       plan = snap.val() || 'pro';
       updateCurrentUniversity();
     }));
-
-    // 3. Status
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/status`), (snap) => {
       status = snap.val() || 'actif';
       updateCurrentUniversity();
     }));
-
-    // 4. CreatedAt
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/createdAt`), (snap) => {
       createdAt = snap.val() || new Date().toISOString().split('T')[0];
       updateCurrentUniversity();
     }));
-
-    // 5. Admin Uid
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/adminUid`), (snap) => {
       adminUid = snap.val() || undefined;
       updateCurrentUniversity();
     }));
-
-    // 6. Admin Name
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/adminName`), (snap) => {
       adminName = snap.val() || undefined;
       updateCurrentUniversity();
     }));
-
-    // 7. Admin Email
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/adminEmail`), (snap) => {
       adminEmail = snap.val() || undefined;
       updateCurrentUniversity();
     }));
 
-    // 8. Étudiants
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/etudiants`), (snap) => {
-      const list = parseList(snap.val());
-      studentsCount = list.length;
-      setStore({ students: list });
-      updateCurrentUniversity();
-    }));
-
-    // 9. Enseignants
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/enseignants`), (snap) => {
-      const list = parseList(snap.val());
-      teachersCount = list.length;
-      setStore({ teachers: list });
-      updateCurrentUniversity();
-    }));
-
-    // 10. Cours
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/cours`), (snap) => {
-      setStore({ courses: parseList(snap.val()) });
-    }));
-
-    // 11. Transactions
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/transactions`), (snap) => {
-      setStore({ transactions: parseList(snap.val()) });
-    }));
-
-    // 12. Notes (Grades)
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/notes`), (snap) => {
-      setStore({ grades: parseList(snap.val()) });
-    }));
-
-    // 13. Devoirs (Assignments)
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/devoirs`), (snap) => {
-      setStore({ assignments: parseList(snap.val()) });
-    }));
-
-    // 14. Ressources
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/ressources`), (snap) => {
-      setStore({ resources: parseList(snap.val()) });
-    }));
-
-    // 15. Emploi du temps
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/emploi_du_temps`), (snap) => {
-      setStore({ scheduleEvents: parseList(snap.val()) });
-    }));
-
-    // 16. Annonces
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/annonces`), (snap) => {
-      setStore({ announcements: parseList(snap.val()) });
-    }));
-
-    // 17. Emails simulés
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/emails_simules`), (snap) => {
-      setStore({ emailsSimules: parseList(snap.val()) });
-    }));
-
-    // 18. Cahier de textes
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/cahier_de_textes`), (snap) => {
-      setStore({ cahierDeTextes: parseList(snap.val()) });
-    }));
-
-    // 19. Quizzes
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/quizzes`), (snap) => {
-      setStore({ quizzes: parseList(snap.val()) });
-    }));
-
-    // 20. Appels (Absences)
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/appels`), (snap) => {
-      setStore({ appels: snap.val() || {} });
-    }));
-
-    // Evaluations real-time listener for admins
-    let isInitialEvals = true;
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/evaluations`), (snap) => {
-      const data = snap.val();
-      const list = parseList(data);
-      list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
-      setStore({ evaluations: list });
-
-      if (isInitialEvals) {
-        isInitialEvals = false;
-        return;
-      }
-      const userRole = useAuthStore.getState().user?.role as string;
-      if (data && (userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN')) {
-        const newest = list[0];
-        if (newest) {
-          const elapsed = Date.now() - new Date(newest.submittedAt).getTime();
-          if (elapsed < 10000) {
-            useNotificationStore.getState().addNotification(
-              `⭐ Nouvelle note — Évaluation`,
-              `${newest.userName} (${newest.userRole === 'PARENT' ? 'Parent' : 'Étudiant'}) a attribué ${newest.average}/5.`,
-              'success',
-              {
-                type: 'evaluation',
-                userName: newest.userName,
-                userRole: newest.userRole,
-                ratings: newest.ratings,
-                average: newest.average,
-                comment: newest.comment,
-                submittedAt: newest.submittedAt
-              }
-            );
-          }
-        }
-      }
-    }));
-
-    // Suggestions real-time listener for admins
-    let isInitialSuggs = true;
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/suggestions`), (snap) => {
-      const data = snap.val();
-      const list = parseList(data);
-      list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
-      setStore({ suggestions: list });
-
-      if (isInitialSuggs) {
-        isInitialSuggs = false;
-        return;
-      }
-      const userRole = useAuthStore.getState().user?.role as string;
-      if (data && (userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN')) {
-        const newest = list[0];
-        if (newest) {
-          const elapsed = Date.now() - new Date(newest.submittedAt).getTime();
-          if (elapsed < 10000) {
-            useNotificationStore.getState().addNotification(
-              `💡 Nouvelle suggestion`,
-              `${newest.userName} (${newest.userRole === 'PARENT' ? 'Parent' : 'Étudiant'}) : ${newest.subject}`,
-              'info',
-              {
-                type: 'suggestion',
-                userName: newest.userName,
-                userRole: newest.userRole,
-                category: newest.category,
-                subject: newest.subject,
-                content: newest.content,
-                submittedAt: newest.submittedAt
-              }
-            );
-          }
-        }
-      }
-    }));
-
-    // 21. Filières
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/filieres`), (snap) => {
-      const val = snap.val();
-      if (val) {
-        setStore({ filieres: Object.values(val) });
-      } else {
-        setStore({ filieres: [] });
-      }
-    }));
-
-    // 22. Classes
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/classes`), (snap) => {
-      const val = snap.val();
-      if (val) {
-        setStore({ classes: Object.keys(val).map(key => ({ id: key, ...val[key] })), loading: false });
-      } else {
-        setStore({ classes: [], loading: false });
-      }
-    }));
-
-    // 23. Salles
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/salles`), (snap) => {
-      const val = snap.val();
-      if (val) {
-        setStore({ salles: Object.values(val) });
-      } else {
-        setStore({ salles: [] });
-      }
-    }));
-
-    // 24. Gestionnaires
-    unsubscribers.push(onValue(ref(db, `universites/${universityId}/gestionnaires`), (snap) => {
-      setStore({ gestionnaires: parseList(snap.val()) });
-    }));
-
-    // 25. Annonces Globales
+    // Annonces Globales (always loaded)
     unsubscribers.push(onValue(ref(db, 'annonces_globales'), (snap) => {
       setStore({ systemAnnouncement: snap.val() || null });
     }));
 
-    // 26. Cours en ligne / Visioconférence
+    // Get current user role and UID to conditionally subscribe (Lazy & Tenant-isolated)
+    const currentUser = useAuthStore.getState().user;
+    const userRole = currentUser?.role as string | undefined;
+    const userUid = currentUser?.id || '';
+
+    if (userRole === 'STUDENT') {
+      // STUDENT ROLE OPTIMIZATIONS
+      // Listen to own student profile only
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/etudiants/${userUid}`), (snap) => {
+        const studentVal = snap.val();
+        if (studentVal) {
+          setStore({ students: [{ id: userUid, ...studentVal }] });
+        } else {
+          setStore({ students: [] });
+        }
+      }));
+
+      // Query own notes
+      const notesQuery = query(ref(db, `universites/${universityId}/notes`), orderByChild('studentId'), equalTo(userUid));
+      unsubscribers.push(onValue(notesQuery, (notesSnap) => {
+        setStore({ grades: parseList(notesSnap.val()) });
+      }));
+
+      // Query own transactions (filtered by studentName to match UI structure)
+      const studentName = currentUser?.name || '';
+      const transQuery = query(ref(db, `universites/${universityId}/transactions`), orderByChild('studentName'), equalTo(studentName));
+      unsubscribers.push(onValue(transQuery, (transSnap) => {
+        setStore({ transactions: parseList(transSnap.val()) });
+      }));
+
+    } else if (userRole === 'PARENT') {
+      // PARENT ROLE OPTIMIZATIONS
+      // Listen to linked children profiles, notes and transactions
+      const enfantsRef = ref(db, `utilisateurs/${userUid}/enfants`);
+      unsubscribers.push(onValue(enfantsRef, (enfantsSnap) => {
+        const enfantsVal = enfantsSnap.val() || {};
+        const childUids = Object.keys(enfantsVal);
+
+        setStore({ students: [], grades: [], transactions: [] });
+
+        childUids.forEach((childUid) => {
+          // Listen to child profile
+          const studentRef = ref(db, `universites/${universityId}/etudiants/${childUid}`);
+          unsubscribers.push(onValue(studentRef, (studentSnap) => {
+            if (studentSnap.exists()) {
+              const childProfile = studentSnap.val();
+              const childName = childProfile?.name || '';
+              
+              setStore((state) => {
+                const filtered = state.students.filter(s => s.id !== childUid);
+                return { students: [...filtered, { id: childUid, ...childProfile }] };
+              });
+
+              // Query transactions for child (filtered by studentName)
+              const transQuery = query(ref(db, `universites/${universityId}/transactions`), orderByChild('studentName'), equalTo(childName));
+              unsubscribers.push(onValue(transQuery, (transSnap) => {
+                const list = parseList(transSnap.val());
+                setStore((state) => {
+                  const filtered = state.transactions.filter(t => t.studentName !== childName);
+                  return { transactions: [...filtered, ...list] };
+                });
+              }));
+            }
+          }));
+
+          // Query notes for child
+          const notesQuery = query(ref(db, `universites/${universityId}/notes`), orderByChild('studentId'), equalTo(childUid));
+          unsubscribers.push(onValue(notesQuery, (notesSnap) => {
+            const list = parseList(notesSnap.val());
+            setStore((state) => {
+              const filtered = state.grades.filter(g => g.studentId !== childUid);
+              return { grades: [...filtered, ...list] };
+            });
+          }));
+        });
+      }));
+
+    } else if (userRole === 'TEACHER') {
+      // TEACHER ROLE OPTIMIZATIONS
+      // Listen to own teacher profile
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/enseignants/${userUid}`), (snap) => {
+        const teacherVal = snap.val();
+        if (teacherVal) {
+          setStore({ teachers: [{ id: userUid, ...teacherVal }] });
+        } else {
+          setStore({ teachers: [] });
+        }
+      }));
+
+      // Query notes for the teacher's grading duties
+      const notesQuery = query(ref(db, `universites/${universityId}/notes`), orderByChild('teacherId'), equalTo(userUid));
+      unsubscribers.push(onValue(notesQuery, (notesSnap) => {
+        setStore({ grades: parseList(notesSnap.val()) });
+      }));
+
+      // Query only courses taught by this teacher
+      const coursesQuery = query(ref(db, `universites/${universityId}/cours`), orderByChild('teacherId'), equalTo(userUid));
+      unsubscribers.push(onValue(coursesQuery, (coursesSnap) => {
+        const teacherCourses = parseList(coursesSnap.val());
+        setStore({ courses: teacherCourses });
+
+        // Retrieve and subscribe to students belonging to the unique filieres taught by this teacher
+        const uniqueFilieres = Array.from(new Set(teacherCourses.map(c => c.filiere).filter(Boolean)));
+        uniqueFilieres.forEach((filiere) => {
+          const filiereStr = String(filiere || '');
+          if (!filiereStr) return;
+          
+          const studentQuery = query(ref(db, `universites/${universityId}/etudiants`), orderByChild('filiere'), equalTo(filiereStr));
+          unsubscribers.push(onValue(studentQuery, (studentSnap) => {
+            const list = parseList(studentSnap.val());
+            setStore((state) => {
+              // Merge students from other filieres
+              const otherStudents = state.students.filter(s => s.filiere !== filiereStr);
+              return { students: [...otherStudents, ...list] };
+            });
+          }));
+        });
+      }));
+
+    } else {
+      // ADMIN & MANAGER ROLES (Full sync with safety checks)
+      // Listen to students
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/etudiants`), (snap) => {
+        const list = parseList(snap.val());
+        studentsCount = list.length;
+        setStore({ students: list });
+        updateCurrentUniversity();
+      }));
+
+      // Listen to teachers
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/enseignants`), (snap) => {
+        const list = parseList(snap.val());
+        teachersCount = list.length;
+        setStore({ teachers: list });
+        updateCurrentUniversity();
+      }));
+
+      // Listen to all courses
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/cours`), (snap) => {
+        setStore({ courses: parseList(snap.val()) });
+      }));
+
+      // Listen to transactions
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/transactions`), (snap) => {
+        setStore({ transactions: parseList(snap.val()) });
+      }));
+
+      // Listen to notes
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/notes`), (snap) => {
+        setStore({ grades: parseList(snap.val()) });
+      }));
+
+      // Listen to gestionnaires (admins and student managers only)
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/gestionnaires`), (snap) => {
+        setStore({ gestionnaires: parseList(snap.val()) });
+      }));
+
+      // Listen to evaluations
+      let isInitialEvals = true;
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/evaluations`), (snap) => {
+        const data = snap.val();
+        const list = parseList(data);
+        list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+        setStore({ evaluations: list });
+
+        if (isInitialEvals) {
+          isInitialEvals = false;
+          return;
+        }
+        if (data && (userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN')) {
+          const newest = list[0];
+          if (newest) {
+            const elapsed = Date.now() - new Date(newest.submittedAt).getTime();
+            if (elapsed < 10000) {
+              useNotificationStore.getState().addNotification(
+                `⭐ Nouvelle note — Évaluation`,
+                `${newest.userName} (${newest.userRole === 'PARENT' ? 'Parent' : 'Étudiant'}) a attribué ${newest.average}/5.`,
+                'success',
+                {
+                  type: 'evaluation',
+                  userName: newest.userName,
+                  userRole: newest.userRole,
+                  ratings: newest.ratings,
+                  average: newest.average,
+                  comment: newest.comment,
+                  submittedAt: newest.submittedAt
+                }
+              );
+            }
+          }
+        }
+      }));
+
+      // Listen to suggestions
+      let isInitialSuggs = true;
+      unsubscribers.push(onValue(ref(db, `universites/${universityId}/suggestions`), (snap) => {
+        const data = snap.val();
+        const list = parseList(data);
+        list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+        setStore({ suggestions: list });
+
+        if (isInitialSuggs) {
+          isInitialSuggs = false;
+          return;
+        }
+        if (data && (userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN')) {
+          const newest = list[0];
+          if (newest) {
+            const elapsed = Date.now() - new Date(newest.submittedAt).getTime();
+            if (elapsed < 10000) {
+              useNotificationStore.getState().addNotification(
+                `💡 Nouvelle suggestion`,
+                `${newest.userName} (${newest.userRole === 'PARENT' ? 'Parent' : 'Étudiant'}) : ${newest.subject}`,
+                'info',
+                {
+                  type: 'suggestion',
+                  userName: newest.userName,
+                  userRole: newest.userRole,
+                  category: newest.category,
+                  subject: newest.subject,
+                  content: newest.content,
+                  submittedAt: newest.submittedAt
+                }
+              );
+            }
+          }
+        }
+      }));
+    }
+
+    // SHARED / PEDAGOGICAL RESOURCES (Subscribed by all roles in that university)
+    // Devoirs
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/devoirs`), (snap) => {
+      setStore({ assignments: parseList(snap.val()) });
+    }));
+
+    // Ressources
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/ressources`), (snap) => {
+      setStore({ resources: parseList(snap.val()) });
+    }));
+
+    // Emploi du temps
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/emploi_du_temps`), (snap) => {
+      setStore({ scheduleEvents: parseList(snap.val()) });
+    }));
+
+    // Annonces
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/annonces`), (snap) => {
+      setStore({ announcements: parseList(snap.val()) });
+    }));
+
+    // Emails simulés
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/emails_simules`), (snap) => {
+      setStore({ emailsSimules: parseList(snap.val()) });
+    }));
+
+    // Cahier de textes
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/cahier_de_textes`), (snap) => {
+      setStore({ cahierDeTextes: parseList(snap.val()) });
+    }));
+
+    // Quizzes
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/quizzes`), (snap) => {
+      setStore({ quizzes: parseList(snap.val()) });
+    }));
+
+    // Appels (Absences)
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/appels`), (snap) => {
+      setStore({ appels: snap.val() || {} });
+    }));
+
+    // Filières
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/filieres`), (snap) => {
+      const val = snap.val();
+      setStore({ filieres: val ? Object.values(val) : [] });
+    }));
+
+    // Classes
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/classes`), (snap) => {
+      const val = snap.val();
+      setStore({ classes: val ? Object.keys(val).map(key => ({ id: key, ...val[key] })) : [], loading: false });
+    }));
+
+    // Salles
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/salles`), (snap) => {
+      const val = snap.val();
+      setStore({ salles: val ? Object.values(val) : [] });
+    }));
+
+    // Cours en ligne / Visioconférence
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/cours_en_ligne`), (snap) => {
-      setStore({ liveMeetings: parseList(snap.val()) });
+      const meetings = parseList(snap.val());
+      const now = new Date().getTime();
+      const validMeetings = meetings.filter(m => {
+        if (!m.createdAt) {
+          const staleMeetingRef = ref(db, `universites/${universityId}/cours_en_ligne/${m.id}`);
+          remove(staleMeetingRef).catch(() => {});
+          return false;
+        }
+        const createdTime = new Date(m.createdAt).getTime();
+        if (now - createdTime > 7200000) { // 2 heures
+          const staleMeetingRef = ref(db, `universites/${universityId}/cours_en_ligne/${m.id}`);
+          remove(staleMeetingRef).catch(() => {});
+          return false;
+        }
+        return true;
+      });
+      setStore({ liveMeetings: validMeetings });
     }));
 
     return () => {
@@ -619,17 +732,18 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     }
     await deleteApp(tempStudentApp);
 
-    // 4. Vérifier si le parent existe déjà dans /utilisateurs
+    // 4. Vérifier si le parent existe déjà dans /utilisateurs (Requête optimisée O(1))
     let parentUid = '';
     const usersRef = ref(db, 'utilisateurs');
-    const allUsersSnap = await get(usersRef);
-    if (allUsersSnap.exists()) {
-      const allUsers = allUsersSnap.val();
-      const existingParent = Object.entries(allUsers).find(
-        ([_, u]: [string, any]) => u && u.email?.toLowerCase() === parentEmail.trim().toLowerCase() && u.role === 'PARENT'
+    const parentQuery = query(usersRef, orderByChild('email'), equalTo(parentEmail.trim().toLowerCase()), limitToFirst(1));
+    const parentQuerySnap = await get(parentQuery);
+    if (parentQuerySnap.exists()) {
+      const parentVal = parentQuerySnap.val();
+      const parentEntry = Object.entries(parentVal).find(
+        ([_, u]: [string, any]) => u && u.role === 'PARENT'
       );
-      if (existingParent) {
-        parentUid = existingParent[0];
+      if (parentEntry) {
+        parentUid = parentEntry[0];
       }
     }
 
@@ -651,18 +765,19 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       await deleteApp(tempParentApp);
     }
 
-    // 6. Enregistrer l'étudiant dans la liste de l'université
+    // 6. Enregistrer l'étudiant dans la liste de l'université (parentUid inclus pour O(1) delete)
     const studentUnivRef = ref(db, `universites/${universityId}/etudiants/${studentUid}`);
     await set(studentUnivRef, {
       ...studentInfo,
       id: studentUid,
       studentId,
       universityId,
+      parentUid,
       status: 'actif',
       createdAt: new Date().toISOString()
     });
 
-    // 7. Enregistrer le profil étudiant dans /utilisateurs
+    // 7. Enregistrer le profil étudiant dans /utilisateurs (parentUid inclus pour O(1) delete)
     const studentUserRef = ref(db, `utilisateurs/${studentUid}`);
     const sPrenom = (studentInfo as any).prenom || studentInfo.name.split(' ')[0] || '';
     const sNom = (studentInfo as any).nom || studentInfo.name.split(' ').slice(1).join(' ') || studentInfo.name;
@@ -672,6 +787,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       role: 'STUDENT',
       status: 'active',
       universityId,
+      parentUid,
       prenom: sPrenom,
       nom: sNom,
       telephone: '',
@@ -1041,30 +1157,55 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   },
 
   deleteStudent: async (universityId, studentId) => {
+    // Read student profile first to get parentUid (O(1) optimization)
+    const studentUserRef = ref(db, `utilisateurs/${studentId}`);
+    const studentUserSnap = await get(studentUserRef);
+    let parentUid = '';
+    if (studentUserSnap.exists()) {
+      parentUid = studentUserSnap.val().parentUid || '';
+    }
+
     // 1. Supprimer l'étudiant de l'université
     const studentRef = ref(db, `universites/${universityId}/etudiants/${studentId}`);
     await remove(studentRef);
 
     // 2. Supprimer l'utilisateur dans /utilisateurs
-    const userRef = ref(db, `utilisateurs/${studentId}`);
-    await remove(userRef);
+    await remove(studentUserRef);
 
     // 3. Supprimer le lien dans le profil parent
-    const usersRef = ref(db, 'utilisateurs');
-    const allUsersSnap = await get(usersRef);
-    if (allUsersSnap.exists()) {
-      const allUsers = allUsersSnap.val();
-      for (const [uid, u] of Object.entries(allUsers)) {
-        const profile = u as any;
-        if (profile && profile.role === 'PARENT' && profile.enfants && profile.enfants[studentId]) {
-          const parentChildRef = ref(db, `utilisateurs/${uid}/enfants/${studentId}`);
+    if (parentUid) {
+      const parentUserRef = ref(db, `utilisateurs/${parentUid}`);
+      const parentSnap = await get(parentUserRef);
+      if (parentSnap.exists()) {
+        const profile = parentSnap.val();
+        if (profile.enfants && profile.enfants[studentId]) {
+          const parentChildRef = ref(db, `utilisateurs/${parentUid}/enfants/${studentId}`);
           await remove(parentChildRef);
 
-          // Si le parent n'a plus d'autres enfants liés, supprimer son compte
           const updatedEnfants = { ...profile.enfants };
           delete updatedEnfants[studentId];
           if (Object.keys(updatedEnfants).length === 0) {
-            await remove(ref(db, `utilisateurs/${uid}`));
+            await remove(parentUserRef);
+          }
+        }
+      }
+    } else {
+      // Fallback for legacy data (scan users)
+      const usersRef = ref(db, 'utilisateurs');
+      const allUsersSnap = await get(usersRef);
+      if (allUsersSnap.exists()) {
+        const allUsers = allUsersSnap.val();
+        for (const [uid, u] of Object.entries(allUsers)) {
+          const profile = u as any;
+          if (profile && profile.role === 'PARENT' && profile.enfants && profile.enfants[studentId]) {
+            const parentChildRef = ref(db, `utilisateurs/${uid}/enfants/${studentId}`);
+            await remove(parentChildRef);
+
+            const updatedEnfants = { ...profile.enfants };
+            delete updatedEnfants[studentId];
+            if (Object.keys(updatedEnfants).length === 0) {
+              await remove(ref(db, `utilisateurs/${uid}`));
+            }
           }
         }
       }

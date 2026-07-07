@@ -73,12 +73,8 @@ export function TeacherDashboard() {
       return dateA - dateB;
     });
 
-    // Cherche le premier événement dans le futur
-    const nextEvent = sortedEvents.find(e => new Date(`${e.date}T${e.startTime}`).getTime() > now);
-    if (nextEvent) return nextEvent;
-
-    // S'il n'y en a pas dans le futur, retourne le dernier passé
-    return sortedEvents[sortedEvents.length - 1];
+    // Retourne uniquement le premier événement dans le futur
+    return sortedEvents.find(e => new Date(`${e.date}T${e.startTime}`).getTime() > now) ?? null;
   };
 
   const nextEvent = getNextEvent();

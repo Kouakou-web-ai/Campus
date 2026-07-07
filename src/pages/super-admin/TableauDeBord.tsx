@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Users, Building2, TrendingUp, AlertCircle, Megaphone } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -297,9 +298,9 @@ export default function SuperAdminDashboard() {
             <h3 className="text-base font-semibold text-slate-800">Universités sous gestion</h3>
             <p className="text-xs text-slate-400 mt-0.5">Toutes les universités avec leur statut actuel</p>
           </div>
-          <button className="text-sm text-indigo-600 font-medium hover:text-indigo-700 transition-colors">
+          <Link to="/app/super-admin/universites" className="text-sm text-indigo-600 font-medium hover:text-indigo-700 transition-colors">
             Voir tout →
-          </button>
+          </Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full table-premium">

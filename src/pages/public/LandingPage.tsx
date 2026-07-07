@@ -47,8 +47,8 @@ const FEATURES = [
   },
   {
     icon: BookOpen,
-    title: 'Ressources Pédagogiques',
-    description: 'Bibliothèque numérique intégrée pour le partage de cours, de TP et le suivi des devoirs en ligne.',
+    title: 'Bulletins & Résultats',
+    description: 'Génération et gestion des bulletins de notes semestriels avec saisie des notes, calcul automatique des moyennes et appréciations.',
     color: 'text-rose-600',
     bg: 'bg-rose-50',
   },

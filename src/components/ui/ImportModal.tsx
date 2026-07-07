@@ -74,49 +74,6 @@ export default function ImportModal({ type, onClose, onImport }: ImportModalProp
     setStep('loading');
   };
 
-  function generateMockData(warnMsg?: string) {
-    if (warnMsg) {
-      ToastError(warnMsg);
-    }
-
-    // Generate realistic demo list
-    const count = Math.floor(Math.random() * 3) + 5; // 5 to 7 students
-    const items = [];
-
-    const shuffledNames = [...DEFAULT_IVORIAN_NAMES].sort(() => 0.5 - Math.random());
-
-    for (let i = 0; i < count; i++) {
-      const name = shuffledNames[i % shuffledNames.length];
-      const nameParts = name.toLowerCase().split(' ');
-      const cleanPrenom = nameParts[0] || 'etu';
-      const cleanNom = nameParts[nameParts.length - 1] || 'ci';
-
-      if (type === 'student') {
-        const studentId = `ETU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-        items.push({
-          name,
-          email: `${cleanPrenom}.${cleanNom}@univ.ci`,
-          studentId,
-          filiere,
-          annee,
-          paidAmount: Math.random() > 0.4 ? (Math.random() > 0.5 ? totalAmount : Math.floor(totalAmount / 2)) : 0,
-          totalAmount: totalAmount
-        });
-      } else {
-        items.push({
-          name,
-          email: `${cleanPrenom}.${cleanNom}@univ.ci`,
-          specialite,
-          hoursPerWeek
-        });
-      }
-    }
-
-    setParsedItems(items);
-    setStep('preview');
-    ToastSuccess(`${items.length} Ã©lÃ©ments simulÃ©s depuis le fichier.`);
-  }
-
   // Simulate file parsing
   useEffect(() => {
     if (step !== 'loading' || !file) return;
