@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#863bff',
-};
+}
 
 export default function RootLayout({
   children,
@@ -52,26 +52,16 @@ export default function RootLayout({
             `,
           }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function () {
-                if (typeof window !== 'undefined') {
-                  var isHeadless = navigator.webdriver || 
-                                   window.domAutomation || 
-                                   window.domAutomationController ||
-                                   window._phantom ||
-                                   window.callPhantom ||
-                                   (navigator.languages && navigator.languages.length === 0);
-                  if (isHeadless) {
-                    document.documentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-weight:bold;color:#ef4444;background:#0f172a;text-align:center;padding:20px;">Accès refusé - Activité automatisée détectée.</div>';
-                    window.stop();
-                  }
-                }
-              })();
-            `,
-          }}
-        />
+        {/*
+          Script anti-bot retiré : il testait navigator.webdriver, window.domAutomation,
+          window._phantom, etc. et effaçait toute la page si détecté. Problème : l'outil
+          de capture d'écran de Vercel (et vos propres tests Playwright/Puppeteer) utilisent
+          justement un navigateur "webdriver", donc ce script bloquait aussi le déploiement
+          de production sur Vercel lui-même. Si une protection anti-scraping est vraiment
+          nécessaire plus tard, mieux vaut la faire côté serveur (middleware) avec une
+          whitelist explicite pour les IPs/UA de Vercel, plutôt que côté client de façon
+          aussi radicale.
+        */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
