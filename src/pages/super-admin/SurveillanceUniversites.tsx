@@ -189,7 +189,8 @@ export default function SurveillanceUniversites() {
         createdAt: new Date().toISOString().split('T')[0],
         adminUid,
         adminName: adminPayload.name,
-        adminEmail: adminPayload.email
+        adminEmail: adminPayload.email,
+        enforceLimits: true
       });
 
       ToastSuccess("Université et compte administrateur créés avec succès !");

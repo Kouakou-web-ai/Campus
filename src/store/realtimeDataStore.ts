@@ -173,7 +173,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     
     // Variables locales pour construire l'état agrégé currentUniversity
     let branding: any = {};
-    let plan: 'starter' | 'pro' | 'enterprise' = 'pro';
+    let plan: 'gratuit' | 'starter' | 'pro' | 'premium' | 'enterprise' = 'pro';
     let status: StatusType = 'actif';
     let createdAt = new Date().toISOString().split('T')[0];
     let adminUid: string | undefined = undefined;
@@ -181,12 +181,15 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     let adminEmail: string | undefined = undefined;
     let studentsCount = 0;
     let teachersCount = 0;
+    let enforceLimits = false;
 
     const updateCurrentUniversity = () => {
       let mrrVal = 0;
       if (plan === 'enterprise') mrrVal = 250000;
+      else if (plan === 'premium') mrrVal = 200000;
       else if (plan === 'pro') mrrVal = 100000;
-      else mrrVal = 50000;
+      else if (plan === 'starter') mrrVal = 50000;
+      else mrrVal = 0;
 
       setStore({
         currentUniversity: {
@@ -202,7 +205,8 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
           createdAt,
           adminUid,
           adminName,
-          adminEmail
+          adminEmail,
+          enforceLimits
         }
       });
     };
@@ -234,6 +238,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     }));
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/adminEmail`), (snap) => {
       adminEmail = snap.val() || undefined;
+      updateCurrentUniversity();
+    }));
+    unsubscribers.push(onValue(ref(db, `universites/${universityId}/enforceLimits`), (snap) => {
+      enforceLimits = snap.val() || false;
       updateCurrentUniversity();
     }));
 
@@ -582,8 +590,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         // Calculate dynamic MRR based on plans or payments
         let mrrVal = 0;
         if (u.plan === 'enterprise') mrrVal = 250000;
+        else if (u.plan === 'premium') mrrVal = 200000;
         else if (u.plan === 'pro') mrrVal = 100000;
-        else mrrVal = 50000;
+        else if (u.plan === 'starter') mrrVal = 50000;
+        else mrrVal = 0;
 
         totalStudents += studentsCount;
         totalTeachers += teachersCount;
@@ -607,6 +617,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
           devoirsCount,
           ressourcesCount,
           transactionsCount,
+          enforceLimits: u.enforceLimits || false,
         });
 
         if (u.emails_simules) {

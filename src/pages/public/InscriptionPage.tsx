@@ -179,11 +179,13 @@ export default function InscriptionPage() {
             city: 'Abidjan',
             country: "Côte d'Ivoire",
           });
+          const planParam = (searchParams.get('plan') || 'starter') as 'gratuit' | 'starter' | 'pro' | 'premium';
           const metaRef = ref(db, `universites/${finalUniversityId}`);
           await update(metaRef, {
-            plan: 'starter',
+            plan: planParam,
             status: 'pending',
             createdAt: new Date().toISOString().split('T')[0],
+            enforceLimits: true,
           });
         }
       }
@@ -276,6 +278,14 @@ export default function InscriptionPage() {
           onSubmit={handleSignup} 
           className="space-y-8 bg-surface border border-border-subtle p-8 sm:p-10 rounded-3xl shadow-xl shadow-slate-100/5 dark:shadow-none transition-colors"
         >
+          {role === 'UNIVERSITY_ADMIN' && !isInvited && (
+            <div className="p-4 bg-indigo-50/50 dark:bg-slate-900/50 border border-indigo-100/50 dark:border-slate-800 rounded-2xl flex items-center justify-between text-xs animate-fade-in">
+              <span className="text-content-secondary font-medium">Formule d'abonnement sélectionnée :</span>
+              <span className="bg-indigo-600 text-white dark:bg-indigo-500 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl shadow-sm">
+                {searchParams.get('plan') || 'starter'}
+              </span>
+            </div>
+          )}
           {/* Invitation Banner */}
           {isInvited && (
             <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-2xl flex items-start gap-3 text-indigo-800 dark:text-indigo-200">

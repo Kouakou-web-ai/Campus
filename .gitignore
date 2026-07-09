@@ -23,7 +23,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.database.rules.json
 
 # Next.js build output
 .next
+
+# Build cache & TypeScript
+*.tsbuildinfo
+
+# Reports, logs & temp files
+eslint-report.json
+recovered_block.txt
+*.err
+
+# Local environment files
+.env*.local
+.env.local
+
 

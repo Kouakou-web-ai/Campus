@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node dev-runner.js",
-    "build": "tsc -b && vite build",
+    "build": "next build",
     "preview": "vite preview",
     "lint": "eslint .",
     "email-service": "node email-service.js"
@@ -21,6 +21,7 @@
     "jspdf": "^4.2.1",
     "lucide-react": "^1.17.0",
     "nodemailer": "^9.0.3",
+    "next": "^15.1.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.77.0",

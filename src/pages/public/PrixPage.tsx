@@ -199,7 +199,7 @@ export default function PrixPage() {
 
                   {/* CTA */}
                   <Link
-                    to="/connexion"
+                    to={plan.name === 'premium' ? '/contact?sujet=Abonnement%20Premium' : `/signup?plan=${plan.name.toLowerCase()}`}
                     className={`flex items-center justify-center gap-2 w-full py-3 px-4 rounded-2xl font-semibold text-xs transition-all group mb-6 ${
                       isPopular
                         ? 'bg-white text-indigo-700 hover:bg-indigo-50'

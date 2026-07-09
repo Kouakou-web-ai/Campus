@@ -1,13 +1,13 @@
 import { spawn } from 'child_process';
 
-console.log("Démarrage simultané de Vite et du service d'emails...");
+console.log("Démarrage simultané de Next.js et du service d'emails...");
 
-const vite = spawn('npx', ['vite'], { stdio: 'inherit', shell: true });
+const nextDev = spawn('npx', ['next', 'dev'], { stdio: 'inherit', shell: true });
 const email = spawn('node', ['email-service.js'], { stdio: 'inherit', shell: true });
 
 const cleanup = () => {
   console.log("\nArrêt des services...");
-  vite.kill();
+  nextDev.kill();
   email.kill();
   process.exit();
 };

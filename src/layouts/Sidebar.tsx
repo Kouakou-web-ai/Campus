@@ -10,6 +10,7 @@ import { useChatStore } from '../store/chatStore';
 import { ToastSuccess, ToastError } from '../controllers/Toast-emitter';
 import { useTranslation } from '../hooks/useTranslation';
 import { labelToKeyMap, sectionToKeyMap } from '../constants/translations';
+import { hasFeatureAccess } from '../lib/subscription';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -33,7 +34,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
   };
 
   const { requests, subscribe: subscribeReg, teardown: teardownReg } = useRegistrationStore();
-  const { universities, transactions, grades, students, teachers } = useRealtimeDataStore();
+  const { currentUniversity, universities, transactions, grades, students, teachers } = useRealtimeDataStore();
   const { subscribeToAllUserChats, totalUnreadCount } = useChatStore();
 
 
@@ -77,7 +78,29 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
 
   if (!user) return null;
 
-  const navSections = navigationByRole[user.role] ?? [];
+  const rawNavSections = navigationByRole[user.role] ?? [];
+  const navSections = rawNavSections.map(section => {
+    const items = section.items.filter(item => {
+      if (item.path === '/app/admin/finance' || item.path === '/app/etudiant/paiements' || item.path === '/app/parent/scolarite') {
+        return hasFeatureAccess(currentUniversity, 'hasFinance');
+      }
+      if (item.path === '/app/admin/gestionnaires') {
+        return hasFeatureAccess(currentUniversity, 'hasGestionnaires');
+      }
+      if (item.path === '/app/enseignant/absences') {
+        return hasFeatureAccess(currentUniversity, 'hasAbsences');
+      }
+      if (item.path === '/app/enseignant/devoirs') {
+        return hasFeatureAccess(currentUniversity, 'hasDevoirs');
+      }
+      if (item.path === '/app/evaluation-suggestions') {
+        return hasFeatureAccess(currentUniversity, 'hasStats');
+      }
+      return true;
+    });
+    return { ...section, items };
+  }).filter(section => section.items.length > 0);
+
   const roleLabel = t(`role.${user.role}`, roleLabels[user.role]);
 
   const isActive = (path: string) => {

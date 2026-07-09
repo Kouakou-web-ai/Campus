@@ -48,6 +48,7 @@ export interface University {
   devoirsCount?: number;
   ressourcesCount?: number;
   transactionsCount?: number;
+  enforceLimits?: boolean;
 }
 
 export interface Class {

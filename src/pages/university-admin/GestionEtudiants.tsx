@@ -228,9 +228,12 @@ export default function GestionEtudiants() {
     }
 
     const plan = currentUniversity?.plan || 'pro';
-    const limit = plan === 'starter' ? 500 : plan === 'pro' ? 5000 : Infinity;
+    const enforce = currentUniversity?.enforceLimits || false;
+    const limit = enforce
+      ? (plan === 'gratuit' ? 100 : plan === 'starter' ? 500 : plan === 'pro' ? 5000 : Infinity)
+      : Infinity;
     if (students.length >= limit) {
-      ToastError(`Limite d'étudiants atteinte. Votre abonnement ${plan === 'starter' ? 'Starter' : 'Pro'} est limité à ${limit} étudiants. Veuillez passer à un forfait supérieur.`);
+      ToastError(`Limite d'étudiants atteinte. Votre abonnement ${plan.toUpperCase()} est limité à ${limit} étudiants. Veuillez passer à un forfait supérieur.`);
       return;
     }
 
@@ -289,7 +292,10 @@ export default function GestionEtudiants() {
     if (!user?.universityId) return;
 
     const plan = currentUniversity?.plan || 'pro';
-    const limit = plan === 'starter' ? 500 : plan === 'pro' ? 5000 : Infinity;
+    const enforce = currentUniversity?.enforceLimits || false;
+    const limit = enforce
+      ? (plan === 'gratuit' ? 100 : plan === 'starter' ? 500 : plan === 'pro' ? 5000 : Infinity)
+      : Infinity;
     if (students.length + items.length > limit) {
       ToastError(`Importation impossible. La liste dépasse la limite de votre forfait (${limit} étudiants maximum).`);
       return;

@@ -1,7 +1,7 @@
 {
-  "name": "Campus - SaaS Universitaire",
+  "name": "Campus - Gestion Universitaire",
   "short_name": "Campus",
-  "description": "Plateforme SaaS Universitaire Premium",
+  "description": "Plateforme De Gestion Universitaire Premium",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
