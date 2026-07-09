@@ -72,14 +72,19 @@ export function exportBulletinPDF(
     const exText = g.examNote !== undefined && g.examNote !== null ? `${g.examNote.toFixed(1)}/20` : '—';
     doc.text(clText, 95, y);
     doc.text(exText, 125, y);
-    doc.text(`${g.value.toFixed(2)}/20`, 150, y);
+    const valText = g.value !== undefined && g.value !== null && !isNaN(g.value) ? `${g.value.toFixed(2)}/20` : '—';
+    doc.text(valText, 150, y);
     
     // appreciation
-    let appraisal = 'Passable';
-    if (g.value >= 16) appraisal = 'Très Bien';
-    else if (g.value >= 14) appraisal = 'Bien';
-    else if (g.value >= 12) appraisal = 'Assez Bien';
-    else if (g.value < 10) appraisal = 'Insuffisant';
+    let appraisal = '—';
+    if (g.classNote !== undefined && g.classNote !== null || g.examNote !== undefined && g.examNote !== null || (g.value !== undefined && g.value !== null && !isNaN(g.value))) {
+      const val = g.value ?? 10;
+      appraisal = 'Passable';
+      if (val >= 16) appraisal = 'Très Bien';
+      else if (val >= 14) appraisal = 'Bien';
+      else if (val >= 12) appraisal = 'Assez Bien';
+      else if (val < 10) appraisal = 'Insuffisant';
+    }
     doc.text(appraisal, 172, y);
     
     totalPoints += g.value * g.coefficient;

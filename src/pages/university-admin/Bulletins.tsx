@@ -14,7 +14,20 @@ const getAppreciation = (note: number): string => {
   if (note >= 12) return 'Assez bien';
   if (note >= 10) return 'Passable';
   if (note >= 8)  return 'Insuffisant';
-  return 'Très insuffisant';
+};
+
+const getAppreciationForGrade = (g: { classNote?: number; examNote?: number; manualNote?: number; isManual: boolean }): string => {
+  let finalNote: number | undefined;
+  if (g.isManual) {
+    if (g.manualNote !== undefined) {
+      finalNote = g.manualNote;
+    }
+  } else {
+    if (g.classNote !== undefined || g.examNote !== undefined) {
+      finalNote = parseFloat(((g.classNote ?? 10) * 0.4 + (g.examNote ?? 10) * 0.6).toFixed(2));
+    }
+  }
+  return finalNote !== undefined ? getAppreciation(finalNote) : '';
 };
 
 export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean }) {
@@ -95,26 +108,19 @@ export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean
     });
     grades.forEach(g => {
       if (g.studentId === selectedStudentId && newLocalGrades[g.courseId]) {
-        let autoAppreciation = g.appreciation || '';
-        const cNote = g.classNote;
-        const eNote = g.examNote;
-        const mNote = g.manualNote;
         const isManual = g.isManual || false;
-        let finalNote: number | undefined;
-        if (isManual && mNote !== undefined) {
-          finalNote = mNote;
-        } else if (cNote !== undefined || eNote !== undefined) {
-          finalNote = parseFloat(((cNote ?? 10) * 0.4 + (eNote ?? 10) * 0.6).toFixed(2));
-        }
-        if (finalNote !== undefined) {
-          autoAppreciation = getAppreciation(finalNote);
-        }
+        const autoAppreciation = getAppreciationForGrade({
+          classNote: g.classNote,
+          examNote: g.examNote,
+          manualNote: g.manualNote,
+          isManual
+        });
         newLocalGrades[g.courseId] = {
           gradeId: g.id,
           classNote: g.classNote,
           examNote: g.examNote,
           manualNote: g.manualNote,
-          isManual: g.isManual || false,
+          isManual,
           appreciation: autoAppreciation
         };
       }
@@ -122,35 +128,17 @@ export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean
     setLocalGrades(newLocalGrades);
   }, [selectedStudentId, grades]);
 
-  // ─── Recalcule automatiquement l'appréciation à chaque changement de note ──
-  const recalcAppreciation = useCallback(
-    (current: typeof localGrades[string], newClassNote?: number, newExamNote?: number, newManualNote?: number, isManual?: boolean): string => {
-      const cNote = newClassNote ?? current.classNote;
-      const eNote = newExamNote ?? current.examNote;
-      const mNote = newManualNote ?? current.manualNote;
-      const manual = isManual ?? current.isManual;
-      let finalNote: number | undefined;
-      if (manual && mNote !== undefined) {
-        finalNote = mNote;
-      } else if (cNote !== undefined || eNote !== undefined) {
-        finalNote = parseFloat(((cNote ?? 10) * 0.4 + (eNote ?? 10) * 0.6).toFixed(2));
-      }
-      return finalNote !== undefined ? getAppreciation(finalNote) : '';
-    },
-    []
-  );
-
   const updateClassNote = (courseId: string, valStr: string) => {
     const val = valStr === '' ? undefined : parseFloat(valStr);
     setLocalGrades(prev => {
       const current = prev[courseId] || { isManual: false, appreciation: '' };
       const clamped = val !== undefined && !isNaN(val) ? Math.min(20, Math.max(0, val)) : undefined;
+      const updated = { ...current, classNote: clamped };
       return {
         ...prev,
         [courseId]: {
-          ...current,
-          classNote: clamped,
-          appreciation: recalcAppreciation(current, clamped, undefined)
+          ...updated,
+          appreciation: getAppreciationForGrade(updated)
         }
       };
     });
@@ -161,12 +149,12 @@ export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean
     setLocalGrades(prev => {
       const current = prev[courseId] || { isManual: false, appreciation: '' };
       const clamped = val !== undefined && !isNaN(val) ? Math.min(20, Math.max(0, val)) : undefined;
+      const updated = { ...current, examNote: clamped };
       return {
         ...prev,
         [courseId]: {
-          ...current,
-          examNote: clamped,
-          appreciation: recalcAppreciation(current, undefined, clamped)
+          ...updated,
+          appreciation: getAppreciationForGrade(updated)
         }
       };
     });
@@ -177,13 +165,12 @@ export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean
     setLocalGrades(prev => {
       const current = prev[courseId] || { isManual: false, appreciation: '' };
       const clamped = val !== undefined && !isNaN(val) ? Math.min(20, Math.max(0, val)) : undefined;
+      const updated = { ...current, manualNote: clamped, isManual: val !== undefined };
       return {
         ...prev,
         [courseId]: {
-          ...current,
-          manualNote: clamped,
-          isManual: val !== undefined,
-          appreciation: recalcAppreciation(current, undefined, undefined, clamped, val !== undefined)
+          ...updated,
+          appreciation: getAppreciationForGrade(updated)
         }
       };
     });
@@ -194,13 +181,12 @@ export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean
       const current = prev[courseId] || { isManual: false, appreciation: '' };
       const newIsManual = forceAuto ? false : !current.isManual;
       const newManual = forceAuto ? undefined : current.manualNote;
+      const updated = { ...current, isManual: newIsManual, manualNote: newManual };
       return {
         ...prev,
         [courseId]: {
-          ...current,
-          isManual: newIsManual,
-          manualNote: newManual,
-          appreciation: recalcAppreciation(current, undefined, undefined, newManual, newIsManual)
+          ...updated,
+          appreciation: getAppreciationForGrade(updated)
         }
       };
     });
@@ -221,6 +207,7 @@ export default function Bulletins({ hideHeader = false }: { hideHeader?: boolean
           studentId: selectedStudentId,
           studentName: activeStudent.name,
           courseId,
+          teacherId: course.teacherId || '',
           classNote: local.classNote,
           examNote: local.examNote,
           manualNote: local.manualNote,

@@ -26,7 +26,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 };
 
 export default function UniversityAdminDashboard() {
-  const { students, teachers, courses, transactions, evaluations, suggestions, loading, currentUniversity } = useRealtimeDataStore();
+  const { students, teachers, courses, transactions, evaluations, suggestions, loading, currentUniversity, grades } = useRealtimeDataStore();
 
   // 1. Stats calculation
   const totalStudents = students.length;
@@ -41,6 +41,19 @@ export default function UniversityAdminDashboard() {
   const averageRating = evaluations.length > 0
     ? (evaluations.reduce((sum, e) => sum + (e.average || 0), 0) / evaluations.length).toFixed(1)
     : '4.5';
+
+  // Global success stats calculation
+  const gradedItems = grades.filter(g => typeof g.note === 'number');
+  const averageGrade = gradedItems.length > 0
+    ? parseFloat((gradedItems.reduce((sum, g) => sum + (g.note || 0), 0) / gradedItems.length).toFixed(2))
+    : 0;
+  const passingGrades = gradedItems.filter(g => (g.note ?? 0) >= 10);
+  const passingRate = gradedItems.length > 0
+    ? parseFloat(((passingGrades.length / gradedItems.length) * 100).toFixed(1))
+    : 0;
+  const failingRate = gradedItems.length > 0
+    ? parseFloat((100 - passingRate).toFixed(1))
+    : 0;
 
   const STATS = [
     {
@@ -100,7 +113,7 @@ export default function UniversityAdminDashboard() {
   }));
 
   const hasFinance = hasFeatureAccess(currentUniversity, 'hasFinance');
-  const hasStats = hasFeatureAccess(currentUniversity, 'hasStats');
+  const hasStats = true;
 
   const visibleStats = STATS.filter((_, idx) => {
     if (idx === 3) return hasStats;
@@ -235,22 +248,28 @@ export default function UniversityAdminDashboard() {
             <span className="badge badge-primary badge-sm font-semibold uppercase tracking-wider">Abonnement Pro</span>
           </div>
 
-          {/* Mock visual stats (blurred) */}
-          <div className={`grid grid-cols-1 sm:grid-cols-3 gap-6 ${!hasStats ? 'filter blur-sm select-none pointer-events-none opacity-50' : ''}`}>
+          {/* Success stats calculated in real-time */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded-2xl">
               <span className="text-xs text-slate-400 font-bold uppercase block mb-1">Moyenne Générale</span>
-              <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400">14.28 / 20</span>
-              <div className="text-[10px] text-emerald-650 font-semibold mt-1">▲ +0.45 ce semestre</div>
+              <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400">
+                {averageGrade > 0 ? `${averageGrade.toFixed(2)} / 20` : 'N/A'}
+              </span>
+              <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-1">Calculé en temps réel</div>
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded-2xl">
               <span className="text-xs text-slate-400 font-bold uppercase block mb-1">Taux de Passage</span>
-              <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">89.4 %</span>
+              <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                {gradedItems.length > 0 ? `${passingRate} %` : 'N/A'}
+              </span>
               <div className="text-[10px] text-slate-400 font-semibold mt-1">Objectif cible : 90 %</div>
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded-2xl">
               <span className="text-xs text-slate-400 font-bold uppercase block mb-1">Taux de Redoublement</span>
-              <span className="text-3xl font-black text-rose-500">10.6 %</span>
-              <div className="text-[10px] text-emerald-650 font-semibold mt-1">▼ -1.2 % par rapport à l'an dernier</div>
+              <span className="text-3xl font-black text-rose-500">
+                {gradedItems.length > 0 ? `${failingRate} %` : 'N/A'}
+              </span>
+              <div className="text-[10px] text-slate-400 font-semibold mt-1">Moyenne inférieure à 10/20</div>
             </div>
           </div>
 

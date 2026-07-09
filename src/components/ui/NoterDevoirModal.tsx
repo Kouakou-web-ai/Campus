@@ -10,7 +10,7 @@ interface NoterDevoirModalProps {
 }
 
 export default function NoterDevoirModal({ assignmentId, universityId, onClose }: NoterDevoirModalProps) {
-  const { students, assignments, courses, updateAssignment, addGrade } = useRealtimeDataStore();
+  const { students, assignments, courses, updateAssignment, addGrade, grades: realtimeGrades, updateGrade } = useRealtimeDataStore();
   const assignment = assignments.find(a => a.id === assignmentId);
   const course = courses.find(c => c.id === assignment?.courseId);
   const courseStudents = students.filter(s => s.filiere === course?.filiere);
@@ -29,25 +29,60 @@ export default function NoterDevoirModal({ assignmentId, universityId, onClose }
     try {
       const submittedCount = Object.keys(grades).length;
       
-      // Save grades using addGrade
+      // Save grades by appending them to the main student grade's classNotes
       const promises = Object.entries(grades).map(async ([studentId, note]) => {
         const student = students.find(s => s.id === studentId);
         if (student && course) {
-          await addGrade(universityId, {
-            studentId,
-            studentName: student.name,
-            courseId: course.id,
-            note: note,
-            appreciation: `Devoir: ${assignment?.title}`,
-            submitted: true
-          });
+          const existingGrade = realtimeGrades.find(g => g.studentId === studentId && g.courseId === course.id);
+          
+          const newClassNotes = existingGrade && existingGrade.classNotes
+            ? [...existingGrade.classNotes, note]
+            : existingGrade && existingGrade.classNote !== undefined
+              ? [existingGrade.classNote, note]
+              : [note];
+          
+          const classNoteAvg = parseFloat((newClassNotes.reduce((s, n) => s + n, 0) / newClassNotes.length).toFixed(2));
+          const examNoteAvg = existingGrade && existingGrade.examNotes && existingGrade.examNotes.length > 0
+            ? parseFloat((existingGrade.examNotes.reduce((s, n) => s + n, 0) / existingGrade.examNotes.length).toFixed(2))
+            : existingGrade && existingGrade.examNote !== undefined
+              ? existingGrade.examNote
+              : undefined;
+              
+          let finalNote = undefined;
+          if (classNoteAvg !== undefined || examNoteAvg !== undefined) {
+            const cNote = classNoteAvg ?? 10;
+            const eNote = examNoteAvg ?? 10;
+            finalNote = parseFloat((cNote * 0.4 + eNote * 0.6).toFixed(2));
+          }
+          
+          if (existingGrade) {
+            await updateGrade(universityId, existingGrade.id, {
+              classNotes: newClassNotes,
+              classNote: classNoteAvg,
+              note: finalNote,
+              submitted: true,
+              teacherId: course.teacherId || ''
+            });
+          } else {
+            await addGrade(universityId, {
+              studentId,
+              studentName: student.name,
+              courseId: course.id,
+              classNotes: newClassNotes,
+              classNote: classNoteAvg,
+              note: finalNote,
+              submitted: true,
+              teacherId: course.teacherId || ''
+            });
+          }
         }
       });
       await Promise.all(promises);
 
       await updateAssignment(universityId, assignmentId, {
         status: 'termine',
-        submissionsCount: submittedCount
+        submissionsCount: submittedCount,
+        grades: grades
       });
 
       ToastSuccess(`Notes enregistrées avec succès (${submittedCount} étudiants).`);

@@ -150,6 +150,7 @@ export interface Grade {
   studentName: string;
   avatar?: string;
   courseId: string;
+  teacherId?: string;
   note?: number;
   classNote?: number;
   examNote?: number;
@@ -172,6 +173,7 @@ export interface Assignment {
   studentsCount: number;
   description: string;
   maxGrade: number;
+  grades?: Record<string, number>;
 }
 
 export interface Resource {

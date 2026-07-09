@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Users, Calendar, FileText, X } from 'lucide-react';
+import { Plus, Users, Calendar, FileText, X, Trash2 } from 'lucide-react';
 import PageHeader from '../../components/ui/PageHeader';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
@@ -11,7 +11,7 @@ import { useNotificationStore } from '../../store/notificationStore';
 
 export default function PublicationDevoirs() {
   const { user } = useAuthStore();
-  const { assignments, courses, students, addAssignment, loading } = useRealtimeDataStore();
+  const { assignments, courses, students, addAssignment, deleteAssignment, loading } = useRealtimeDataStore();
   const [filter, setFilter] = useState('tous');
   const [modalOpen, setModalOpen] = useState(false);
   const [gradingAssignmentId, setGradingAssignmentId] = useState<string | null>(null);
@@ -74,6 +74,19 @@ export default function PublicationDevoirs() {
     }
   };
 
+  const handleCancelAssignment = async (assignmentId: string) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir annuler ce devoir ? Le devoir ainsi que toutes les notes de devoirs associées seront supprimées à tous les niveaux.")) return;
+    try {
+      const univId = user?.universityId;
+      if (!univId) return;
+      await deleteAssignment(univId, assignmentId);
+      ToastSuccess("Le devoir et toutes ses notes associées ont été supprimés.");
+    } catch (err: any) {
+      console.error(err);
+      ToastError("Erreur lors de la suppression du devoir.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="w-full flex justify-center py-20">
@@ -111,19 +124,17 @@ export default function PublicationDevoirs() {
         ))}
       </div>
 
-      {/* Filtres */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {['tous', 'brouillon', 'publie', 'termine'].map(f => (
+      {/* Filter tabs */}
+      <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900/60 rounded-xl w-fit">
+        {['tous', 'publie', 'termine'].map(tab => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all ${
-              filter === f
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-200'
+            key={tab}
+            onClick={() => setFilter(tab)}
+            className={`text-xs px-3.5 py-1.5 rounded-lg font-semibold capitalize transition-all ${
+              filter === tab ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-650'
             }`}
           >
-            {{ tous: 'Tous', brouillon: '📝 Brouillons', publie: '✅ Publiés', termine: '🏁 Terminés' }[f]}
+            {tab === 'publie' ? 'publiés' : tab === 'termine' ? 'terminés' : tab}
           </button>
         ))}
       </div>
@@ -180,7 +191,7 @@ export default function PublicationDevoirs() {
                   </div>
                 </div>
 
-                {assignment.status === 'publie' && (
+                {(assignment.status === 'publie' || assignment.status === 'termine') && (
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                     <div className="flex-1 mr-4">
                       <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
@@ -196,13 +207,25 @@ export default function PublicationDevoirs() {
                         />
                       </div>
                     </div>
-                    <button
-                      onClick={() => setGradingAssignmentId(assignment.id)}
-                      className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
-                    >
-                      <Plus size={14} />
-                      Noter
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCancelAssignment(assignment.id)}
+                        className="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                        title="Annuler le devoir et effacer les notes"
+                      >
+                        <Trash2 size={13} />
+                        Annuler
+                      </button>
+                      {assignment.status === 'publie' && (
+                        <button
+                          onClick={() => setGradingAssignmentId(assignment.id)}
+                          className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+                        >
+                          <Plus size={14} />
+                          Noter
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+    webpackMemoryOptimizations: true,
+  },
   async headers() {
     return [
       {

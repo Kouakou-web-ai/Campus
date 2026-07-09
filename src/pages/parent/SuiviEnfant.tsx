@@ -386,26 +386,6 @@ export default function SuiviEnfant() {
                 )}
               </div>
 
-              {/* Activité récente */}
-              <div className="card-premium overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-slate-800">Activité récente de l'étudiant</h3>
-                  <Eye size={15} className="text-slate-300" />
-                </div>
-                {activities.length === 0 ? (
-                  <div className="p-6 text-center text-slate-400 text-xs">Aucune activité enregistrée.</div>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {activities.map((a, i) => (
-                      <div key={i} className="flex items-center gap-3 px-6 py-3.5 hover:bg-slate-50 transition-colors">
-                        <span className="text-lg flex-shrink-0">{a.icon}</span>
-                        <p className="flex-1 text-sm text-slate-700">{a.text}</p>
-                        <span className="text-xs text-slate-400 flex-shrink-0">{a.time}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </>
           )}
         </>

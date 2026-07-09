@@ -13,7 +13,7 @@ import { useNotificationStore } from '../../store/notificationStore';
 
 export default function GestionNotes() {
   const { user } = useAuthStore();
-  const { courses, students, grades, addGrade, updateGrade, addSimulatedEmail, loading, teachers } = useRealtimeDataStore();
+  const { courses, students, grades, addGrade, updateGrade, deleteGrade, addSimulatedEmail, loading, teachers } = useRealtimeDataStore();
   const [selectedCourse, setSelectedCourse] = useState('');
   const [filterSemester, setFilterSemester] = useState<number | 'tous'>('tous');
   
@@ -276,8 +276,13 @@ export default function GestionNotes() {
         const student = students.find(s => s.id === studentId);
         if (!student) return;
 
-        // Skip if no note entered
-        if (local.note === undefined) return;
+        // Si la note est vide/effacée et qu'un enregistrement existait, on le supprime
+        if (local.note === undefined) {
+          if (local.gradeId) {
+            await deleteGrade(universityId, local.gradeId);
+          }
+          return;
+        }
 
         // Calculate averages for storage
         const classNoteAvg = local.classNotes && local.classNotes.length > 0
@@ -296,7 +301,8 @@ export default function GestionNotes() {
             examNote: examNoteAvg,
             note: local.note,
             appreciation: local.appreciation,
-            submitted: true
+            submitted: true,
+            teacherId: user?.id || ''
           });
         } else {
           // Create new
@@ -310,7 +316,8 @@ export default function GestionNotes() {
             examNote: examNoteAvg,
             note: local.note,
             appreciation: local.appreciation,
-            submitted: true
+            submitted: true,
+            teacherId: user?.id || ''
           });
         }
 

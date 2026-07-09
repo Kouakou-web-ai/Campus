@@ -70,6 +70,7 @@
 
         "etudiants": {
           ".read": "auth != null && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'STUDENT_MANAGER' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'TEACHER')))",
+          ".indexOn": ["filiere"],
           "$studentId": {
             ".read": "auth != null && (auth.uid === $studentId || root.child('utilisateurs').child(auth.uid).child('enfants').child($studentId).exists() || root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'STUDENT_MANAGER' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'TEACHER')))",
             ".write": "auth != null && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'STUDENT_MANAGER')))",
@@ -93,12 +94,13 @@
 
         "cours": {
           ".read": "auth != null && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId)",
-          ".write": "auth != null && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'TEACHER')))"
+          ".write": "auth != null && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'TEACHER')))",
+          ".indexOn": ["teacherId"]
         },
 
         "transactions": {
           ".read": "auth != null && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'FINANCE_MANAGER')))",
-          ".indexOn": ["studentId"],
+          ".indexOn": ["studentId", "studentName"],
           "$transactionId": {
             ".read": "auth != null && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'FINANCE_MANAGER' || auth.uid === data.child('studentId').val() || root.child('utilisateurs').child(auth.uid).child('enfants').child(data.child('studentId').val()).exists())))",
             ".write": "auth != null && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'SUPER_ADMIN' || (root.child('utilisateurs').child(auth.uid).child('universityId').val() === $universityId && (root.child('utilisateurs').child(auth.uid).child('role').val() === 'UNIVERSITY_ADMIN' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'FINANCE_MANAGER' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'STUDENT' || root.child('utilisateurs').child(auth.uid).child('role').val() === 'PARENT')))"

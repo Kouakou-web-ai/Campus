@@ -46,6 +46,122 @@ async function resolveUniversityName(
   }
 }
 
+async function migrateDevoirGrades(universityId: string) {
+  try {
+    const gradesRef = ref(db, `universites/${universityId}/notes`);
+    const gradesSnap = await get(gradesRef);
+    if (!gradesSnap.exists()) return;
+
+    const gradesVal = gradesSnap.val();
+    const allGrades = Object.keys(gradesVal).map(key => ({ id: key, ...gradesVal[key] }));
+
+    // Filter legacy homework grades (isolated)
+    const legacyGrades = allGrades.filter(g => g.appreciation && g.appreciation.includes('Devoir:'));
+    if (legacyGrades.length === 0) return;
+
+    // Filter main grades
+    const mainGrades = allGrades.filter(g => !g.appreciation || !g.appreciation.includes('Devoir:'));
+
+    // We also need student information for names
+    const studentsSnap = await get(ref(db, `universites/${universityId}/etudiants`));
+    const students = studentsSnap.exists()
+      ? Object.keys(studentsSnap.val()).map(key => ({ id: key, ...studentsSnap.val()[key] }))
+      : [];
+
+    // And courses for teacherId fallback
+    const coursesSnap = await get(ref(db, `universites/${universityId}/cours`));
+    const courses = coursesSnap.exists()
+      ? Object.keys(coursesSnap.val()).map(key => ({ id: key, ...coursesSnap.val()[key] }))
+      : [];
+
+    console.log(`[Migration] Found ${legacyGrades.length} legacy homework grades to migrate.`);
+
+    // Group legacy grades by studentId and courseId to batch merge
+    const groupedLegacy: Record<string, typeof legacyGrades> = {};
+    legacyGrades.forEach(g => {
+      const key = `${g.studentId}_${g.courseId}`;
+      if (!groupedLegacy[key]) groupedLegacy[key] = [];
+      groupedLegacy[key].push(g);
+    });
+
+    for (const [key, legacyList] of Object.entries(groupedLegacy)) {
+      const [studentId, courseId] = key.split('_');
+      const student = students.find(s => s.id === studentId);
+      const course = courses.find(c => c.id === courseId);
+      const studentName = student?.name || legacyList[0].studentName || 'Étudiant';
+      const teacherId = course?.teacherId || legacyList[0].teacherId || '';
+
+      // Find existing main grade
+      let existingMain = mainGrades.find(g => g.studentId === studentId && g.courseId === courseId);
+
+      // Collect notes to merge
+      const notesToMerge = legacyList.map(g => g.note).filter(n => typeof n === 'number') as number[];
+
+      if (notesToMerge.length === 0) {
+        // Just delete them if they don't have a note value
+        for (const leg of legacyList) {
+          await remove(ref(db, `universites/${universityId}/notes/${leg.id}`));
+        }
+        continue;
+      }
+
+      if (existingMain) {
+        // Merge into existing main grade
+        const currentClassNotes = existingMain.classNotes || 
+                                 (typeof existingMain.classNote === 'number' ? [existingMain.classNote] : []);
+        const newClassNotes = [...currentClassNotes, ...notesToMerge];
+        const classNoteAvg = parseFloat((newClassNotes.reduce((s, n) => s + n, 0) / newClassNotes.length).toFixed(2));
+        
+        const examNoteAvg = existingMain.examNotes && existingMain.examNotes.length > 0
+          ? parseFloat((existingMain.examNotes.reduce((s, n) => s + n, 0) / existingMain.examNotes.length).toFixed(2))
+          : typeof existingMain.examNote === 'number'
+            ? existingMain.examNote
+            : undefined;
+
+        let finalNote = undefined;
+        if (classNoteAvg !== undefined || examNoteAvg !== undefined) {
+          const cNote = classNoteAvg ?? 10;
+          const eNote = examNoteAvg ?? 10;
+          finalNote = parseFloat((cNote * 0.4 + eNote * 0.6).toFixed(2));
+        }
+
+        await update(ref(db, `universites/${universityId}/notes/${existingMain.id}`), {
+          classNotes: newClassNotes,
+          classNote: classNoteAvg,
+          note: finalNote,
+          teacherId: teacherId || existingMain.teacherId || ''
+        });
+
+      } else {
+        // Create new main grade
+        const classNoteAvg = parseFloat((notesToMerge.reduce((s, n) => s + n, 0) / notesToMerge.length).toFixed(2));
+        const finalNote = classNoteAvg; // No exam yet
+
+        const newGradeRef = push(ref(db, `universites/${universityId}/notes`));
+        await set(newGradeRef, {
+          studentId,
+          studentName,
+          courseId,
+          classNotes: notesToMerge,
+          classNote: classNoteAvg,
+          note: finalNote,
+          submitted: true,
+          teacherId
+        });
+      }
+
+      // Delete migrated legacy grades
+      for (const leg of legacyList) {
+        await remove(ref(db, `universites/${universityId}/notes/${leg.id}`));
+      }
+    }
+
+    console.log(`[Migration] Migration completed successfully.`);
+  } catch (err) {
+    console.error(`[Migration] Error during migration:`, err);
+  }
+}
+
 interface RealtimeDataState {
   students: Student[];
   teachers: Teacher[];
@@ -95,8 +211,10 @@ interface RealtimeDataState {
   addTransaction: (universityId: string, transaction: Omit<Transaction, 'id'>) => Promise<void>;
   addGrade: (universityId: string, grade: Omit<Grade, 'id'>) => Promise<void>;
   updateGrade: (universityId: string, gradeId: string, data: Partial<Grade>) => Promise<void>;
+  deleteGrade: (universityId: string, gradeId: string) => Promise<void>;
   addAssignment: (universityId: string, assignment: Omit<Assignment, 'id'>) => Promise<void>;
   updateAssignment: (universityId: string, assignmentId: string, data: Partial<Assignment>) => Promise<void>;
+  deleteAssignment: (universityId: string, assignmentId: string) => Promise<void>;
   addResource: (universityId: string, resource: Omit<Resource, 'id'>) => Promise<void>;
   addScheduleEvent: (universityId: string, event: Omit<ScheduleEvent, 'id'>) => Promise<void>;
   addUniversity: (univ: Omit<University, 'id'>) => Promise<void>;
@@ -105,8 +223,6 @@ interface RealtimeDataState {
   deleteTeacher: (universityId: string, teacherId: string) => Promise<void>;
   deleteCourse: (universityId: string, courseId: string) => Promise<void>;
   deleteTransaction: (universityId: string, transactionId: string) => Promise<void>;
-  deleteGrade: (universityId: string, gradeId: string) => Promise<void>;
-  deleteAssignment: (universityId: string, assignmentId: string) => Promise<void>;
   deleteResource: (universityId: string, resourceId: string) => Promise<void>;
   deleteScheduleEvent: (universityId: string, eventId: string) => Promise<void>;
   deleteUniversity: (universityId: string) => Promise<void>;
@@ -254,6 +370,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     const currentUser = useAuthStore.getState().user;
     const userRole = currentUser?.role as string | undefined;
     const userUid = currentUser?.id || '';
+
+    if (userRole === 'TEACHER' || userRole === 'UNIVERSITY_ADMIN' || userRole === 'ADMIN') {
+      migrateDevoirGrades(universityId).catch(err => console.error("Migration error:", err));
+    }
 
     if (userRole === 'STUDENT') {
       // STUDENT ROLE OPTIMIZATIONS
@@ -1098,14 +1218,30 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   },
 
   addGrade: async (universityId, grade) => {
+    let teacherId = grade.teacherId;
+    if (!teacherId && grade.courseId) {
+      try {
+        const courseSnap = await get(ref(db, `universites/${universityId}/cours/${grade.courseId}`));
+        if (courseSnap.exists()) {
+          teacherId = courseSnap.val().teacherId || '';
+        }
+      } catch (err) {
+        console.error("Error fetching course for teacherId", err);
+      }
+    }
     const gradesRef = ref(db, `universites/${universityId}/notes`);
     const newGradeRef = push(gradesRef);
-    await set(newGradeRef, grade);
+    await set(newGradeRef, { ...grade, teacherId: teacherId || '' });
   },
 
   updateGrade: async (universityId, gradeId, data) => {
     const gradeRef = ref(db, `universites/${universityId}/notes/${gradeId}`);
     await update(gradeRef, data);
+  },
+
+  deleteGrade: async (universityId, gradeId) => {
+    const gradeRef = ref(db, `universites/${universityId}/notes/${gradeId}`);
+    await remove(gradeRef);
   },
 
   startLiveMeeting: async (universityId, meetingId, meetingData) => {
@@ -1131,6 +1267,101 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   updateAssignment: async (universityId, assignmentId, data) => {
     const assignRef = ref(db, `universites/${universityId}/devoirs/${assignmentId}`);
     await update(assignRef, data);
+  },
+
+  deleteAssignment: async (universityId, assignmentId) => {
+    const assignmentRef = ref(db, `universites/${universityId}/devoirs/${assignmentId}`);
+    const assignmentSnap = await get(assignmentRef);
+    if (!assignmentSnap.exists()) return;
+    const assignment = assignmentSnap.val();
+    const courseId = assignment.courseId;
+    const assignmentGrades = assignment.grades || {};
+
+    const gradesRef = ref(db, `universites/${universityId}/notes`);
+    const gradesSnap = await get(gradesRef);
+    if (gradesSnap.exists()) {
+      const allGrades = gradesSnap.val();
+      const promises = Object.entries(assignmentGrades).map(async ([studentId, noteVal]) => {
+        try {
+          const gradeKey = Object.keys(allGrades).find(key => 
+            allGrades[key].studentId === studentId && allGrades[key].courseId === courseId
+          );
+          if (gradeKey) {
+            const studentGrade = allGrades[gradeKey];
+            
+            let newClassNotes: number[] = [];
+            if (studentGrade.classNotes) {
+              if (Array.isArray(studentGrade.classNotes)) {
+                newClassNotes = [...studentGrade.classNotes];
+              } else if (typeof studentGrade.classNotes === 'object') {
+                newClassNotes = Object.values(studentGrade.classNotes).filter((v): v is number => typeof v === 'number');
+              }
+            }
+
+            const noteNum = Number(noteVal);
+            const index = newClassNotes.findIndex(n => n === noteNum);
+            if (index !== -1) {
+              newClassNotes.splice(index, 1);
+            }
+            
+            let classNoteAvg = undefined;
+            if (newClassNotes.length > 0) {
+              classNoteAvg = parseFloat((newClassNotes.reduce((s, n) => s + n, 0) / newClassNotes.length).toFixed(2));
+            }
+
+            let currentExamNotes: number[] = [];
+            if (studentGrade.examNotes) {
+              if (Array.isArray(studentGrade.examNotes)) {
+                currentExamNotes = [...studentGrade.examNotes];
+              } else if (typeof studentGrade.examNotes === 'object') {
+                currentExamNotes = Object.values(studentGrade.examNotes).filter((v): v is number => typeof v === 'number');
+              }
+            }
+
+            const examNoteAvg = currentExamNotes.length > 0
+              ? parseFloat((currentExamNotes.reduce((s, n) => s + n, 0) / currentExamNotes.length).toFixed(2))
+              : studentGrade.examNote !== undefined
+                ? studentGrade.examNote
+                : undefined;
+
+            let finalNote = undefined;
+            if (classNoteAvg !== undefined || examNoteAvg !== undefined) {
+              const cNote = classNoteAvg ?? 10;
+              const eNote = examNoteAvg ?? 10;
+              finalNote = parseFloat((cNote * 0.4 + eNote * 0.6).toFixed(2));
+            }
+
+            const updatedGrade = {
+              ...studentGrade,
+              classNotes: newClassNotes,
+              classNote: classNoteAvg,
+              note: finalNote,
+            };
+
+            if (classNoteAvg === undefined && examNoteAvg === undefined) {
+              updatedGrade.appreciation = '';
+            } else {
+              const tempNote = finalNote ?? 10;
+              let appraisal = 'Passable';
+              if (tempNote >= 18) appraisal = 'Excellent';
+              else if (tempNote >= 16) appraisal = 'Très bien';
+              else if (tempNote >= 14) appraisal = 'Bien';
+              else if (tempNote >= 12) appraisal = 'Assez bien';
+              else if (tempNote < 10) appraisal = 'Insuffisant';
+              if (tempNote < 8 && tempNote >= 0) appraisal = 'Très insuffisant';
+              updatedGrade.appreciation = appraisal;
+            }
+
+            await set(ref(db, `universites/${universityId}/notes/${gradeKey}`), updatedGrade);
+          }
+        } catch (e) {
+          console.error("Error processing grade rollback for student:", studentId, e);
+        }
+      });
+      await Promise.all(promises);
+    }
+
+    await remove(assignmentRef);
   },
 
   addResource: async (universityId, resource) => {
@@ -1273,16 +1504,6 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   deleteTransaction: async (universityId, transactionId) => {
     const transRef = ref(db, `universites/${universityId}/transactions/${transactionId}`);
     await remove(transRef);
-  },
-
-  deleteGrade: async (universityId, gradeId) => {
-    const gradeRef = ref(db, `universites/${universityId}/notes/${gradeId}`);
-    await remove(gradeRef);
-  },
-
-  deleteAssignment: async (universityId, assignmentId) => {
-    const assignRef = ref(db, `universites/${universityId}/devoirs/${assignmentId}`);
-    await remove(assignRef);
   },
 
   deleteResource: async (universityId, resourceId) => {

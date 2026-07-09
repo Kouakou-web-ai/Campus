@@ -25,7 +25,7 @@ export default function PortailApprentissage() {
 
   const activeCourses = courses.filter(c => c.status === 'en_cours');
   const pendingAssignments = assignments.filter(a => a.status === 'publie');
-  const nextEvent = scheduleEvents[0];
+  const nextEvent = null;
 
   // Find student profile to get matricule (studentId)
   const currentStudent = students.find(s => s.id === user?.id);
@@ -45,18 +45,43 @@ export default function PortailApprentissage() {
   // Only show live meetings from teachers of THIS student's courses
   const relevantLiveMeetings = (liveMeetings || []).filter(m => studentTeacherIds.has(m.teacherId));
 
-  const handleOpenPdf = (pdf: any) => {
-    if (pdf.url) {
-      window.open(pdf.url, '_blank', 'noopener,noreferrer');
-    } else {
-      setSelectedPdf(pdf);
-      setPdfPage(1);
-      setPdfZoom(100);
+  const handleDownloadPdf = async (res: any) => {
+    if (!res.url) {
+      const link = document.createElement('a');
+      const dummyBlob = new Blob(['%PDF-1.4... Dummy simulated PDF content for ' + res.title], { type: 'application/pdf' });
+      const dummyUrl = URL.createObjectURL(dummyBlob);
+      link.href = dummyUrl;
+      link.download = res.title.endsWith('.pdf') ? res.title : `${res.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(dummyUrl);
+      ToastSuccess(`Téléchargement de "${res.title}" démarré.`);
+      return;
     }
-  };
-
-  const handleDownloadSimulatedPdf = () => {
-    ToastSuccess("Téléchargement simulé du PDF démarré.");
+    
+    try {
+      const response = await fetch(res.url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = res.title.endsWith('.pdf') ? res.title : `${res.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      ToastSuccess(`Téléchargement de "${res.title}" démarré.`);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      const link = document.createElement('a');
+      link.href = res.url;
+      link.target = '_blank';
+      link.download = res.title;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   // Calculate student average note
@@ -149,15 +174,7 @@ export default function PortailApprentissage() {
               </div>
             </div>
           </div>
-          <ProgressRing
-            value={activeCourses.length > 0 ? Math.round((activeCourses.reduce((sum, c) => sum + (c.progress || 0), 0) / activeCourses.length)) : 0}
-            size={100}
-            strokeWidth={8}
-            color="rgba(255,255,255,0.8)"
-            label="Moyenne"
-            sublabel="progression"
-            className="flex-shrink-0 hidden md:flex [&_span]:text-white"
-          />
+
         </div>
       </div>
 
@@ -350,11 +367,11 @@ export default function PortailApprentissage() {
                   <div className="flex items-center justify-between border-t border-slate-50 pt-3 mt-3">
                     <span className="text-[10px] text-slate-400">Reçu le {res.uploadedAt}</span>
                     <button
-                      onClick={() => handleOpenPdf(res)}
+                      onClick={() => handleDownloadPdf(res)}
                       className="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all active:scale-95 shadow-sm"
                     >
-                      <Eye size={12} />
-                      Ouvrir
+                      <Download size={12} />
+                      Télécharger
                     </button>
                   </div>
                 </div>
@@ -413,7 +430,7 @@ export default function PortailApprentissage() {
 
                 {/* Download (Simulated) */}
                 <button
-                  onClick={handleDownloadSimulatedPdf}
+                  onClick={() => handleDownloadPdf(selectedPdf)}
                   className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-650 dark:text-slate-350 hover:text-indigo-650 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all"
                   title="Télécharger le fichier"
                 >
