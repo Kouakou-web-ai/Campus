@@ -144,7 +144,7 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
               value={searchVal}
               onChange={e => setSearchVal(e.target.value)}
               placeholder={t('topbar.search_placeholder')}
-              className="w-full pl-9 pr-16 py-2 text-sm bg-app border border-border rounded-xl text-content focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
+              className="w-full pl-9 pr-16 py-2 text-base md:text-sm bg-app border border-border rounded-xl text-content focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-sm"
               onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
             />
             {isSupported && (
@@ -317,7 +317,7 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
       </div>
 
       {/* User avatar */}
-      <div className="flex items-center gap-2.5 pl-2">
+      <div className="flex items-center gap-2.5 pl-2 pr-2 sm:pr-0 mr-2 sm:mr-0">
         <Avatar name={user.name} size="sm" />
         <div className="hidden sm:block">
           <p className="text-sm font-semibold text-content leading-none">{user.name.split(' ')[0]}</p>

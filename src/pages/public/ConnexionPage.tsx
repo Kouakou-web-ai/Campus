@@ -16,6 +16,7 @@ export default function ConnexionPage() {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [activationEmail, setActivationEmail] = useState<string | null>(null);
+  const [localLoading, setLocalLoading] = useState(false);
 
   const [resetEmail, setResetEmail] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
@@ -51,6 +52,7 @@ export default function ConnexionPage() {
   const from = (location.state as { from?: Location })?.from?.pathname;
 
   const handleGoogleLogin = async () => {
+    setLocalLoading(true);
     try {
       await loginWithGoogle();
       ToastSuccess("Connexion réussie !");
@@ -61,6 +63,7 @@ export default function ConnexionPage() {
       }
     } catch (err: any) {
       console.error(err);
+      setLocalLoading(false);
       ToastError("Échec de la connexion Google.");
     }
   };
@@ -72,6 +75,7 @@ export default function ConnexionPage() {
       return;
     }
 
+    setLocalLoading(true);
     try {
       setActivationEmail(null);
       const invitedUser = await findInvitedUserByEmail(email);
@@ -79,11 +83,13 @@ export default function ConnexionPage() {
         const invitedEmail = invitedUser.profile.email || email;
         setActivationEmail(invitedEmail);
         ToastSuccess("Compte pré-enregistré trouvé. Créez votre mot de passe pour l'activer.");
+        setLocalLoading(false);
         return;
       }
 
       if (!password) {
         ToastError("Veuillez renseigner votre mot de passe.");
+        setLocalLoading(false);
         return;
       }
 
@@ -91,6 +97,7 @@ export default function ConnexionPage() {
       if (isParent) {
         if (!childMatricule) {
           ToastError("Veuillez saisir le matricule de votre enfant.");
+          setLocalLoading(false);
           return;
         }
 
@@ -101,12 +108,14 @@ export default function ConnexionPage() {
 
         if (!userSnapshot.exists()) {
           ToastError("Aucun compte parent trouvé avec cette adresse email.");
+          setLocalLoading(false);
           return;
         }
 
         const userData = Object.values(userSnapshot.val())[0] as any;
         if (userData.role !== 'PARENT') {
           ToastError("Cet e-mail n'est pas associé à un compte parent.");
+          setLocalLoading(false);
           return;
         }
 
@@ -125,6 +134,7 @@ export default function ConnexionPage() {
 
         if (!childMatched) {
           ToastError("Le matricule saisi ne correspond pas à un enfant lié à ce compte parent.");
+          setLocalLoading(false);
           return;
         }
       }
@@ -139,6 +149,7 @@ export default function ConnexionPage() {
       }
     } catch (err: any) {
       console.error(err);
+      setLocalLoading(false);
       if (err.code === 'auth/invalid-credential') {
         ToastError("Adresse email ou mot de passe incorrect.");
       } else {
@@ -179,7 +190,7 @@ export default function ConnexionPage() {
               onChange={e => setEmail(e.target.value)}
               placeholder="adresse@universite.ci"
               required
-              className="w-full pl-11 pr-4 py-3 bg-app border border-border rounded-xl text-sm text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
+              className="w-full pl-11 pr-4 py-3 bg-app border border-border rounded-xl text-base md:text-sm text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
             />
           </div>
         </div>
@@ -202,7 +213,7 @@ export default function ConnexionPage() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full pl-11 pr-10 py-3 bg-app border border-border rounded-xl text-sm text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
+              className="w-full pl-11 pr-10 py-3 bg-app border border-border rounded-xl text-base md:text-sm text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
             />
             <button
               type="button"
@@ -232,10 +243,10 @@ export default function ConnexionPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={localLoading || loading}
           className="w-full py-3.5 bg-slate-900 dark:bg-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-md shadow-indigo-100/10"
         >
-          {loading ? (
+          {localLoading || loading ? (
             <>
               <span className="loading loading-spinner loading-sm" />
               Connexion en cours…
@@ -277,7 +288,7 @@ export default function ConnexionPage() {
                     onChange={(e) => setResetEmail(e.target.value)}
                     placeholder="adresse@universite.ci"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 bg-surface-raised border border-border rounded-xl text-xs text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
+                    className="w-full pl-10 pr-4 py-2.5 bg-surface-raised border border-border rounded-xl text-base md:text-xs text-content placeholder-content-muted focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200"
                   />
                 </div>
               </div>

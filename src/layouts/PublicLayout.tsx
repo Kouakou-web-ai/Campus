@@ -213,7 +213,7 @@ export default function PublicLayout() {
                 value={searchVal}
                 onChange={(e) => setSearchVal(e.target.value)}
                 placeholder="Rechercher une section..."
-                className="w-full pl-8 pr-12 py-1.5 text-xs bg-surface-raised border border-border rounded-lg text-content focus:outline-none"
+                className="w-full pl-8 pr-12 py-1.5 text-base md:text-xs bg-surface-raised border border-border rounded-lg text-content focus:outline-none"
                 autoFocus
               />
               <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-content-muted" />

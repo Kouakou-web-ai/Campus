@@ -222,7 +222,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
       </nav>
 
       {/* Footer user */}
-      <div className={`border-t border-border-subtle p-3 ${collapsed ? '' : ''}`}>
+      <div className={`border-t border-border-subtle p-3 pb-8 lg:pb-3 flex-shrink-0 bg-surface ${collapsed ? '' : ''}`}>
         {!collapsed ? (
           <div className="dropdown dropdown-top w-full">
             <div
