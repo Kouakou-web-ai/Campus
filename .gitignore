@@ -40,9 +40,3 @@ recovered_block.txt
 .env*.local
 .env.local
 
-# Fichiers internes et agents
-.agents/
-database.rules.json
-roles-firebase.md
-skills-lock.json
-ollama.md
