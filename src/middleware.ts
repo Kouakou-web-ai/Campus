@@ -16,49 +16,48 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000); // toutes les 5 minutes
 
-// Liste des User-Agents de bots et scrapers bloqués
+// Liste des User-Agents de scrapers/outils d'attaque à bloquer.
+// IMPORTANT : on ne bloque QUE des outils clairement malveillants ou de scraping commercial.
+// On NE bloque PLUS headless/puppeteer/playwright/curl/python/axios/postman car :
+//  - Vercel utilise un navigateur headless pour générer les captures d'écran de déploiement
+//  - Playwright/Puppeteer sont utilisés pour vos propres tests E2E et le monitoring (Speed Insights, etc.)
+//  - curl/postman/axios servent aussi à des appels serveur-à-serveur légitimes (ex: vos webhooks n8n)
 const BLOCKED_USER_AGENTS_PATTERNS = [
-  /bot/i,
-  /crawler/i,
-  /spider/i,
-  /scrap/i,
-  /headless/i,
-  /curl/i,
-  /wget/i,
-  /python/i,
-  /axios/i,
-  /go-http-client/i,
-  /selenium/i,
-  /playwright/i,
-  /puppeteer/i,
-  /apache-httpclient/i,
-  /postman/i,
-  /nmap/i,
   /sqlmap/i,
-  /dirbuster/i,
+  /nmap/i,
   /nikto/i,
+  /dirbuster/i,
+  /masscan/i,
+  /zgrab/i,
+  /nuclei/i,
+  // Scrapers SEO commerciaux agressifs (pas les moteurs de recherche légitimes)
   /mj12bot/i,
-  /ahrefs/i,
-  /semrush/i,
+  /ahrefsbot/i,
+  /semrushbot/i,
   /dotbot/i,
   /rogerbot/i,
   /exabot/i,
-  /loader\.io/i,
+];
+
+// User-Agents toujours autorisés même s'ils matchent un pattern ci-dessus (whitelist explicite)
+const ALLOWED_USER_AGENTS = [
+  /googlebot/i,
+  /bingbot/i,
+  /vercel/i, // outils internes Vercel (screenshot, edge functions, monitoring)
 ];
 
 // Chemins d'attaque ou de scan de vulnérabilités courants à bloquer directement
+// (resserré pour éviter les faux positifs : "admin" et "sql" seuls étaient trop larges
+// et pouvaient bloquer des routes légitimes comme /admin-dashboard ou /sql-report)
 const SUSPICIOUS_PATHS = [
-  /\/\.env/i,
-  /\/\.git/i,
-  /wp-admin/i,
-  /wp-login/i,
-  /xmlrpc\.php/i,
-  /config\.php/i,
-  /phpinfo/i,
-  /sql/i,
-  /admin/i,
-  /setup/i,
-  /backup/i,
+  /^\/\.env/i,
+  /^\/\.git/i,
+  /^\/wp-admin/i,
+  /^\/wp-login/i,
+  /^\/xmlrpc\.php/i,
+  /^\/phpinfo/i,
+  /^\/\.aws/i,
+  /^\/\.ssh/i,
 ];
 
 export function middleware(request: NextRequest) {
@@ -77,26 +76,26 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 2. Détection et blocage de scrapers via le User-Agent
-  // On ignore certains bots légitimes nécessaires (comme Googlebot, Bingbot s'ils sont nécessaires, mais ici on bloque strictement si demandé)
-  const isBlockedAgent = BLOCKED_USER_AGENTS_PATTERNS.some((pattern) => pattern.test(userAgent));
-  if (isBlockedAgent && !userAgent.includes('Googlebot') && !userAgent.includes('Bingbot')) {
-    console.warn(`[SECURITE] Scraping détecté et bloqué. User-Agent: "${userAgent}" | IP: ${ip}`);
-    return new NextResponse(
-      JSON.stringify({ error: 'Scraping interdit sur cette plateforme.' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    );
+  // 2. Détection et blocage de scrapers via le User-Agent (liste resserrée, whitelist appliquée en premier)
+  const isAllowedAgent = ALLOWED_USER_AGENTS.some((pattern) => pattern.test(userAgent));
+  if (!isAllowedAgent) {
+    const isBlockedAgent = BLOCKED_USER_AGENTS_PATTERNS.some((pattern) => pattern.test(userAgent));
+    if (isBlockedAgent) {
+      console.warn(`[SECURITE] Scraping détecté et bloqué. User-Agent: "${userAgent}" | IP: ${ip}`);
+      return new NextResponse(
+        JSON.stringify({ error: 'Scraping interdit sur cette plateforme.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
   }
 
-  // 3. Détection des en-têtes Vercel détournées / usurpées ou d'attaques Edge Loops
-  // S'assurer qu'aucun client externe ne simule des en-têtes système sensibles comme x-vercel-id internes invalides
+  // 3. Détection des en-têtes détournées / usurpées ou d'attaques Edge Loops
   const vercelSignature = request.headers.get('x-vercel-signature');
   if (vercelSignature && vercelSignature.length > 500) {
-    // Risque de buffer overflow / attaque d'en-tête
     return new NextResponse('Bad Request', { status: 400 });
   }
 
-  // 4. Rate Limiting local
+  // 4. Rate Limiting local (uniquement si l'IP est connue)
   if (ip !== 'unknown-ip') {
     const now = Date.now();
     const rateData = ipRequestCounts.get(ip);
@@ -105,7 +104,6 @@ export function middleware(request: NextRequest) {
       ipRequestCounts.set(ip, { count: 1, lastReset: now });
     } else {
       if (now - rateData.lastReset > RATE_LIMIT_WINDOW_MS) {
-        // Nouvelle fenêtre
         rateData.count = 1;
         rateData.lastReset = now;
       } else {
@@ -125,23 +123,12 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
   const headers = response.headers;
 
-  // Clickjacking protection
   headers.set('X-Frame-Options', 'DENY');
-  
-  // MIME sniffing protection
   headers.set('X-Content-Type-Options', 'nosniff');
-  
-  // Referrer Policy
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  // XSS protection
   headers.set('X-XSS-Protection', '1; mode=block');
-  
-  // Strict Transport Security (HSTS)
   headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  
-  // Content Security Policy (CSP)
-  // Autorise Firebase, Google Auth, et les connexions d'APIs nécessaires
+
   const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com;
@@ -156,7 +143,7 @@ export function middleware(request: NextRequest) {
     frame-ancestors 'none';
     upgrade-insecure-requests;
   `.replace(/\s{2,}/g, ' ').trim();
-  
+
   headers.set('Content-Security-Policy', cspHeader);
 
   return response;
@@ -165,14 +152,6 @@ export function middleware(request: NextRequest) {
 // Configurer le middleware pour s'exécuter sur toutes les routes sauf ressources statiques
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (si vous voulez exclure ou gérer différemment)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images (local images folder)
-     */
     '/((?!_next/static|_next/image|favicon.ico|images|manifest.json|sw.js).*)',
   ],
 };
