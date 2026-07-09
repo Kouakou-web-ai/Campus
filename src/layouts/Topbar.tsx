@@ -317,7 +317,7 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
       </div>
 
       {/* User avatar */}
-      <div className="flex items-center gap-2.5 pl-2 pr-2 sm:pr-0 mr-2 sm:mr-0">
+      <div className="hidden sm:flex items-center gap-2.5 pl-2 pr-2 sm:pr-0 mr-2 sm:mr-0">
         <Avatar name={user.name} size="sm" />
         <div className="hidden sm:block">
           <p className="text-sm font-semibold text-content leading-none">{user.name.split(' ')[0]}</p>
