@@ -1,25 +1,16 @@
 import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import PageHeader from '../../components/ui/PageHeader';
-import { User, Shield, Sun, Moon, Save, Loader2, Key, Smartphone, Copy, Check, Plus } from 'lucide-react';
+import { User, Shield, Sun, Moon, Save, Loader2, Key } from 'lucide-react';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useThemeStore } from '../../store/themeStore';
-import { auth } from '../../../firebase-config';
-import axios from 'axios';
 
 export default function ParametresProfil() {
   const { user, updateUserProfile, refreshUserProfile, loading } = useAuthStore();
   const { t, language, setLanguage } = useTranslation();
   const { mode, setMode } = useThemeStore();
   const [activeTab, setActiveTab] = useState<'profil' | 'securite' | 'preferences'>('profil');
-
-  // MFA states
-  const [mfaActive, setMfaActive] = useState(!!user?.mfaEnabled);
-  const [mfaModalOpen, setMfaModalOpen] = useState(false);
-  const [mfaCode, setMfaCode] = useState('');
-  const [verifyingMfa, setVerifyingMfa] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   // Form states
   const [name, setName] = useState(user?.name || '');
@@ -98,65 +89,6 @@ export default function ParametresProfil() {
     } catch (err: any) {
       ToastError(err.message || t('settings.error'));
     }
-  };
-  const handleToggle2FA = async () => {
-    if (mfaActive) {
-      if (window.confirm("Êtes-vous sûr de vouloir désactiver l'authentification à deux facteurs ? Votre compte sera moins sécurisé.")) {
-        try {
-          const fbUser = auth.currentUser;
-          if (fbUser) {
-            const token = await fbUser.getIdToken();
-            const dbUrl = import.meta.env.VITE_databaseURL;
-            await axios.patch(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`, {
-              mfaEnabled: false
-            });
-            ToastSuccess("Authentification à deux facteurs désactivée.");
-            setMfaActive(false);
-            await refreshUserProfile();
-          }
-        } catch (err) {
-          ToastError("Erreur lors de la désactivation du 2FA.");
-        }
-      }
-    } else {
-      setMfaCode('');
-      setMfaModalOpen(true);
-    }
-  };
-
-  const handleConfirm2FA = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (mfaCode.length !== 6) {
-      ToastError("Veuillez saisir un code à 6 chiffres.");
-      return;
-    }
-    
-    setVerifyingMfa(true);
-    try {
-      const fbUser = auth.currentUser;
-      if (fbUser) {
-        const token = await fbUser.getIdToken();
-        const dbUrl = import.meta.env.VITE_databaseURL;
-        await axios.patch(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`, {
-          mfaEnabled: true
-        });
-        ToastSuccess("L'authentification à deux facteurs (2FA) a été activée avec succès !");
-        setMfaActive(true);
-        setMfaModalOpen(false);
-        await refreshUserProfile();
-      }
-    } catch (err) {
-      ToastError("Erreur lors de la validation du code.");
-    } finally {
-      setVerifyingMfa(false);
-    }
-  };
-
-  const handleCopyKey = () => {
-    navigator.clipboard.writeText("JBSWY3DPEHPK3PXP");
-    setCopied(true);
-    ToastSuccess("Clé de secours copiée !");
-    setTimeout(() => setCopied(false), 2000);
   };
   if (!user) return null;
 
@@ -279,31 +211,6 @@ export default function ParametresProfil() {
                     />
                   </div>
 
-                  {/* Authentification à deux facteurs */}
-                  <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                          <Smartphone size={16} className="text-indigo-600 dark:text-indigo-400" />
-                          Authentification à deux facteurs (2FA)
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed max-w-xl">
-                          Sécurisez votre compte en exigeant un code de validation à usage unique (Google Authenticator, etc.) en plus de votre mot de passe.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`badge ${mfaActive ? 'badge-success text-white' : 'badge-ghost'} badge-sm font-bold`}>
-                          {mfaActive ? 'Actif' : 'Inactif'}
-                        </span>
-                        <input
-                          type="checkbox"
-                          className="toggle toggle-primary toggle-sm"
-                          checked={mfaActive}
-                          onChange={handleToggle2FA}
-                        />
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -360,122 +267,10 @@ export default function ParametresProfil() {
                   {loading ? t('settings.profile.saving') : t('settings.profile.save')}
                 </button>
               </div>
-
             </form>
           </div>
         </div>
       </div>
-
-      {/* Modale d'activation 2FA */}
-      {mfaModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 max-w-md w-full border border-slate-100 dark:border-slate-800 shadow-2xl relative animate-fade-up">
-            <button
-              onClick={() => setMfaModalOpen(false)}
-              className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-650 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all"
-            >
-              <Plus className="rotate-45" size={18} />
-            </button>
-
-            <form onSubmit={handleConfirm2FA} className="space-y-5">
-              <div>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Configurer le 2FA</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  Suivez les étapes ci-dessous avec votre application d'authentification (Google Authenticator, Authy, etc.).
-                </p>
-              </div>
-
-              {/* QR Code SVG */}
-              <div className="flex justify-center py-2 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <svg width="130" height="130" viewBox="0 0 140 140" className="bg-white p-2 rounded-2xl shadow-sm border border-slate-150">
-                  <rect x="10" y="10" width="30" height="30" fill="#312e81" rx="4" />
-                  <rect x="15" y="15" width="20" height="20" fill="#ffffff" rx="2" />
-                  <rect x="20" y="20" width="10" height="10" fill="#312e81" rx="1" />
-                  
-                  <rect x="100" y="10" width="30" height="30" fill="#312e81" rx="4" />
-                  <rect x="105" y="15" width="20" height="20" fill="#ffffff" rx="2" />
-                  <rect x="110" y="20" width="10" height="10" fill="#312e81" rx="1" />
-                  
-                  <rect x="10" y="100" width="30" height="30" fill="#312e81" rx="4" />
-                  <rect x="15" y="105" width="20" height="20" fill="#ffffff" rx="2" />
-                  <rect x="20" y="110" width="10" height="10" fill="#312e81" rx="1" />
-
-                  <rect x="50" y="10" width="10" height="10" fill="#4f46e5" rx="1" />
-                  <rect x="60" y="20" width="10" height="10" fill="#4f46e5" rx="1" />
-                  <rect x="70" y="10" width="20" height="10" fill="#4f46e5" rx="1" />
-                  <rect x="50" y="30" width="10" height="20" fill="#312e81" rx="1" />
-                  <rect x="80" y="30" width="10" height="10" fill="#4f46e5" rx="1" />
-                  
-                  <rect x="10" y="50" width="20" height="10" fill="#312e81" rx="1" />
-                  <rect x="40" y="50" width="30" height="10" fill="#4f46e5" rx="1" />
-                  <rect x="80" y="50" width="20" height="20" fill="#312e81" rx="1" />
-                  <rect x="110" y="50" width="10" height="10" fill="#4f46e5" rx="1" />
-                  
-                  <rect x="10" y="70" width="10" height="10" fill="#4f46e5" rx="1" />
-                  <rect x="30" y="70" width="20" height="10" fill="#312e81" rx="1" />
-                  <rect x="60" y="70" width="15" height="15" fill="#4f46e5" rx="1" />
-                  <rect x="120" y="70" width="10" height="20" fill="#312e81" rx="1" />
-
-                  <rect x="90" y="80" width="20" height="10" fill="#4f46e5" rx="1" />
-                  
-                  <rect x="50" y="100" width="10" height="30" fill="#312e81" rx="1" />
-                  <rect x="70" y="100" width="20" height="10" fill="#4f46e5" rx="1" />
-                  <rect x="70" y="115" width="10" height="15" fill="#312e81" rx="1" />
-                  <rect x="90" y="110" width="10" height="20" fill="#4f46e5" rx="1" />
-                  <rect x="110" y="100" width="20" height="10" fill="#312e81" rx="1" />
-                  <rect x="110" y="120" width="10" height="10" fill="#4f46e5" rx="1" />
-                </svg>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl space-y-2">
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-semibold">Clé manuelle</span>
-                <div className="flex items-center justify-between gap-2">
-                  <code className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">JBSWY3DPEHPK3PXP</code>
-                  <button
-                    type="button"
-                    onClick={handleCopyKey}
-                    className="p-1.5 text-slate-400 hover:text-indigo-650 rounded-lg hover:bg-white dark:hover:bg-slate-900 border border-transparent hover:border-slate-150 dark:hover:border-slate-800 transition-all flex-shrink-0"
-                    title="Copier"
-                  >
-                    {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Code de validation</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  required
-                  placeholder="Ex: 123456"
-                  value={mfaCode}
-                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                  className="input input-bordered input-premium w-full px-3 py-2.5 text-center text-lg font-bold font-mono tracking-widest"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-50 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setMfaModalOpen(false)}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={verifyingMfa}
-                  className="px-4 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-indigo-650 dark:bg-slate-800 dark:hover:bg-indigo-600 rounded-xl shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {verifyingMfa && <Loader2 size={12} className="animate-spin" />}
-                  Valider
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
