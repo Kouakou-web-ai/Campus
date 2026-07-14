@@ -3,6 +3,7 @@ import { Bell, Menu, Search, X, BookOpen, Users, FileText, Trash2, Mic } from 'l
 import { useAuthStore } from '../store/authStore';
 import { Avatar } from '../components/ui/AvatarGroup';
 import ThemeToggle from '../components/shared/ThemeToggle';
+import OfflineStatusIndicator from '../components/shared/OfflineStatusIndicator';
 import { useNotificationStore } from '../store/notificationStore';
 import { useRealtimeDataStore } from '../store/realtimeDataStore';
 import { useNavigate } from 'react-router-dom';
@@ -217,6 +218,8 @@ export default function Topbar({ onToggleSidebar, sidebarCollapsed }: TopbarProp
       </div>
 
       <div className="flex-grow" />
+
+      <OfflineStatusIndicator />
 
       <ThemeToggle />
 

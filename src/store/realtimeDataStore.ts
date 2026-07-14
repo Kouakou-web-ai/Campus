@@ -3,6 +3,8 @@ import { useNotificationStore } from './notificationStore';
 import { useAuthStore } from './authStore';
 import { db, auth, firebaseConfig } from '../../firebase-config';
 import { ref, onValue, set, push, update, remove, get, query, orderByChild, equalTo, limitToFirst } from 'firebase/database';
+import { dbLocal } from '../lib/db';
+import { useSyncStore } from './syncStore';
 import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource, ScheduleEvent, University, RevenueData, StatusType, Class, Gestionnaire } from '../types';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
@@ -248,6 +250,13 @@ interface RealtimeDataState {
   addGestionnaire: (universityId: string, data: { name: string; email: string; role: 'FINANCE_MANAGER' | 'STUDENT_MANAGER' | 'TEACHER_MANAGER' }) => Promise<{ tempPassword: string }>;
   updateGestionnaire: (universityId: string, uid: string, data: Partial<Gestionnaire>) => Promise<void>;
   deleteGestionnaire: (universityId: string, uid: string) => Promise<void>;
+  performWrite: (
+    action: 'set' | 'update' | 'remove',
+    path: string,
+    payload: any,
+    localStateUpdate: () => void | Promise<void>,
+    localCacheUpdate: () => Promise<void>
+  ) => Promise<void>;
 }
 
 export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStore) => ({
@@ -277,13 +286,113 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   systemAnnouncement: null,
   liveMeetings: [],
 
-  subscribeToUniversity: (universityId: string) => {
-    setStore({ loading: true });
+  performWrite: async (action, path, payload, localStateUpdate, localCacheUpdate) => {
+    const isOnline = useSyncStore.getState().isOnline;
+    if (!isOnline) {
+      await localCacheUpdate();
+      await localStateUpdate();
+      await useSyncStore.getState().addToQueue(action, path, payload);
+      return;
+    }
+    const dbRef = ref(db, path);
+    if (action === 'set') {
+      await set(dbRef, payload);
+    } else if (action === 'update') {
+      await update(dbRef, payload);
+    } else if (action === 'remove') {
+      await remove(dbRef);
+    }
+  },
 
+  subscribeToUniversity: (universityId: string) => {
+    const isOnline = useSyncStore.getState().isOnline;
     const parseList = (node: any) => {
       if (!node) return [];
       return Object.keys(node).map(key => ({ id: key, ...node[key] }));
     };
+
+    if (!isOnline) {
+      // Mode Hors Ligne : chargement immédiat du cache IndexedDB
+      (async () => {
+        setStore({ loading: true });
+        try {
+          const students = await dbLocal.students.toArray();
+          const teachers = await dbLocal.teachers.toArray();
+          const courses = await dbLocal.courses.toArray();
+          const transactions = await dbLocal.transactions.toArray();
+          const grades = await dbLocal.grades.toArray();
+          const assignments = await dbLocal.assignments.toArray();
+          const resources = await dbLocal.resources.toArray();
+          const scheduleEvents = await dbLocal.scheduleEvents.toArray();
+          const announcements = await dbLocal.announcements.toArray();
+          const emailsSimules = await dbLocal.emailsSimules.toArray();
+          const cahierDeTextes = await dbLocal.cahierDeTextes.toArray();
+          const quizzes = await dbLocal.quizzes.toArray();
+          
+          const appelsList = await dbLocal.appels.toArray();
+          const appels: Record<string, any> = {};
+          appelsList.forEach((item) => {
+            appels[item.id] = item.data;
+          });
+
+          const filieres = await dbLocal.filieres.toArray();
+          const classes = await dbLocal.classes.toArray();
+          const salles = await dbLocal.salles.toArray();
+          const evaluations = await dbLocal.evaluations.toArray();
+          const suggestions = await dbLocal.suggestions.toArray();
+          const gestionnaires = await dbLocal.gestionnaires.toArray();
+          const liveMeetings = await dbLocal.liveMeetings.toArray();
+          
+          const nameMeta = await dbLocal.metadata.get('universityName');
+          const planMeta = await dbLocal.metadata.get('plan');
+          const statusMeta = await dbLocal.metadata.get('status');
+          const createdAtMeta = await dbLocal.metadata.get('createdAt');
+
+          setStore({
+            students,
+            teachers,
+            courses,
+            transactions,
+            grades,
+            assignments,
+            resources,
+            scheduleEvents,
+            announcements,
+            emailsSimules,
+            cahierDeTextes,
+            quizzes,
+            appels,
+            filieres,
+            classes,
+            salles,
+            evaluations,
+            suggestions,
+            gestionnaires,
+            liveMeetings,
+            currentUniversity: {
+              id: universityId,
+              name: nameMeta?.value || 'Université Atlantique d\'Abidjan (Cache)',
+              city: 'Abidjan',
+              country: "Côte d'Ivoire",
+              plan: planMeta?.value || 'pro',
+              status: statusMeta?.value || 'actif',
+              studentsCount: students.length,
+              teachersCount: teachers.length,
+              mrr: 100000,
+              createdAt: createdAtMeta?.value || new Date().toISOString().split('T')[0],
+              enforceLimits: false
+            },
+            loading: false
+          });
+        } catch (err) {
+          console.error("[Offline] Erreur lors du chargement des données IndexedDB :", err);
+          setStore({ loading: false });
+        }
+      })();
+      return () => {};
+    }
+
+    setStore({ loading: true });
 
     const unsubscribers: (() => void)[] = [];
     
@@ -331,18 +440,22 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/branding`), (snap) => {
       branding = snap.val() || {};
       updateCurrentUniversity();
+      dbLocal.metadata.put({ key: 'universityName', value: branding.name || '' }).catch(console.error);
     }));
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/plan`), (snap) => {
       plan = snap.val() || 'pro';
       updateCurrentUniversity();
+      dbLocal.metadata.put({ key: 'plan', value: plan }).catch(console.error);
     }));
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/status`), (snap) => {
       status = snap.val() || 'actif';
       updateCurrentUniversity();
+      dbLocal.metadata.put({ key: 'status', value: status }).catch(console.error);
     }));
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/createdAt`), (snap) => {
       createdAt = snap.val() || new Date().toISOString().split('T')[0];
       updateCurrentUniversity();
+      dbLocal.metadata.put({ key: 'createdAt', value: createdAt }).catch(console.error);
     }));
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/adminUid`), (snap) => {
       adminUid = snap.val() || undefined;
@@ -381,23 +494,30 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       unsubscribers.push(onValue(ref(db, `universites/${universityId}/etudiants/${userUid}`), (snap) => {
         const studentVal = snap.val();
         if (studentVal) {
-          setStore({ students: [{ id: userUid, ...studentVal }] });
+          const list = [{ id: userUid, ...studentVal }];
+          setStore({ students: list });
+          dbLocal.students.clear().then(() => dbLocal.students.bulkPut(list)).catch(console.error);
         } else {
           setStore({ students: [] });
+          dbLocal.students.clear().catch(console.error);
         }
       }));
 
       // Query own notes
       const notesQuery = query(ref(db, `universites/${universityId}/notes`), orderByChild('studentId'), equalTo(userUid));
       unsubscribers.push(onValue(notesQuery, (notesSnap) => {
-        setStore({ grades: parseList(notesSnap.val()) });
+        const list = parseList(notesSnap.val());
+        setStore({ grades: list });
+        dbLocal.grades.clear().then(() => dbLocal.grades.bulkPut(list)).catch(console.error);
       }));
 
       // Query own transactions (filtered by studentName to match UI structure)
       const studentName = currentUser?.name || '';
       const transQuery = query(ref(db, `universites/${universityId}/transactions`), orderByChild('studentName'), equalTo(studentName));
       unsubscribers.push(onValue(transQuery, (transSnap) => {
-        setStore({ transactions: parseList(transSnap.val()) });
+        const list = parseList(transSnap.val());
+        setStore({ transactions: list });
+        dbLocal.transactions.clear().then(() => dbLocal.transactions.bulkPut(list)).catch(console.error);
       }));
 
     } else if (userRole === 'PARENT') {
@@ -453,16 +573,21 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
       unsubscribers.push(onValue(ref(db, `universites/${universityId}/enseignants/${userUid}`), (snap) => {
         const teacherVal = snap.val();
         if (teacherVal) {
-          setStore({ teachers: [{ id: userUid, ...teacherVal }] });
+          const list = [{ id: userUid, ...teacherVal }];
+          setStore({ teachers: list });
+          dbLocal.teachers.clear().then(() => dbLocal.teachers.bulkPut(list)).catch(console.error);
         } else {
           setStore({ teachers: [] });
+          dbLocal.teachers.clear().catch(console.error);
         }
       }));
 
       // Query notes for the teacher's grading duties
       const notesQuery = query(ref(db, `universites/${universityId}/notes`), orderByChild('teacherId'), equalTo(userUid));
       unsubscribers.push(onValue(notesQuery, (notesSnap) => {
-        setStore({ grades: parseList(notesSnap.val()) });
+        const list = parseList(notesSnap.val());
+        setStore({ grades: list });
+        dbLocal.grades.clear().then(() => dbLocal.grades.bulkPut(list)).catch(console.error);
       }));
 
       // Query only courses taught by this teacher
@@ -497,6 +622,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         studentsCount = list.length;
         setStore({ students: list });
         updateCurrentUniversity();
+        dbLocal.students.clear().then(() => dbLocal.students.bulkPut(list)).catch(console.error);
       }));
 
       // Listen to teachers
@@ -505,26 +631,35 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         teachersCount = list.length;
         setStore({ teachers: list });
         updateCurrentUniversity();
+        dbLocal.teachers.clear().then(() => dbLocal.teachers.bulkPut(list)).catch(console.error);
       }));
 
       // Listen to all courses
       unsubscribers.push(onValue(ref(db, `universites/${universityId}/cours`), (snap) => {
-        setStore({ courses: parseList(snap.val()) });
+        const list = parseList(snap.val());
+        setStore({ courses: list });
+        dbLocal.courses.clear().then(() => dbLocal.courses.bulkPut(list)).catch(console.error);
       }));
 
       // Listen to transactions
       unsubscribers.push(onValue(ref(db, `universites/${universityId}/transactions`), (snap) => {
-        setStore({ transactions: parseList(snap.val()) });
+        const list = parseList(snap.val());
+        setStore({ transactions: list });
+        dbLocal.transactions.clear().then(() => dbLocal.transactions.bulkPut(list)).catch(console.error);
       }));
 
       // Listen to notes
       unsubscribers.push(onValue(ref(db, `universites/${universityId}/notes`), (snap) => {
-        setStore({ grades: parseList(snap.val()) });
+        const list = parseList(snap.val());
+        setStore({ grades: list });
+        dbLocal.grades.clear().then(() => dbLocal.grades.bulkPut(list)).catch(console.error);
       }));
 
       // Listen to gestionnaires (admins and student managers only)
       unsubscribers.push(onValue(ref(db, `universites/${universityId}/gestionnaires`), (snap) => {
-        setStore({ gestionnaires: parseList(snap.val()) });
+        const list = parseList(snap.val());
+        setStore({ gestionnaires: list });
+        dbLocal.gestionnaires.clear().then(() => dbLocal.gestionnaires.bulkPut(list)).catch(console.error);
       }));
 
       // Listen to evaluations
@@ -534,6 +669,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         const list = parseList(data);
         list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
         setStore({ evaluations: list });
+        dbLocal.evaluations.clear().then(() => dbLocal.evaluations.bulkPut(list)).catch(console.error);
 
         if (isInitialEvals) {
           isInitialEvals = false;
@@ -570,6 +706,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         const list = parseList(data);
         list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
         setStore({ suggestions: list });
+        dbLocal.suggestions.clear().then(() => dbLocal.suggestions.bulkPut(list)).catch(console.error);
 
         if (isInitialSuggs) {
           isInitialSuggs = false;
@@ -603,60 +740,83 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     // SHARED / PEDAGOGICAL RESOURCES (Subscribed by all roles in that university)
     // Devoirs
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/devoirs`), (snap) => {
-      setStore({ assignments: parseList(snap.val()) });
+      const list = parseList(snap.val());
+      setStore({ assignments: list });
+      dbLocal.assignments.clear().then(() => dbLocal.assignments.bulkPut(list)).catch(console.error);
     }));
 
     // Ressources
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/ressources`), (snap) => {
-      setStore({ resources: parseList(snap.val()) });
+      const list = parseList(snap.val());
+      setStore({ resources: list });
+      dbLocal.resources.clear().then(() => dbLocal.resources.bulkPut(list)).catch(console.error);
     }));
 
     // Emploi du temps
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/emploi_du_temps`), (snap) => {
-      setStore({ scheduleEvents: parseList(snap.val()) });
+      const list = parseList(snap.val());
+      setStore({ scheduleEvents: list });
+      dbLocal.scheduleEvents.clear().then(() => dbLocal.scheduleEvents.bulkPut(list)).catch(console.error);
     }));
 
     // Annonces
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/annonces`), (snap) => {
-      setStore({ announcements: parseList(snap.val()) });
+      const list = parseList(snap.val());
+      setStore({ announcements: list });
+      dbLocal.announcements.clear().then(() => dbLocal.announcements.bulkPut(list)).catch(console.error);
     }));
 
     // Emails simulés
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/emails_simules`), (snap) => {
-      setStore({ emailsSimules: parseList(snap.val()) });
+      const list = parseList(snap.val());
+      setStore({ emailsSimules: list });
+      dbLocal.emailsSimules.clear().then(() => dbLocal.emailsSimules.bulkPut(list)).catch(console.error);
     }));
 
     // Cahier de textes
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/cahier_de_textes`), (snap) => {
-      setStore({ cahierDeTextes: parseList(snap.val()) });
+      const list = parseList(snap.val());
+      setStore({ cahierDeTextes: list });
+      dbLocal.cahierDeTextes.clear().then(() => dbLocal.cahierDeTextes.bulkPut(list)).catch(console.error);
     }));
 
     // Quizzes
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/quizzes`), (snap) => {
-      setStore({ quizzes: parseList(snap.val()) });
+      const list = parseList(snap.val());
+      setStore({ quizzes: list });
+      dbLocal.quizzes.clear().then(() => dbLocal.quizzes.bulkPut(list)).catch(console.error);
     }));
 
     // Appels (Absences)
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/appels`), (snap) => {
-      setStore({ appels: snap.val() || {} });
+      const val = snap.val() || {};
+      setStore({ appels: val });
+      const list = Object.keys(val).map(key => ({ id: key, data: val[key] }));
+      dbLocal.appels.clear().then(() => dbLocal.appels.bulkPut(list)).catch(console.error);
     }));
 
     // Filières
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/filieres`), (snap) => {
       const val = snap.val();
-      setStore({ filieres: val ? Object.values(val) : [] });
+      const list = val ? Object.values(val) : [];
+      setStore({ filieres: list });
+      dbLocal.filieres.clear().then(() => dbLocal.filieres.bulkPut(list.map((f: any, i) => ({ id: String(i), ...f })))).catch(console.error);
     }));
 
     // Classes
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/classes`), (snap) => {
       const val = snap.val();
-      setStore({ classes: val ? Object.keys(val).map(key => ({ id: key, ...val[key] })) : [], loading: false });
+      const list = val ? Object.keys(val).map(key => ({ id: key, ...val[key] })) : [];
+      setStore({ classes: list, loading: false });
+      dbLocal.classes.clear().then(() => dbLocal.classes.bulkPut(list)).catch(console.error);
     }));
 
     // Salles
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/salles`), (snap) => {
       const val = snap.val();
-      setStore({ salles: val ? Object.values(val) : [] });
+      const list = val ? Object.values(val) : [];
+      setStore({ salles: list });
+      dbLocal.salles.clear().then(() => dbLocal.salles.bulkPut(list.map((s: any, i) => ({ id: String(i), ...s })))).catch(console.error);
     }));
 
     // Cours en ligne / Visioconférence
@@ -678,6 +838,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         return true;
       });
       setStore({ liveMeetings: validMeetings });
+      dbLocal.liveMeetings.clear().then(() => dbLocal.liveMeetings.bulkPut(validMeetings)).catch(console.error);
     }));
 
     return () => {
@@ -832,6 +993,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   },
 
   addStudent: async (universityId, studentData) => {
+    const isOnline = useSyncStore.getState().isOnline;
+    if (!isOnline) {
+      throw new Error("L'enregistrement d'un étudiant requiert une connexion internet active pour configurer son compte d'accès.");
+    }
     const { parentEmail, parentName, studentId: customStudentId, ...studentInfo } = studentData;
 
     if (studentInfo.email.trim().toLowerCase() === parentEmail.trim().toLowerCase()) {
@@ -1060,6 +1225,10 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   },
 
   addTeacher: async (universityId, teacher) => {
+    const isOnline = useSyncStore.getState().isOnline;
+    if (!isOnline) {
+      throw new Error("L'enregistrement d'un enseignant requiert une connexion internet active pour configurer son compte d'accès.");
+    }
     // 1. Generate temp teacher password
     const tempTeacherPassword = 'ENS-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
@@ -1163,10 +1332,46 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   addCourse: async (universityId, course) => {
     const coursesRef = ref(db, `universites/${universityId}/cours`);
     const newCourseRef = push(coursesRef);
-    await set(newCourseRef, { ...course, universityId });
+    const courseId = newCourseRef.key || 'course_' + Math.random().toString(36).substring(2, 15);
+    const path = `universites/${universityId}/cours/${courseId}`;
+    const payload = { ...course, id: courseId, universityId };
+
+    await getStore().performWrite(
+      'set',
+      path,
+      payload,
+      () => {
+        setStore((state) => ({ courses: [...state.courses, payload] }));
+      },
+      async () => {
+        await dbLocal.courses.put(payload);
+      }
+    );
   },
 
   updateCourse: async (universityId, courseId, data) => {
+    const isOnline = useSyncStore.getState().isOnline;
+    if (!isOnline) {
+      const existing = await dbLocal.courses.get(courseId);
+      if (existing) {
+        const updated = { ...existing, ...data };
+        await getStore().performWrite(
+          'update',
+          `universites/${universityId}/cours/${courseId}`,
+          data,
+          () => {
+            setStore((state) => ({
+              courses: state.courses.map(c => c.id === courseId ? updated : c)
+            }));
+          },
+          async () => {
+            await dbLocal.courses.put(updated);
+          }
+        );
+      }
+      return;
+    }
+
     const courseRef = ref(db, `universites/${universityId}/cours/${courseId}`);
     try {
       const oldSnapshot = await get(courseRef);
@@ -1214,12 +1419,27 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   addTransaction: async (universityId, transaction) => {
     const transRef = ref(db, `universites/${universityId}/transactions`);
     const newTransRef = push(transRef);
-    await set(newTransRef, transaction);
+    const transId = newTransRef.key || 'trans_' + Math.random().toString(36).substring(2, 15);
+    const path = `universites/${universityId}/transactions/${transId}`;
+    const payload = { ...transaction, id: transId };
+
+    await getStore().performWrite(
+      'set',
+      path,
+      payload,
+      () => {
+        setStore((state) => ({ transactions: [...state.transactions, payload] }));
+      },
+      async () => {
+        await dbLocal.transactions.put(payload);
+      }
+    );
   },
 
   addGrade: async (universityId, grade) => {
     let teacherId = grade.teacherId;
-    if (!teacherId && grade.courseId) {
+    const isOnline = useSyncStore.getState().isOnline;
+    if (isOnline && !teacherId && grade.courseId) {
       try {
         const courseSnap = await get(ref(db, `universites/${universityId}/cours/${grade.courseId}`));
         if (courseSnap.exists()) {
@@ -1229,19 +1449,66 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         console.error("Error fetching course for teacherId", err);
       }
     }
+    
     const gradesRef = ref(db, `universites/${universityId}/notes`);
     const newGradeRef = push(gradesRef);
-    await set(newGradeRef, { ...grade, teacherId: teacherId || '' });
+    const gradeId = newGradeRef.key || 'grade_' + Math.random().toString(36).substring(2, 15);
+    const path = `universites/${universityId}/notes/${gradeId}`;
+    const payload = { ...grade, id: gradeId, teacherId: teacherId || '' };
+
+    await getStore().performWrite(
+      'set',
+      path,
+      payload,
+      () => {
+        setStore((state) => ({ grades: [...state.grades, payload] }));
+      },
+      async () => {
+        await dbLocal.grades.put(payload);
+      }
+    );
   },
 
   updateGrade: async (universityId, gradeId, data) => {
+    const isOnline = useSyncStore.getState().isOnline;
+    if (!isOnline) {
+      const existing = await dbLocal.grades.get(gradeId);
+      if (existing) {
+        const updated = { ...existing, ...data };
+        await getStore().performWrite(
+          'update',
+          `universites/${universityId}/notes/${gradeId}`,
+          data,
+          () => {
+            setStore((state) => ({
+              grades: state.grades.map(g => g.id === gradeId ? updated : g)
+            }));
+          },
+          async () => {
+            await dbLocal.grades.put(updated);
+          }
+        );
+      }
+      return;
+    }
     const gradeRef = ref(db, `universites/${universityId}/notes/${gradeId}`);
     await update(gradeRef, data);
   },
 
   deleteGrade: async (universityId, gradeId) => {
-    const gradeRef = ref(db, `universites/${universityId}/notes/${gradeId}`);
-    await remove(gradeRef);
+    const path = `universites/${universityId}/notes/${gradeId}`;
+
+    await getStore().performWrite(
+      'remove',
+      path,
+      null,
+      () => {
+        setStore((state) => ({ grades: state.grades.filter(g => g.id !== gradeId) }));
+      },
+      async () => {
+        await dbLocal.grades.delete(gradeId);
+      }
+    );
   },
 
   startLiveMeeting: async (universityId, meetingId, meetingData) => {
@@ -1462,6 +1729,22 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
   },
 
   deleteCourse: async (universityId, courseId) => {
+    const isOnline = useSyncStore.getState().isOnline;
+    if (!isOnline) {
+      await getStore().performWrite(
+        'remove',
+        `universites/${universityId}/cours/${courseId}`,
+        null,
+        () => {
+          setStore((state) => ({ courses: state.courses.filter(c => c.id !== courseId) }));
+        },
+        async () => {
+          await dbLocal.courses.delete(courseId);
+        }
+      );
+      return;
+    }
+
     const courseRef = ref(db, `universites/${universityId}/cours/${courseId}`);
     try {
       const courseSnapshot = await get(courseRef);

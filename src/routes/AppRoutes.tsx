@@ -274,3 +274,42 @@ export default function AppRoutes() {
     </BrowserRouter>
   );
 }
+
+const routesPrefetchMap: Record<string, () => Promise<any>> = {
+  '/': () => import('../pages/public/LandingPage'),
+  '/tarifs': () => import('../pages/public/PrixPage'),
+  '/faq': () => import('../pages/public/FAQPage'),
+  '/contact': () => import('../pages/public/ContactPage'),
+  '/app/super-admin': () => import('../pages/super-admin/TableauDeBord'),
+  '/app/super-admin/revenus': () => import('../pages/super-admin/AnalytiquesRevenu'),
+  '/app/super-admin/universites': () => import('../pages/super-admin/SurveillanceUniversites'),
+  '/app/super-admin/demandes': () => import('../pages/super-admin/DemandesAdministrateurs'),
+  '/app/admin': () => import('../pages/university-admin/TableauDeBord'),
+  '/app/admin/cours': () => import('../pages/university-admin/GestionCours'),
+  '/app/admin/etudiants': () => import('../pages/university-admin/GestionEtudiants'),
+  '/app/admin/enseignants': () => import('../pages/university-admin/GestionEnseignants'),
+  '/app/admin/finance': () => import('../pages/university-admin/CentreFinancier'),
+  '/app/admin/classes': () => import('../pages/university-admin/Classes'),
+  '/app/admin/bulletins': () => import('../pages/university-admin/Bulletins'),
+  '/app/admin/gestionnaires': () => import('../pages/university-admin/Gestionnaires'),
+  '/app/enseignant': () => import('../pages/teacher/Dashboard'),
+  '/app/enseignant/notes': () => import('../pages/teacher/GestionNotes'),
+  '/app/enseignant/devoirs': () => import('../pages/teacher/PublicationDevoirs'),
+  '/app/enseignant/absences': () => import('../pages/teacher/GestionAbsences'),
+  '/app/etudiant': () => import('../pages/student/PortailApprentissage'),
+  '/app/etudiant/notes': () => import('../pages/student/ResultatsAcademiques'),
+  '/app/etudiant/paiements': () => import('../pages/student/Paiements'),
+  '/app/etudiant/planning': () => import('../pages/student/EmploiDuTemps'),
+  '/app/parent': () => import('../pages/parent/SuiviEnfant'),
+  '/app/parent/suivi': () => import('../pages/parent/SuiviEnfant'),
+  '/app/parent/scolarite': () => import('../pages/parent/Scolarite'),
+  '/app/parent/academique': () => import('../pages/parent/SuiviAcademique'),
+  '/app/parametres': () => import('../pages/shared/ParametresProfil'),
+};
+
+export function prefetchRoute(path: string) {
+  const loader = routesPrefetchMap[path];
+  if (loader) {
+    loader().catch(() => {});
+  }
+}

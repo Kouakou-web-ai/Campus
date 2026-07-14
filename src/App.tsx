@@ -45,10 +45,39 @@ class GlobalErrorBoundary extends Component<{ children: ReactNode }, { hasError:
   }
 }
 
+import { useEffect } from 'react';
+import { useRealtimeDataStore } from './store/realtimeDataStore';
+import AppSplash from './components/shared/AppSplash';
+
 function App() {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const serverData = (window as any).__PRELOADED_DATA__;
+      if (serverData) {
+        useRealtimeDataStore.setState({
+          systemAnnouncement: serverData.announcement || null,
+          currentUniversity: serverData.branding ? {
+            id: 'univ-ufhb',
+            name: serverData.branding.name || 'Université Atlantique d\'Abidjan',
+            city: serverData.branding.city || 'Abidjan',
+            country: serverData.branding.country || "Côte d'Ivoire",
+            plan: 'pro',
+            status: 'actif',
+            studentsCount: 0,
+            teachersCount: 0,
+            mrr: 100000,
+            createdAt: new Date().toISOString().split('T')[0],
+            enforceLimits: false
+          } : null
+        });
+      }
+    }
+  }, []);
+
   return (
     <GlobalErrorBoundary>
       <ThemeProvider>
+        <AppSplash />
         <AppRoutes />
         <ToastContainer
           position="top-right"

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Users, GraduationCap, BookOpen, CreditCard, Star, MessageSquare, TrendingUp, ArrowRight, CheckCircle2, Lock } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import dynamic from 'next/dynamic';
 import StatCard from '../../components/ui/StatCard';
 import ChartCard from '../../components/ui/ChartCard';
 import PageHeader from '../../components/ui/PageHeader';
@@ -8,6 +8,15 @@ import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import ThreeDCard from '../../components/ui/ThreeDCard';
 import { Link } from 'react-router-dom';
 import { hasFeatureAccess } from '../../lib/subscription';
+
+const DashboardChart = dynamic(() => import('../../components/dashboard/DashboardChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[240px] flex items-center justify-center">
+      <span className="loading loading-spinner text-indigo-600"></span>
+    </div>
+  ),
+});
 
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
   if (!active || !payload?.length) return null;
@@ -161,21 +170,7 @@ export default function UniversityAdminDashboard() {
               </div>
             }
           >
-            <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="recettesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `${(v/1000).toLocaleString('fr-FR')} k`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="recettes" name="Recettes" stroke="#6366f1" strokeWidth={2.5} fill="url(#recettesGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            <DashboardChart data={chartData} />
           </ChartCard>
 
           {/* Quick statistics summary */}

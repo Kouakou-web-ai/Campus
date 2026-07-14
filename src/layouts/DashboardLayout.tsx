@@ -41,6 +41,15 @@ export default function DashboardLayout() {
     }
   }, [user?.universityId, user?.role, subscribeToUniversity, subscribeToSuperAdmin]);
 
+  // Initialisation de la surveillance de connectivité réseau et de rejeu de file
+  useEffect(() => {
+    let cleanup = () => {};
+    import('../store/syncStore').then(({ useSyncStore }) => {
+      cleanup = useSyncStore.getState().initConnectionMonitoring();
+    });
+    return () => cleanup();
+  }, []);
+
   // Real-time automatic course status transition based on calendar clock
   useEffect(() => {
     const universityId = user?.universityId;

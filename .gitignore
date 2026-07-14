@@ -40,3 +40,9 @@ recovered_block.txt
 .env*.local
 .env.local
 
+# Fichiers de contexte IA - non versionnés
+.agents/
+skills-lock.json
+claude-code.md
+ollama.md
+docs/ai-context/

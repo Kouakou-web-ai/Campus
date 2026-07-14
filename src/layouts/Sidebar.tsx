@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LogOut, Settings, ChevronDown, GraduationCap, Trash2 } from 'lucide-react';
+import { prefetchRoute } from '../routes/AppRoutes';
 import { useAuthStore } from '../store/authStore';
 import { navigationByRole, roleLabels } from '../constants/navigation';
 import { Avatar } from '../components/ui/AvatarGroup';
@@ -183,6 +184,7 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
                   <li key={item.path}>
                     <Link
                       to={item.path}
+                      onMouseEnter={() => prefetchRoute(item.path)}
                       title={collapsed ? t(labelToKeyMap[item.label] || item.label) : undefined}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
                         active

@@ -5,6 +5,23 @@ import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, up
 import axios from 'axios';
 import { normalizeUserStatus } from '../constants/accountStatus';
 import type { UserStatus } from '../types/userAccount';
+import { dbLocal } from '../lib/db';
+
+async function saveSessionToLocal(uid: string, token: string, user: any) {
+  try {
+    const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 jours
+    await dbLocal.session.clear(); // Garde une session unique pour la sécurité
+    await dbLocal.session.put({
+      id: uid,
+      token,
+      expiresAt,
+      user
+    });
+    console.log("[Auth] Session enregistrée hors ligne pour 7 jours.");
+  } catch (err) {
+    console.error("[Auth] Échec d'écriture de la session locale :", err);
+  }
+}
 
 async function resolveUserRoleAndDelegation(userData: any, fbUser: any, dbUrl: string, token: string) {
   const now = new Date();
@@ -99,12 +116,14 @@ interface AuthState {
   deleteAccount: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   switchUniversity: (universityId: string) => void;
+  sessionExpiredOffline?: boolean;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   loading: true,
+  sessionExpiredOffline: false,
 
   switchUniversity: (universityId: string) => {
     set((state) => {
@@ -138,8 +157,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ 
       user: mockUser,
       isAuthenticated: true, 
-      loading: false 
+      loading: false,
+      sessionExpiredOffline: false
     });
+    await saveSessionToLocal(mockUser.id, 'mock-token', mockUser);
   },
 
   loginWithFirebase: async (email, password) => {
@@ -228,29 +249,34 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const { role: resolvedRole, delegation: resolvedDelegation } = await resolveUserRoleAndDelegation(userData, fbUser, dbUrl, token);
 
+      const userObj = {
+        id: fbUser.uid,
+        name: fullName,
+        prenom: prenom || undefined,
+        email: fbUser.email || email,
+        role: resolvedRole,
+        universityId: userData.universityId || 'univ-ufhb',
+        status: normalizeUserStatus(userData.status as string | undefined),
+        telephone: userData.telephone,
+        adresse: userData.adresse,
+        createdDate: userData.createdDate,
+        filiere: userData.filiere,
+        annee: userData.annee,
+        specialite: userData.specialite,
+        mustChangePassword: userData.mustChangePassword || false,
+        tempPassword: userData.tempPassword || undefined,
+        delegation: resolvedDelegation,
+        mfaEnabled: userData.mfaEnabled || false,
+      };
+
       set({
-        user: {
-          id: fbUser.uid,
-          name: fullName,
-          prenom: prenom || undefined,
-          email: fbUser.email || email,
-          role: resolvedRole,
-          universityId: userData.universityId || 'univ-ufhb',
-          status: normalizeUserStatus(userData.status as string | undefined),
-          telephone: userData.telephone,
-          adresse: userData.adresse,
-          createdDate: userData.createdDate,
-          filiere: userData.filiere,
-          annee: userData.annee,
-          specialite: userData.specialite,
-          mustChangePassword: userData.mustChangePassword || false,
-          tempPassword: userData.tempPassword || undefined,
-          delegation: resolvedDelegation,
-          mfaEnabled: userData.mfaEnabled || false,
-        },
+        user: userObj,
         isAuthenticated: true,
-        loading: false
+        loading: false,
+        sessionExpiredOffline: false
       });
+
+      await saveSessionToLocal(fbUser.uid, token, userObj);
     } catch (err) {
       set({ loading: false });
       throw err;
@@ -335,25 +361,30 @@ export const useAuthStore = create<AuthState>((set) => ({
         };
       }
 
+      const userObj = {
+        id: fbUser.uid,
+        name: fullName,
+        prenom: prenom || undefined,
+        email,
+        role: userData.role,
+        universityId: userData.universityId,
+        status: normalizeUserStatus(userData.status as string | undefined),
+        telephone: userData.telephone,
+        adresse: userData.adresse,
+        createdDate: userData.createdDate,
+        filiere: userData.filiere,
+        annee: userData.annee,
+        specialite: userData.specialite,
+      };
+
       set({
-        user: {
-          id: fbUser.uid,
-          name: fullName,
-          prenom: prenom || undefined,
-          email,
-          role: userData.role,
-          universityId: userData.universityId,
-          status: normalizeUserStatus(userData.status as string | undefined),
-          telephone: userData.telephone,
-          adresse: userData.adresse,
-          createdDate: userData.createdDate,
-          filiere: userData.filiere,
-          annee: userData.annee,
-          specialite: userData.specialite,
-        },
+        user: userObj,
         isAuthenticated: true,
-        loading: false
+        loading: false,
+        sessionExpiredOffline: false
       });
+
+      await saveSessionToLocal(fbUser.uid, token, userObj);
     } catch (err) {
       set({ loading: false });
       throw err;
@@ -541,7 +572,35 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (e) {
       console.error(e);
     } finally {
-      set({ user: null, isAuthenticated: false, loading: false });
+      try {
+        await dbLocal.session.clear();
+        await Promise.all([
+          dbLocal.students.clear(),
+          dbLocal.teachers.clear(),
+          dbLocal.courses.clear(),
+          dbLocal.transactions.clear(),
+          dbLocal.grades.clear(),
+          dbLocal.assignments.clear(),
+          dbLocal.resources.clear(),
+          dbLocal.scheduleEvents.clear(),
+          dbLocal.announcements.clear(),
+          dbLocal.emailsSimules.clear(),
+          dbLocal.cahierDeTextes.clear(),
+          dbLocal.quizzes.clear(),
+          dbLocal.appels.clear(),
+          dbLocal.filieres.clear(),
+          dbLocal.classes.clear(),
+          dbLocal.salles.clear(),
+          dbLocal.evaluations.clear(),
+          dbLocal.suggestions.clear(),
+          dbLocal.gestionnaires.clear(),
+          dbLocal.liveMeetings.clear(),
+          dbLocal.metadata.clear()
+        ]);
+      } catch (dbErr) {
+        console.error("Failed to clear local cache on logout:", dbErr);
+      }
+      set({ user: null, isAuthenticated: false, loading: false, sessionExpiredOffline: false });
     }
   },
 
@@ -718,10 +777,43 @@ export const useAuthStore = create<AuthState>((set) => ({
 // Écouteur global pour gérer la session et empêcher la connexion multi-comptes
 onAuthStateChanged(auth, async (fbUser) => {
   const state = useAuthStore.getState();
+  
+  // Utilisation de syncStore pour détecter l'état réseau
+  let isOnline = true;
+  try {
+    const { useSyncStore } = await import('./syncStore');
+    isOnline = await useSyncStore.getState().checkConnection();
+  } catch (err) {
+    console.error("Failed to check connection in auth state listener:", err);
+  }
+
   if (fbUser) {
     if (!state.user || state.user.id !== fbUser.uid) {
       useAuthStore.setState({ loading: true });
       try {
+        if (!isOnline) {
+          const cachedSession = await dbLocal.session.get(fbUser.uid);
+          if (cachedSession) {
+            if (cachedSession.expiresAt > Date.now()) {
+              useAuthStore.setState({
+                user: cachedSession.user,
+                isAuthenticated: true,
+                loading: false,
+                sessionExpiredOffline: false
+              });
+              return;
+            } else {
+              useAuthStore.setState({
+                user: null,
+                isAuthenticated: false,
+                loading: false,
+                sessionExpiredOffline: true
+              });
+              return;
+            }
+          }
+        }
+
         const token = await fbUser.getIdToken();
         const dbUrl = import.meta.env.VITE_databaseURL;
         const response = await axios.get(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`);
@@ -733,29 +825,34 @@ onAuthStateChanged(auth, async (fbUser) => {
           
           const { role: resolvedRole, delegation: resolvedDelegation } = await resolveUserRoleAndDelegation(userData, fbUser, dbUrl, token);
 
+          const userObj = {
+            id: fbUser.uid,
+            name: fullName,
+            prenom: prenom || undefined,
+            email: fbUser.email || '',
+            role: resolvedRole,
+            universityId: userData.universityId || 'univ-ufhb',
+            status: normalizeUserStatus(userData.status as string | undefined),
+            telephone: userData.telephone,
+            adresse: userData.adresse,
+            createdDate: userData.createdDate,
+            filiere: userData.filiere,
+            annee: userData.annee,
+            specialite: userData.specialite,
+            mustChangePassword: userData.mustChangePassword || false,
+            tempPassword: userData.tempPassword || undefined,
+            delegation: resolvedDelegation,
+            mfaEnabled: userData.mfaEnabled || false,
+          };
+
           useAuthStore.setState({
-            user: {
-              id: fbUser.uid,
-              name: fullName,
-              prenom: prenom || undefined,
-              email: fbUser.email || '',
-              role: resolvedRole,
-              universityId: userData.universityId || 'univ-ufhb',
-              status: normalizeUserStatus(userData.status as string | undefined),
-              telephone: userData.telephone,
-              adresse: userData.adresse,
-              createdDate: userData.createdDate,
-              filiere: userData.filiere,
-              annee: userData.annee,
-              specialite: userData.specialite,
-              mustChangePassword: userData.mustChangePassword || false,
-              tempPassword: userData.tempPassword || undefined,
-              delegation: resolvedDelegation,
-              mfaEnabled: userData.mfaEnabled || false,
-            },
+            user: userObj,
             isAuthenticated: true,
-            loading: false
+            loading: false,
+            sessionExpiredOffline: false
           });
+
+          await saveSessionToLocal(fbUser.uid, token, userObj);
         } else {
           useAuthStore.setState({ loading: false });
         }
@@ -765,12 +862,42 @@ onAuthStateChanged(auth, async (fbUser) => {
       }
     }
   } else {
+    // Si pas de fbUser, mais qu'on est hors ligne, on regarde s'il y a une session en cache
+    if (!isOnline) {
+      try {
+        const cachedSessions = await dbLocal.session.toArray();
+        if (cachedSessions.length > 0) {
+          const cachedSession = cachedSessions[0];
+          if (cachedSession.expiresAt > Date.now()) {
+            useAuthStore.setState({
+              user: cachedSession.user,
+              isAuthenticated: true,
+              loading: false,
+              sessionExpiredOffline: false
+            });
+            return;
+          } else {
+            useAuthStore.setState({
+              user: null,
+              isAuthenticated: false,
+              loading: false,
+              sessionExpiredOffline: true
+            });
+            return;
+          }
+        }
+      } catch (dbErr) {
+        console.error("Failed to read local session cache:", dbErr);
+      }
+    }
+
     const isDemo = state.user?.id.startsWith('usr-') || state.user?.id === 't1' || state.user?.id === 's1';
     if (state.isAuthenticated && !isDemo) {
       useAuthStore.setState({
         user: null,
         isAuthenticated: false,
-        loading: false
+        loading: false,
+        sessionExpiredOffline: false
       });
     } else {
       if (state.loading) {
