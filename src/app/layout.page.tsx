@@ -3,8 +3,12 @@ import '../index.css';
 import axios from 'axios';
 
 export const metadata: Metadata = {
-  title: 'Campus - Espace Universitaire',
-  description: 'Plateforme Universitaire Premium',
+  metadataBase: new URL('https://www.moncampus.online'),
+  title: {
+    template: '%s | CAMPUS',
+    default: 'CAMPUS - Plateforme de Gestion Universitaire Tout-en-Un',
+  },
+  description: 'Plateforme De Gestion Universitaire Premium',
   authors: [{ name: 'Kouakou Atsé Mondésire' }],
   manifest: '/manifest.json',
   appleWebApp: {
@@ -12,8 +16,13 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
   },
   icons: {
-    icon: '/images/logo-original.png',
-    apple: '/images/logo-original.png',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
 };
 
@@ -44,6 +53,58 @@ export default async function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/* Structured Data (Schema.org / JSON-LD) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "@id": "https://www.moncampus.online/#website",
+                  "url": "https://www.moncampus.online/",
+                  "name": "CAMPUS",
+                  "description": "Plateforme de gestion universitaire premium en Côte d'Ivoire",
+                  "publisher": {
+                    "@id": "https://www.moncampus.online/#organization"
+                  },
+                  "inLanguage": "fr-FR"
+                },
+                {
+                  "@type": "EducationalOrganization",
+                  "@id": "https://www.moncampus.online/#organization",
+                  "name": "CAMPUS",
+                  "url": "https://www.moncampus.online/",
+                  "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://www.moncampus.online/images/logo-original.png",
+                    "width": "512",
+                    "height": "512"
+                  }
+                },
+                {
+                  "@type": "SiteNavigationElement",
+                  "@id": "https://www.moncampus.online/#navigation",
+                  "name": [
+                    "Accueil",
+                    "Tarifs",
+                    "FAQ",
+                    "Contact",
+                    "Connexion"
+                  ],
+                  "url": [
+                    "https://www.moncampus.online/",
+                    "https://www.moncampus.online/tarifs",
+                    "https://www.moncampus.online/faq",
+                    "https://www.moncampus.online/contact",
+                    "https://www.moncampus.online/connexion"
+                  ]
+                }
+              ]
+            })
+          }}
+        />
         {/* iOS Startup Images */}
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-2048-2732.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-2732-2048.jpg" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
