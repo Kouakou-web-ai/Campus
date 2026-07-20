@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /super-admin/
+Disallow: /enseignant/
+Disallow: /etudiant/
+Disallow: /parent/
+Disallow: /app/
+Disallow: /api/
+Disallow: /account-pending
+Disallow: /account-rejected
+Disallow: /account-suspended
+
+Sitemap: https://www.moncampus.online/sitemap.xml
