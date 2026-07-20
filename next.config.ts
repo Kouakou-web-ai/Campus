@@ -17,11 +17,11 @@ const nextConfig: NextConfig = {
   async headers() {
     const cspHeader = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' blob: data: https://*.googleusercontent.com https://*.firebaseusercontent.com https://images.unsplash.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com https://*.firebase.google.com https://formsubmit.co",
+      "connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com wss://*.firebasedatabase.app https://*.firebasedatabase.app https://*.firebase.google.com https://formsubmit.co https://vitals.vercel-insights.com",
       "frame-src 'self' https://*.firebaseapp.com",
       "object-src 'none'",
       "base-uri 'self'",

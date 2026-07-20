@@ -6,15 +6,7 @@ const ipRequestCounts = new Map<string, { count: number; lastReset: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 120; // 120 requêtes par minute maximum par IP
 
-// Nettoyage régulier pour éviter les fuites mémoire
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, data] of ipRequestCounts.entries()) {
-    if (now - data.lastReset > RATE_LIMIT_WINDOW_MS) {
-      ipRequestCounts.delete(ip);
-    }
-  }
-}, 5 * 60 * 1000); // toutes les 5 minutes
+// Le nettoyage a été déplacé en inline dans le middleware car setInterval est interdit dans l'Edge runtime.
 
 // Liste des User-Agents de scrapers/outils d'attaque à bloquer.
 // IMPORTANT : on ne bloque QUE des outils clairement malveillants ou de scraping commercial.
@@ -98,6 +90,16 @@ export function middleware(request: NextRequest) {
   // 4. Rate Limiting local (uniquement si l'IP est connue)
   if (ip !== 'unknown-ip') {
     const now = Date.now();
+    
+    // Nettoyage inline périodique pour éviter fuite mémoire sans setInterval (interdit dans l'Edge runtime)
+    if (ipRequestCounts.size > 200) {
+      for (const [key, data] of ipRequestCounts.entries()) {
+        if (now - data.lastReset > RATE_LIMIT_WINDOW_MS) {
+          ipRequestCounts.delete(key);
+        }
+      }
+    }
+
     const rateData = ipRequestCounts.get(ip);
 
     if (!rateData) {
@@ -131,11 +133,11 @@ export function middleware(request: NextRequest) {
 
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com https://va.vercel-scripts.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     img-src 'self' data: https://*.googleusercontent.com https://*.firebaseusercontent.com https://images.unsplash.com;
     font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com https://*.firebase.google.com;
+    connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com wss://*.firebasedatabase.app https://*.firebasedatabase.app https://*.firebase.google.com https://formsubmit.co https://vitals.vercel-insights.com;
     frame-src 'self' https://*.firebaseapp.com;
     object-src 'none';
     base-uri 'self';
