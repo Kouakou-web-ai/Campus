@@ -69,7 +69,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (isPrivateRoute) {
     return {
-      title: 'Espace Sécurisé - CAMPUS',
+      title: {
+        absolute: 'Espace Sécurisé - CAMPUS',
+      },
       robots: {
         index: false,
         follow: false,
@@ -81,7 +83,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const fullUrl = `https://www.moncampus.online${path === '/' ? '' : path}`;
 
   return {
-    title: meta.title,
+    title: {
+      absolute: meta.title,
+    },
     description: meta.description,
     metadataBase: new URL('https://www.moncampus.online'),
     alternates: {

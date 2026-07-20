@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import ProtectedRoute from './ProtectedRoute';
@@ -95,6 +95,63 @@ const Loader = () => <LoadingState message="Chargement de la page…" />;
 function AnimatedRoutes() {
   const location = useLocation();
   
+  useEffect(() => {
+    const ROUTE_TITLES: Record<string, string> = {
+      '/': 'CAMPUS - Plateforme de Gestion Universitaire Tout-en-Un',
+      '/tarifs': 'Offres & Tarifs',
+      '/faq': 'Foire Aux Questions',
+      '/contact': 'Contactez-nous',
+      '/conditions': "Conditions Générales d'Utilisation",
+      '/mentions-legales': 'Mentions Légales',
+      '/confidentialite': 'Politique de Confidentialité',
+      '/signup': 'Créer un Compte',
+      '/connexion': 'Connexion',
+      '/activation-compte': 'Activation de Compte',
+      '/app/super-admin': 'Tableau de Bord Super Admin',
+      '/app/super-admin/revenus': 'Analytiques Revenu',
+      '/app/super-admin/universites': 'Surveillance Universités',
+      '/app/super-admin/demandes': 'Demandes Administrateurs',
+      '/app/admin': 'Tableau de Bord Administration',
+      '/app/admin/cours': 'Gestion des Cours',
+      '/app/admin/gestionnaires': 'Gestion des Collaborateurs',
+      '/app/admin/classes': 'Gestion des Classes',
+      '/app/admin/bulletins': 'Bulletins & Notes',
+      '/app/admin/etudiants': 'Gestion des Étudiants',
+      '/app/admin/enseignants': 'Gestion des Enseignants',
+      '/app/admin/finance': 'Centre Financier',
+      '/app/enseignant': 'Portail Enseignant',
+      '/app/enseignant/notes': 'Gestion des Notes',
+      '/app/enseignant/devoirs': 'Publication des Devoirs',
+      '/app/enseignant/absences': 'Gestion des Absences',
+      '/app/etudiant': 'Portail Étudiant',
+      '/app/etudiant/notes': 'Résultats Académiques',
+      '/app/etudiant/paiements': 'Règlements & Scolarité',
+      '/app/etudiant/planning': 'Mon Emploi du Temps',
+      '/app/parent': 'Suivi Enfant',
+      '/app/parent/scolarite': 'Règlements Scolarité',
+      '/app/parent/academique': 'Suivi Académique Enfant',
+      '/app/parametres': 'Paramètres Profil',
+      '/app/evaluation-suggestions': 'Évaluations & Suggestions',
+    };
+
+    const pathname = location.pathname;
+    let title = ROUTE_TITLES[pathname];
+
+    if (!title) {
+      if (pathname.startsWith('/app/visioconference/')) {
+        title = 'Visioconférence';
+      } else {
+        const segments = pathname.split('/').filter(Boolean);
+        if (segments.length > 0) {
+          const last = segments[segments.length - 1];
+          title = last.charAt(0).toUpperCase() + last.slice(1).replace(/-/g, ' ');
+        }
+      }
+    }
+
+    document.title = pathname === '/' ? ROUTE_TITLES['/'] : (title ? `${title} | CAMPUS` : 'CAMPUS');
+  }, [location.pathname]);
+
   return (
     <AnimatePresence mode="wait">
       <motion.div
