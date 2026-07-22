@@ -3,6 +3,7 @@ import { X, Building2, MapPin, Globe, CreditCard, ShieldAlert, Users, BookOpen, 
 import type { University } from '../../types';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
+import { notifyUniversityStatusUpdate } from '../../services/emailSender';
 import StatusBadge from './StatusBadge';
 
 interface UniversityManagementModalProps {
@@ -113,6 +114,10 @@ export default function UniversityManagementModal({ isOpen, onClose, universityI
     try {
       await updateUniversity(u.id, { status: newStatus });
       setStatus(newStatus);
+      const mappedStatus = newStatus === 'actif' ? 'validated' : newStatus === 'suspendu' ? 'suspended' : 'rejected';
+      if (u.adminEmail) {
+        notifyUniversityStatusUpdate(u.adminEmail, u.name, mappedStatus).catch(err => console.error("Erreur email notification statut:", err));
+      }
       ToastSuccess(`Statut d'accès configuré sur : ${newStatus.toUpperCase()}`);
     } catch (err: any) {
       ToastError(err.message || 'Erreur lors du changement de statut.');
@@ -149,6 +154,9 @@ export default function UniversityManagementModal({ isOpen, onClose, universityI
     }
     setIsSaving(true);
     try {
+      if (u.adminEmail) {
+        notifyUniversityStatusUpdate(u.adminEmail, u.name, 'deleted').catch(err => console.error("Erreur email suppression:", err));
+      }
       await deleteUniversity(u.id);
       ToastSuccess(`L'université ${u.name} a été supprimée avec succès.`);
       onClose();

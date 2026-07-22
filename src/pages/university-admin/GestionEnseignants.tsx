@@ -6,6 +6,7 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import { Avatar } from '../../components/ui/AvatarGroup';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { useAuthStore } from '../../store/authStore';
+import { notifyUserAccountAccess } from '../../services/emailSender';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 import ImportModal from '../../components/ui/ImportModal';
 import TeacherProfileModal from '../../components/ui/TeacherProfileModal';
@@ -71,6 +72,18 @@ export default function GestionEnseignants() {
         ...classPayload
       });
       ToastSuccess("Enseignant ajouté avec succès !");
+
+      const uniName = currentUniversity?.name;
+      if (creds && creds.password) {
+        notifyUserAccountAccess({
+          name: name.trim(),
+          email: email.trim(),
+          password: creds.password,
+          role: 'teacher',
+          uniName
+        }).catch(err => console.error("Erreur email accès enseignant:", err));
+      }
+
       setGeneratedCreds(creds);
       setName('');
       setEmail('');

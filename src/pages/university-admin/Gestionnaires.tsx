@@ -9,6 +9,7 @@ import { Avatar } from '../../components/ui/AvatarGroup';
 import type { Gestionnaire, TableColumn } from '../../types';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { useAuthStore } from '../../store/authStore';
+import { notifyUserAccountAccess } from '../../services/emailSender';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 
 export default function Gestionnaires() {
@@ -144,6 +145,16 @@ export default function Gestionnaires() {
         email: email.trim(),
         role
       });
+
+      const uniName = currentUniversity?.name;
+      notifyUserAccountAccess({
+        name: name.trim(),
+        email: email.trim(),
+        password: res.tempPassword,
+        role: 'manager',
+        uniName
+      }).catch(err => console.error("Erreur email accès gestionnaire:", err));
+
       setGeneratedCreds({
         name: name.trim(),
         email: email.trim(),

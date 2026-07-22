@@ -10,6 +10,7 @@ import { Avatar } from '../../components/ui/AvatarGroup';
 import type { Student, TableColumn } from '../../types';
 import { useRealtimeDataStore } from '../../store/realtimeDataStore';
 import { useAuthStore } from '../../store/authStore';
+import { notifyUserAccountAccess } from '../../services/emailSender';
 import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 import ImportModal from '../../components/ui/ImportModal';
 
@@ -264,6 +265,26 @@ export default function GestionEtudiants() {
         parentName: parentName.trim()
       });
       ToastSuccess("Étudiant et compte Parent créés avec succès !");
+
+      const uniName = currentUniversity?.name;
+      // Envoi email accès Étudiant
+      notifyUserAccountAccess({
+        name: fullName,
+        email: email.trim(),
+        password: creds.tempStudentPassword,
+        role: 'student',
+        uniName
+      }).catch(err => console.error("Erreur envoi email étudiant:", err));
+
+      // Envoi email accès Parent
+      notifyUserAccountAccess({
+        name: parentName.trim(),
+        email: parentEmail.trim(),
+        password: creds.tempParentPassword,
+        role: 'parent',
+        uniName
+      }).catch(err => console.error("Erreur envoi email parent:", err));
+
       setGeneratedCreds({
         ...creds,
         studentEmail: email,

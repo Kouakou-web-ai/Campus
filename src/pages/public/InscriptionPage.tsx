@@ -7,6 +7,7 @@ import { mockUniversities } from '../../constants/mockData';
 import { ref, get, set, update } from 'firebase/database';
 import { db } from '../../../firebase-config';
 import { getPostLoginPath } from '../../constants/accountStatus';
+import { notifySuperAdminNewUniversity } from '../../services/emailSender';
 
 export default function InscriptionPage() {
   const { signupWithFirebase, loginWithGoogle, activateInvitedAccount, loading } = useAuthStore();
@@ -228,7 +229,17 @@ export default function InscriptionPage() {
         role === 'STUDENT' ? filiere : undefined,
         role === 'STUDENT' ? Number(annee) : undefined
       );
-      ToastSuccess("Compte créé avec succès ! Veuillez d'abord valider votre adresse e-mail via le lien envoyé, puis votre compte sera activé après validation par l'administration.");
+
+      if (role === 'UNIVERSITY_ADMIN' && !isInvited) {
+        notifySuperAdminNewUniversity({
+          name: universityName.trim() || activeUnivId,
+          email: email.trim(),
+          phone: telephone.trim(),
+          adminName: `${prenom} ${nom}`.trim()
+        }).catch(err => console.error("Erreur notification email superadmin:", err));
+      }
+
+      ToastSuccess("Compte créé avec succès ! Veuillez d'abord valider votre adresse e-mail via le lien envoyé (pensez à vérifier vos SPAMS), puis votre compte sera activé après validation par l'administration.");
       navigate('/connexion');
     } catch (err: any) {
       console.error(err);

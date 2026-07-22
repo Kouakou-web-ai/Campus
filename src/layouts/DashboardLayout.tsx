@@ -41,11 +41,14 @@ export default function DashboardLayout() {
     }
   }, [user?.universityId, user?.role, subscribeToUniversity, subscribeToSuperAdmin]);
 
-  // Initialisation de la surveillance de connectivité réseau et de rejeu de file
+  // Initialisation de la surveillance de connectivité réseau et de rejeu de file + rappels d'abonnement
   useEffect(() => {
     let cleanup = () => {};
     import('../store/syncStore').then(({ useSyncStore }) => {
       cleanup = useSyncStore.getState().initConnectionMonitoring();
+    });
+    import('../services/subscriptionNotifier').then(({ checkAndSendSubscriptionReminders }) => {
+      checkAndSendSubscriptionReminders().catch(err => console.error("Erreur rappels abonnements:", err));
     });
     return () => cleanup();
   }, []);

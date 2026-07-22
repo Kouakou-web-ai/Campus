@@ -212,26 +212,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
         
         try {
-          const { sendRealEmail } = await import('../services/emailSender');
-          const fullName = (userData.prenom ? `${userData.prenom} ${userData.nom}` : (userData.nom || fbUser.email || email)).trim();
-          await sendRealEmail(
-            fbUser.email || email,
-            "Action requise : Vérifiez votre adresse email sur CAMPUS",
-            `<div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-               <h2 style="color: #4f46e5;">Validation de votre adresse email</h2>
-               <p>Bonjour ${fullName},</p>
-               <p>Vous avez tenté de vous connecter à la plateforme CAMPUS.</p>
-               <p>Votre compte a été validé par l'administration, mais vous devez obligatoirement vérifier votre adresse email pour finaliser la connexion.</p>
-               <p style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px; color: #1e3a8a; font-size: 13px; border-radius: 4px;">
-                 Un email contenant un lien de vérification officiel Firebase vous a été envoyé. <strong>Pensez à regarder dans vos courriers indésirables / spams</strong>.
-               </p>
-               <p>Une fois le lien cliqué dans l'email de vérification, vous pourrez vous connecter immédiatement.</p>
-               <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
-               <p style="color: #64748b; font-size: 11px;">L'équipe CAMPUS</p>
-             </div>`
-          );
+          const { notifyEmailConfirmationSpamNotice } = await import('../services/emailSender');
+          await notifyEmailConfirmationSpamNotice(fbUser.email || email);
         } catch (sendErr) {
-          console.error("sendRealEmail failed in loginWithFirebase:", sendErr);
+          console.error("notifyEmailConfirmationSpamNotice failed in loginWithFirebase:", sendErr);
         }
 
         await signOut(auth);
