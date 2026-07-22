@@ -394,6 +394,15 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
 
     setStore({ loading: true });
 
+    let hasLoaded = false;
+    const markLoaded = () => {
+      if (!hasLoaded) {
+        hasLoaded = true;
+        setStore({ loading: false });
+      }
+    };
+    const safetyTimer = setTimeout(markLoaded, 600);
+
     const unsubscribers: (() => void)[] = [];
     
     // Variables locales pour construire l'état agrégé currentUniversity
@@ -440,6 +449,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/branding`), (snap) => {
       branding = snap.val() || {};
       updateCurrentUniversity();
+      markLoaded();
       dbLocal.metadata.put({ key: 'universityName', value: branding.name || '' }).catch(console.error);
     }));
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/plan`), (snap) => {
@@ -842,6 +852,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     }));
 
     return () => {
+      clearTimeout(safetyTimer);
       unsubscribers.forEach(unsub => unsub());
     };
   },

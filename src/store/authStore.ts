@@ -772,6 +772,9 @@ onAuthStateChanged(auth, async (fbUser) => {
   }
 
   if (fbUser) {
+    if (state.isAuthenticated && state.user?.id === fbUser.uid) {
+      return;
+    }
     if (!state.user || state.user.id !== fbUser.uid) {
       useAuthStore.setState({ loading: true });
       try {
