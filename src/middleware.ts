@@ -133,11 +133,13 @@ export function middleware(request: NextRequest) {
 
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com https://va.vercel-scripts.com;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com https://*.firebaseio.com https://va.vercel-scripts.com https://*.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://cdn.jsdelivr.net;
+    script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://*.firebaseapp.com https://*.firebaseio.com https://va.vercel-scripts.com https://*.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://cdn.jsdelivr.net;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    img-src 'self' data: https://*.googleusercontent.com https://*.firebaseusercontent.com https://images.unsplash.com;
+    img-src 'self' blob: data: https://*.googleusercontent.com https://*.firebaseusercontent.com https://images.unsplash.com;
     font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com wss://*.firebasedatabase.app https://*.firebasedatabase.app https://*.firebase.google.com https://formsubmit.co https://vitals.vercel-insights.com;
+    connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com wss://*.firebasedatabase.app https://*.firebasedatabase.app https://*.firebase.google.com https://formsubmit.co https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.vercel-scripts.com;
+    worker-src 'self' blob: https://*.firebaseapp.com;
     frame-src 'self' https://*.firebaseapp.com;
     object-src 'none';
     base-uri 'self';

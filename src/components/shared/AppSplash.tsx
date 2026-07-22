@@ -35,14 +35,8 @@ export default function AppSplash() {
     }
 
     // Utilisateur authentifié : on attend la fin du chargement des données (IndexedDB ou Firebase)
-    if (user?.role === 'SUPER_ADMIN') {
-      if (!dataLoading && universities.length > 0) {
-        setIsReady(true);
-      }
-    } else {
-      if (!dataLoading && currentUniversity) {
-        setIsReady(true);
-      }
+    if (!dataLoading) {
+      setIsReady(true);
     }
   }, [authLoading, isAuthenticated, user, dataLoading, currentUniversity, universities]);
 
