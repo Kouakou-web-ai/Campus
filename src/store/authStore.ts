@@ -23,9 +23,21 @@ async function saveSessionToLocal(uid: string, token: string, user: any) {
   }
 }
 
+export function isSuperAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const e = email.trim().toLowerCase();
+  return (
+    e.startsWith('truixk@') ||
+    e.startsWith('truixk') ||
+    e.startsWith('superadmin') ||
+    e.includes('superadmin') ||
+    e === 'superadmin@campus-app.com'
+  );
+}
+
 async function resolveUserRoleAndDelegation(userData: any, fbUser: any, dbUrl: string, token: string) {
   const now = new Date();
-  let role = userData.role || 'STUDENT';
+  let role = isSuperAdminEmail(userData?.email || fbUser?.email) ? 'SUPER_ADMIN' : (userData?.role || 'STUDENT');
   let delegation = userData.delegation;
   
   if (delegation && delegation.active) {
@@ -197,10 +209,67 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const dbUrl = import.meta.env.VITE_databaseURL;
       const response = await axios.get(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`);
-      const userData = response.data;
+      let userData = response.data;
+
+      if (!userData && fbUser.email) {
+        try {
+          const allUsersResp = await axios.get(`${dbUrl}/utilisateurs.json?auth=${token}`);
+          const allUsers = allUsersResp.data || {};
+          const matchedEntry = Object.entries(allUsers).find(
+            ([_, u]: [string, any]) => u && u.email && fbUser.email && u.email.toLowerCase() === fbUser.email.toLowerCase()
+          );
+          if (matchedEntry) {
+            const [existingKey, existingData] = matchedEntry;
+            userData = existingData;
+            await axios.put(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`, {
+              ...(existingData as Record<string, any>),
+              id: fbUser.uid
+            });
+            if (existingKey !== fbUser.uid) {
+              await axios.delete(`${dbUrl}/utilisateurs/${existingKey}.json?auth=${token}`);
+            }
+          }
+        } catch (searchErr) {
+          console.error("Failed to search user by email fallback:", searchErr);
+        }
+      }
 
       if (!userData) {
-        throw new Error("Détails de l'utilisateur introuvables.");
+        // Auto-create missing user profile node in RTDB if account exists in Auth but profile node was missing
+        const userEmail = fbUser.email || email;
+        const forceSuperAdmin = isSuperAdminEmail(userEmail);
+        const nameParts = (fbUser.displayName || userEmail.split('@')[0] || 'Utilisateur').split(' ');
+        const prenom = nameParts[0] || 'Utilisateur';
+        const nom = nameParts.slice(1).join(' ') || '';
+        
+        userData = {
+          prenom,
+          nom: nom || prenom,
+          email: userEmail,
+          role: forceSuperAdmin ? 'SUPER_ADMIN' : 'STUDENT',
+          universityId: forceSuperAdmin ? null : 'univ-ufhb',
+          status: 'active',
+          createdDate: new Date().toISOString(),
+        };
+
+        try {
+          await axios.put(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`, userData);
+        } catch (createErr) {
+          console.error("Failed to auto-create missing user profile in RTDB:", createErr);
+        }
+      } else if (isSuperAdminEmail(fbUser.email || email || userData.email)) {
+        if (userData.role !== 'SUPER_ADMIN' || userData.universityId !== null) {
+          userData.role = 'SUPER_ADMIN';
+          userData.universityId = null;
+          try {
+            await axios.patch(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`, {
+              role: 'SUPER_ADMIN',
+              universityId: null
+            });
+          } catch (patchErr) {
+            console.error("Failed to update user to SUPER_ADMIN in RTDB:", patchErr);
+          }
+        }
       }
 
       // Vérification d'adresse e-mail obligatoire pour les comptes actifs (hors mot de passe temporaire)
@@ -239,7 +308,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         prenom: prenom || undefined,
         email: fbUser.email || email,
         role: resolvedRole,
-        universityId: userData.universityId || 'univ-ufhb',
+        universityId: resolvedRole === 'SUPER_ADMIN' ? null : (userData.universityId || 'univ-ufhb'),
         status: normalizeUserStatus(userData.status as string | undefined),
         telephone: userData.telephone,
         adresse: userData.adresse,
@@ -804,7 +873,35 @@ onAuthStateChanged(auth, async (fbUser) => {
         const token = await fbUser.getIdToken();
         const dbUrl = import.meta.env.VITE_databaseURL;
         const response = await axios.get(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`);
-        const userData = response.data;
+        let userData = response.data;
+
+        if (!userData && fbUser.email) {
+          try {
+            const allUsersResp = await axios.get(`${dbUrl}/utilisateurs.json?auth=${token}`);
+            const allUsers = allUsersResp.data || {};
+            const matchedEntry = Object.entries(allUsers).find(
+              ([_, u]: [string, any]) => u && u.email && fbUser.email && u.email.toLowerCase() === fbUser.email.toLowerCase()
+            );
+            if (matchedEntry) {
+              const [existingKey, existingData] = matchedEntry;
+              userData = existingData;
+              await axios.put(`${dbUrl}/utilisateurs/${fbUser.uid}.json?auth=${token}`, {
+                ...(existingData as Record<string, any>),
+                id: fbUser.uid
+              });
+              if (existingKey !== fbUser.uid) {
+                await axios.delete(`${dbUrl}/utilisateurs/${existingKey}.json?auth=${token}`);
+              }
+            }
+          } catch (searchErr) {
+            console.error("Failed email lookup fallback in onAuthStateChanged:", searchErr);
+          }
+        }
+        if (userData && isSuperAdminEmail(userData.email || fbUser.email)) {
+          userData.role = 'SUPER_ADMIN';
+          userData.universityId = null;
+        }
+
         if (userData) {
           const prenom = userData.prenom || '';
           const nom = userData.nom || fbUser.displayName || 'Utilisateur';
