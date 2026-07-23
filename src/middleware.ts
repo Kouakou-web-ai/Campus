@@ -133,14 +133,14 @@ export function middleware(request: NextRequest) {
 
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://apis.google.com https://www.gstatic.com https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://va.vercel-scripts.com https://*.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://vercel.live https://*.vercel.app https://cdn.jsdelivr.net;
-    script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' blob: https://apis.google.com https://www.gstatic.com https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://va.vercel-scripts.com https://*.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://vercel.live https://*.vercel.app https://cdn.jsdelivr.net;
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    img-src 'self' blob: data: https://*.googleusercontent.com https://*.firebaseusercontent.com https://images.unsplash.com;
-    font-src 'self' https://fonts.gstatic.com data:;
-    connect-src 'self' https://*.googleapis.com wss://*.firebaseio.com https://*.firebaseio.com wss://*.firebasedatabase.app https://*.firebasedatabase.app https://*.firebase.google.com https://formsubmit.co https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.vercel-scripts.com https://vercel.live https://*.vercel.app wss://*.vercel.live;
-    worker-src 'self' blob: https://*.firebaseapp.com;
-    frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://vercel.live;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://apis.google.com https://www.gstatic.com https://*.gstatic.com https://www.google.com https://*.google.com https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://va.vercel-scripts.com https://*.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://vercel.live https://*.vercel.app https://cdn.jsdelivr.net https://moncampus.online https://*.moncampus.online;
+    script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' blob: https://apis.google.com https://www.gstatic.com https://*.gstatic.com https://www.google.com https://*.google.com https://*.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com https://va.vercel-scripts.com https://*.vercel-scripts.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://vercel.live https://*.vercel.app https://cdn.jsdelivr.net https://moncampus.online https://*.moncampus.online;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.gstatic.com;
+    img-src 'self' blob: data: https://*.googleusercontent.com https://*.firebaseusercontent.com https://images.unsplash.com https://www.gstatic.com https://*.gstatic.com https://www.google.com https://*.google.com;
+    font-src 'self' https://fonts.gstatic.com https://*.gstatic.com data:;
+    connect-src 'self' https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com https://*.google.com https://*.gstatic.com wss://*.firebaseio.com https://*.firebaseio.com wss://*.firebasedatabase.app https://*.firebasedatabase.app https://*.firebase.google.com https://*.firebaseapp.com https://formsubmit.co https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.vercel-scripts.com https://vercel.live https://*.vercel.app wss://*.vercel.live https://moncampus.online https://*.moncampus.online;
+    worker-src 'self' blob: https://*.firebaseapp.com https://*.google.com https://*.googleapis.com https://moncampus.online https://*.moncampus.online;
+    frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://www.google.com https://*.google.com https://vercel.live https://moncampus.online https://*.moncampus.online;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
