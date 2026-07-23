@@ -808,7 +808,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     // Filières
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/filieres`), (snap) => {
       const val = snap.val();
-      const list = val ? Object.values(val) : [];
+      const list: string[] = val ? (Object.values(val) as string[]) : [];
       setStore({ filieres: list });
       dbLocal.filieres.clear().then(() => dbLocal.filieres.bulkPut(list.map((f: any, i) => ({ id: String(i), ...f })))).catch(console.error);
     }));
@@ -824,7 +824,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     // Salles
     unsubscribers.push(onValue(ref(db, `universites/${universityId}/salles`), (snap) => {
       const val = snap.val();
-      const list = val ? Object.values(val) : [];
+      const list: string[] = val ? (Object.values(val) as string[]) : [];
       setStore({ salles: list });
       dbLocal.salles.clear().then(() => dbLocal.salles.bulkPut(list.map((s: any, i) => ({ id: String(i), ...s })))).catch(console.error);
     }));

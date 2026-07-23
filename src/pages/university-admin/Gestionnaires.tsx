@@ -14,7 +14,7 @@ import { ToastSuccess, ToastError } from '../../controllers/Toast-emitter';
 
 export default function Gestionnaires() {
   const { user } = useAuthStore();
-  const { gestionnaires, addGestionnaire, updateGestionnaire, deleteGestionnaire, loading } = useRealtimeDataStore();
+  const { gestionnaires, addGestionnaire, updateGestionnaire, deleteGestionnaire, loading, currentUniversity } = useRealtimeDataStore();
 
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<'tous' | 'FINANCE_MANAGER' | 'STUDENT_MANAGER' | 'TEACHER_MANAGER'>('tous');

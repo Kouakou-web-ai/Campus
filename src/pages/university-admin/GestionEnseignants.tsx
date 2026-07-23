@@ -13,7 +13,7 @@ import TeacherProfileModal from '../../components/ui/TeacherProfileModal';
 
 export default function GestionEnseignants() {
   const { user } = useAuthStore();
-  const { teachers, courses, students, addTeacher, deleteTeacher, loading, classes } = useRealtimeDataStore();
+  const { teachers, courses, students, addTeacher, deleteTeacher, loading, classes, currentUniversity } = useRealtimeDataStore();
 
   const handleDelete = async (teacherId: string) => {
     if (!user?.universityId) return;
@@ -74,11 +74,11 @@ export default function GestionEnseignants() {
       ToastSuccess("Enseignant ajouté avec succès !");
 
       const uniName = currentUniversity?.name;
-      if (creds && creds.password) {
+      if (creds && creds.tempTeacherPassword) {
         notifyUserAccountAccess({
           name: name.trim(),
           email: email.trim(),
-          password: creds.password,
+          password: creds.tempTeacherPassword,
           role: 'teacher',
           uniName
         }).catch(err => console.error("Erreur email accès enseignant:", err));
