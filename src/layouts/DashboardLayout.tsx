@@ -10,7 +10,6 @@ import { ToastSuccess, ToastError } from '../controllers/Toast-emitter';
 import { Shield, Lock, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { sendRealEmail } from '../services/emailSender';
 import { APP_URL } from '../services/emailTemplates';
-import { KayimChatDrawer } from '../components/kayim/KayimChatDrawer';
 
 
 export default function DashboardLayout() {
@@ -358,9 +357,6 @@ export default function DashboardLayout() {
           </div>
         </main>
       </div>
-
-      {/* Assistant IA Officiel KAYIM */}
-      <KayimChatDrawer />
     </div>
   );
 }

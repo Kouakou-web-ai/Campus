@@ -13,7 +13,7 @@ export function LandingPage() {
         <div className="relative z-10 flex flex-col items-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary font-medium text-sm mb-8">
             <span className="flex h-2 w-2 rounded-full bg-primary"></span>
-            Nouveau : L'IA au service de l'éducation
+            Plateforme de gestion universitaire modernisée
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-slate-900 tracking-tight max-w-4xl mb-6">
             La plateforme SaaS de référence pour <span className="text-primary">l'enseignement supérieur</span>

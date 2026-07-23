@@ -37,7 +37,7 @@ export default function ThreeDDeployment() {
     const spacing = 26;
     const fov = 300;
 
-    // Generate normalized text points for "KAYIM"
+    // Generate normalized text points for "CAMPUS"
     const generateTextPoints = (targetCount: number): { x: number; y: number }[] => {
       const offscreen = document.createElement('canvas');
       const ow = 300;
@@ -53,7 +53,7 @@ export default function ThreeDDeployment() {
       octx.font = 'bold 50px sans-serif';
       octx.textAlign = 'center';
       octx.textBaseline = 'middle';
-      octx.fillText('KAYIM', ow / 2, oh / 2);
+      octx.fillText('CAMPUS', ow / 2, oh / 2);
 
       const imgData = octx.getImageData(0, 0, ow, oh);
       const data = imgData.data;

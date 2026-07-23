@@ -6,10 +6,13 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.moncampus.online'),
   title: {
     template: '%s | CAMPUS',
-    default: 'CAMPUS - Plateforme de Gestion Universitaire Tout-en-Un',
+    default: 'CAMPUS - Plateforme de Gestion Universitaire | Développé par Kouakou Atsé Ismaël Mondésire (Kayim Truix)',
   },
-  description: 'Plateforme De Gestion Universitaire Premium',
-  authors: [{ name: 'Kouakou Atsé Mondésire' }],
+  description: 'Plateforme De Gestion Universitaire Premium conçue et développée par Kouakou Atsé Ismaël Mondésire (Kayim Truix).',
+  authors: [{ name: 'Kouakou Atsé Ismaël Mondésire (Kayim Truix)', url: 'https://www.moncampus.online' }],
+  creator: 'Kouakou Atsé Ismaël Mondésire (Kayim Truix)',
+  publisher: 'Kouakou Atsé Ismaël Mondésire (Kayim Truix)',
+  keywords: ['Kouakou Atsé Ismaël Mondésire', 'Kayim Truix', 'CAMPUS', 'Gestion Universitaire', 'SaaS', 'Développeur Web', 'Réalisations'],
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -65,11 +68,30 @@ export default async function RootLayout({
                   "@id": "https://www.moncampus.online/#website",
                   "url": "https://www.moncampus.online/",
                   "name": "CAMPUS",
-                  "description": "Plateforme de gestion universitaire premium en Côte d'Ivoire",
+                  "description": "Plateforme de gestion universitaire premium en Côte d'Ivoire développée par Kouakou Atsé Ismaël Mondésire (Kayim Truix)",
+                  "author": {
+                    "@type": "Person",
+                    "@id": "https://www.moncampus.online/#developer",
+                    "name": "Kouakou Atsé Ismaël Mondésire",
+                    "alternateName": "Kayim Truix",
+                    "jobTitle": "Lead Developer & Software Architect"
+                  },
+                  "creator": {
+                    "@id": "https://www.moncampus.online/#developer"
+                  },
                   "publisher": {
-                    "@id": "https://www.moncampus.online/#organization"
+                    "@id": "https://www.moncampus.online/#developer"
                   },
                   "inLanguage": "fr-FR"
+                },
+                {
+                  "@type": "Person",
+                  "@id": "https://www.moncampus.online/#developer",
+                  "name": "Kouakou Atsé Ismaël Mondésire",
+                  "alternateName": "Kayim Truix",
+                  "jobTitle": "Lead Software Developer & Web Architect",
+                  "knowsAbout": ["React", "TypeScript", "TailwindCSS", "Firebase", "SaaS Architecture"],
+                  "url": "https://www.moncampus.online/"
                 },
                 {
                   "@type": "EducationalOrganization",

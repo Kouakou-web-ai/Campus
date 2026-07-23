@@ -3,7 +3,6 @@ import { GraduationCap, Menu, X, Search, Mic } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import { useSpeechToText } from '../hooks/useSpeechToText';
-import { KayimChatDrawer } from '../components/kayim/KayimChatDrawer';
 
 
 const PUBLIC_SECTIONS = [
@@ -362,14 +361,13 @@ export default function PublicLayout() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-slate-600">© {new Date().getFullYear()} CAMPUS. Tous droits réservés.</p>
-            <p className="text-sm text-slate-600">Conçu pour l'excellence universitaire 🎓</p>
+            <p className="text-sm text-slate-500">
+              © {new Date().getFullYear()} CAMPUS. Tous droits réservés. | Développé par <span className="font-semibold text-slate-300">Kouakou Atsé Ismaël Mondésire</span> (<span className="text-indigo-400 font-medium">Kayim Truix</span>)
+            </p>
+            <p className="text-sm text-slate-500">Conçu pour l'excellence universitaire 🎓</p>
           </div>
         </div>
       </footer>
-
-      {/* Assistant IA Officiel KAYIM */}
-      <KayimChatDrawer />
     </div>
   );
 }
