@@ -3,6 +3,8 @@ import { GraduationCap, Menu, X, Search, Mic } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import { useSpeechToText } from '../hooks/useSpeechToText';
+import { KayimChatDrawer } from '../components/kayim/KayimChatDrawer';
+
 
 const PUBLIC_SECTIONS = [
   { label: 'Accueil', path: '/', synonyms: ['accueil', 'home', 'principal', 'début'] },
@@ -365,6 +367,10 @@ export default function PublicLayout() {
           </div>
         </div>
       </footer>
+
+      {/* Assistant IA Officiel KAYIM */}
+      <KayimChatDrawer />
     </div>
   );
 }
+

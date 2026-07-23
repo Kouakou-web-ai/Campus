@@ -17,7 +17,7 @@ export interface EmailPayload {
   error?: string;
 }
 
-const SUPER_ADMIN_EMAIL = "superadmin@campus-app.com"; // Email par défaut pour les alertes Super Admin
+const SUPER_ADMIN_EMAIL = "Truixk@gmail.com"; // Email par défaut pour les alertes Super Admin
 
 /**
  * Met en file d'attente un e-mail dans Firebase Realtime Database

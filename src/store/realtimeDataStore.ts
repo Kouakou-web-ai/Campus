@@ -9,6 +9,7 @@ import type { Student, Teacher, Course, Transaction, Grade, Assignment, Resource
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { sendRealEmail } from '../services/emailSender';
+import { APP_URL } from '../services/emailTemplates';
 
 const FALLBACK_UNIVERSITY_NAME = 'votre établissement';
 
@@ -1160,7 +1161,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     });
 
     // Envoi des e-mails réels via Nodemailer
-    const loginUrl = `${window.location.origin}/connexion`;
+    const loginUrl = `${APP_URL}/connexion`;
     const safeStudentName = escapeHtml(getDisplayText(studentInfo.name, 'Étudiant'));
     const safeStudentEmail = escapeHtml(studentInfo.email.trim());
     const safeParentName = escapeHtml(getDisplayText(parentName, 'Parent'));
@@ -1303,7 +1304,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     });
 
     // Email réel Enseignant via Nodemailer
-    const loginUrl = `${window.location.origin}/connexion`;
+    const loginUrl = `${APP_URL}/connexion`;
     await sendRealEmail(
       teacher.email.trim(),
       "Bienvenue sur CAMPUS - Vos accès Enseignant",
@@ -1945,7 +1946,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
     });
 
     // Email réel via Nodemailer
-    const loginUrl = `${window.location.origin}/connexion`;
+    const loginUrl = `${APP_URL}/connexion`;
     await sendRealEmail(
       data.email.trim(),
       "Bienvenue sur CAMPUS - Vos accès Gestionnaire",
@@ -1988,7 +1989,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>((setStore, getStor
         if (gestSnap.exists()) {
           const gest = gestSnap.val();
           const expiryDate = new Date(delegationData.expiresAt).toLocaleString('fr-FR');
-          const loginUrl = `${window.location.origin}/connexion`;
+          const loginUrl = `${APP_URL}/connexion`;
           await sendRealEmail(
             gest.email,
             "Accès Administrateur délégués - CAMPUS",

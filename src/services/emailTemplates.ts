@@ -1,5 +1,5 @@
 export const APP_NAME = "CAMPUS";
-export const APP_URL = typeof window !== 'undefined' ? window.location.origin : "https://campus-app.com";
+export const APP_URL = "https://www.moncampus.online";
 
 export function getBaseEmailLayout(contentHtml: string, title: string): string {
   return `

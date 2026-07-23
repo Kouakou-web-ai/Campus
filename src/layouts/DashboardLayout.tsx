@@ -9,6 +9,9 @@ import { ref, update } from 'firebase/database';
 import { ToastSuccess, ToastError } from '../controllers/Toast-emitter';
 import { Shield, Lock, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { sendRealEmail } from '../services/emailSender';
+import { APP_URL } from '../services/emailTemplates';
+import { KayimChatDrawer } from '../components/kayim/KayimChatDrawer';
+
 
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -127,7 +130,7 @@ export default function DashboardLayout() {
             const isSent = localStorage.getItem(warningSentKey);
             if (!isSent && currentUniversity.adminEmail) {
               const daysLeft = 30 - diffDays;
-              const loginUrl = `${window.location.origin}/tarifs`;
+              const loginUrl = `${APP_URL}/tarifs`;
               
               await sendRealEmail(
                 currentUniversity.adminEmail,
@@ -355,7 +358,11 @@ export default function DashboardLayout() {
           </div>
         </main>
       </div>
+
+      {/* Assistant IA Officiel KAYIM */}
+      <KayimChatDrawer />
     </div>
   );
 }
+
 

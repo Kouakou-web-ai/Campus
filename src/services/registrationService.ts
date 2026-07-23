@@ -1,6 +1,7 @@
 import { ref, onValue, type Unsubscribe, get, update, set, remove, push } from 'firebase/database';
 import { db } from '../../firebase-config';
 import { sendRealEmail } from './emailSender';
+import { APP_URL } from './emailTemplates';
 import type { UserRole } from '../store/authStore';
 import type { UserProfile, UserStatus } from '../types/userAccount';
 import { normalizeUserStatus } from '../constants/accountStatus';
@@ -182,7 +183,7 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
         });
 
         // Envoi de l'e-mail réel via Nodemailer
-        const loginUrl = `${window.location.origin}/connexion`;
+        const loginUrl = `${APP_URL}/connexion`;
         await sendRealEmail(
           String(userData.email ?? ''),
           "Félicitations - Votre portail d'établissement CAMPUS est actif !",
